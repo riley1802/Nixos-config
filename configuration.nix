@@ -139,5 +139,18 @@
 	powerManagement.enable = false;
 	package = config.boot.kernelPackages.nvidiaPackages.stable;
 };
+ 
+
+# Steam
+programs.steam = {
+  enable = true;
+  remotePlay.openFirewall = true;
+};
+
+# 32-bit graphics support (required for Steam and most games)
+hardware.graphics = {
+  enable = true;
+  enable32Bit = true;
+};
 
 }

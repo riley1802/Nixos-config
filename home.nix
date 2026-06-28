@@ -12,5 +12,10 @@
     ripgrep
     fd
     unzip
+    google-chrome
+    spotify
+    discord
+    codex
+    gemini-cli
   ];
 }
