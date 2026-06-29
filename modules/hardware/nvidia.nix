@@ -6,12 +6,12 @@
   hardware.graphics = {
     enable = true;
 
-    # Required for Steam, Proton, and many 32-bit game/runtime libraries.
+    # Required for Steam and Proton
     enable32Bit = true;
   };
 
   hardware.nvidia = {
-    # Use the proprietary NVIDIA kernel module, matching your existing setup.
+    # Use the proprietary NVIDIA kernel module
     open = false;
 
     # Required for modern NVIDIA Wayland support through GDM/GNOME.
