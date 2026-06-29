@@ -18,7 +18,10 @@
     ./modules/programs/gaming.nix
     ./modules/programs/packages.nix
 
+    ./modules/services/llama-cpp.nix
+    ./modules/services/open-webui.nix
     ./modules/services/printing.nix
+    ./modules/services/searxng.nix
 
     ./modules/users/rileyt.nix
   ];
