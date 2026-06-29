@@ -1,0 +1,9 @@
+# Flake
+
+- Output: `.#nixosConfigurations.nixos`
+- Stable: `nixpkgs` → `nixos-26.05`
+- Unstable: `nixpkgs-unstable` → `pkgsUnstable` in `specialArgs`
+- Home Manager: `release-26.05`, embedded in `flake.nix`, user `./home.nix`
+- Formatter: `nix fmt` (nixpkgs-fmt)
+- CI: `.github/workflows/check.yml` — fmt check, flake check, eval toplevel
+- Overlays: none currently
