@@ -22,17 +22,17 @@ configuration lives under `modules/`, while user configuration lives under
 
 ## Local AI Stack
 
-This system runs a local LLM stack with a web UI and web search, all bound to
+This system runs a local LLM stack with Goose as the agent layer, all bound to
 localhost.
 
 | Service | URL | Module |
 |---------|-----|--------|
 | llama.cpp API | http://127.0.0.1:8080/v1 | `modules/services/llama-cpp.nix` |
-| Open WebUI | http://127.0.0.1:3000 | `modules/services/open-webui.nix` |
+| Goose agent | CLI / app launcher | `home/programs/goose.nix` |
 | SearXNG | http://127.0.0.1:8888 | `modules/services/searxng.nix` |
 
-Open WebUI talks to llama.cpp over the OpenAI-compatible API and uses SearXNG
-for web search.
+Goose is the local AI agent. It uses llama.cpp for inference and can edit
+files, run shell commands, and manage tasks on your system.
 
 ### llama.cpp
 
@@ -50,17 +50,29 @@ Configured model presets:
 | `nemotron-nano-12b-v2-q4` | Nemotron Nano 12B v2 Q4_K_M | NVIDIA reasoning model |
 | `gemma-4-12b-q4-mtp` | Gemma 4 12B Q4_K_M + MTP drafter | ~27% faster than baseline on this hardware |
 
-Select a model in Open WebUI by its alias after the service starts.
+Select a model in Goose by its alias after the service starts.
 
-### Open WebUI
+### Goose
 
-- Connects to llama.cpp at `http://127.0.0.1:8080/v1`.
-- Web search enabled via local SearXNG.
-- `ENABLE_PERSISTENT_CONFIG = False` so NixOS config stays authoritative.
+- CLI agent from `goose-cli`, configured in Home Manager.
+- Connects to llama.cpp at `http://127.0.0.1:8080/v1` via a custom provider.
+- Default model: `gemma-4-e4b-q8`.
+- Enabled extensions: Developer (files + shell), Analyze, Summon, Todo.
+- Tool mode: `smart_approve` (asks before running tools).
+- Launch from terminal: `goose session`
+- Launch from app menu: **Goose** (opens GNOME Terminal)
+
+Change model in a session:
+
+```sh
+goose configure
+```
+
+Or edit `~/.config/goose/config.yaml` and set `GOOSE_MODEL` to another alias.
 
 ### SearXNG
 
-- Local meta-search engine with JSON output for Open WebUI.
+- Local meta-search engine with JSON output.
 - Secret key generated at runtime in `/var/lib/searx/searx.env`.
 
 ## Usage
@@ -93,7 +105,9 @@ nix fmt
 Check service status after applying:
 
 ```sh
-systemctl status llama-cpp open-webui searx
+systemctl status llama-cpp searx
+goose info -v
+goose session
 ```
 
 ## Git and GitHub

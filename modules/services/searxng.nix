@@ -36,11 +36,6 @@ in
     '';
   };
 
-  systemd.services.open-webui = {
-    wants = [ "searx.service" ];
-    after = [ "searx.service" ];
-  };
-
   services.searx = {
     enable = true;
     package = pkgs.searxng;
