@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+{ pkgs, lib, ... }:
 
 let
   llamaCppProvider = {
@@ -84,6 +84,11 @@ in
 {
   home.packages = [
     pkgs.goose-cli
+    pkgs.goose-desktop
+    (pkgs.writeShellScriptBin "goose-launch" ''
+      #!${pkgs.bash}/bin/bash
+      exec ${lib.getExe pkgs.gnome-console} -T Goose -e -- ${lib.getExe pkgs.goose-cli} session
+    '')
   ];
 
   xdg.configFile."goose/config.yaml" = {
@@ -96,12 +101,12 @@ in
     force = true;
   };
 
-  xdg.dataFile."applications/goose.desktop".text = ''
+  xdg.dataFile."applications/goose-cli.desktop".text = ''
     [Desktop Entry]
     Type=Application
-    Name=Goose
-    Comment=Local AI agent powered by llama.cpp
-    Exec=${pkgs.gnome-terminal}/bin/gnome-terminal -- bash -lc "goose session"
+    Name=Goose CLI
+    Comment=Goose terminal session powered by llama.cpp
+    Exec=goose-launch
     Icon=utilities-terminal
     Terminal=false
     Categories=Development;Utility;

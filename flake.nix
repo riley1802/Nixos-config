@@ -30,6 +30,13 @@
         };
 
         modules = [
+          {
+            nixpkgs.overlays = [
+              (final: prev: {
+                goose-desktop = final.callPackage "${self}/packages/goose-desktop.nix" { };
+              })
+            ];
+          }
           ./configuration.nix
           home-manager.nixosModules.home-manager
           {

@@ -28,7 +28,7 @@ localhost.
 | Service | URL | Module |
 |---------|-----|--------|
 | llama.cpp API | http://127.0.0.1:8080/v1 | `modules/services/llama-cpp.nix` |
-| Goose agent | CLI / app launcher | `home/programs/goose.nix` |
+| Goose agent | CLI + desktop app | `home/programs/goose.nix`, `packages/goose-desktop.nix` |
 | SearXNG | http://127.0.0.1:8888 | `modules/services/searxng.nix` |
 
 Goose is the local AI agent. It uses llama.cpp for inference and can edit
@@ -55,12 +55,14 @@ Select a model in Goose by its alias after the service starts.
 ### Goose
 
 - CLI agent from `goose-cli`, configured in Home Manager.
-- Connects to llama.cpp at `http://127.0.0.1:8080/v1` via a custom provider.
+- Desktop app from the official Goose `.deb` release (`goose-desktop` package).
+- Both share `~/.config/goose/` and connect to llama.cpp at `http://127.0.0.1:8080/v1`.
 - Default model: `gemma-4-e4b-q8`.
 - Enabled extensions: Developer (files + shell), Analyze, Summon, Todo.
 - Tool mode: `smart_approve` (asks before running tools).
-- Launch from terminal: `goose session`
-- Launch from app menu: **Goose** (opens GNOME Terminal)
+- Launch CLI from terminal: `goose session`
+- Launch CLI from app menu: **Goose CLI** (opens GNOME Console)
+- Launch desktop app from app menu: **Goose**, or run `goose-desktop`
 
 Change model in a session:
 
@@ -108,6 +110,7 @@ Check service status after applying:
 systemctl status llama-cpp searx
 goose info -v
 goose session
+goose-desktop
 ```
 
 ## Git and GitHub
