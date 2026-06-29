@@ -1,0 +1,32 @@
+name: Check
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  nix:
+    name: Nix
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      - name: Check formatting
+        run: nix fmt -- --check .
+
+      - name: Check flake outputs
+        run: nix flake check --no-build --print-build-logs
+
+      - name: Evaluate NixOS system
+        run: nix eval .#nixosConfigurations.nixos.config.system.build.toplevel.drvPath

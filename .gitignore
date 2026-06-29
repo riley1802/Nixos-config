@@ -1,0 +1,27 @@
+# Nix build outputs
+/result
+/result-*
+
+# Direnv
+/.direnv/
+/.envrc.local
+
+# Local environment files and secrets
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.p12
+*.pfx
+/secrets/*.local.*
+/secrets/*.plain.*
+/secrets/*.decrypted.*
+
+# Editor and OS files
+.DS_Store
+*~
+*.swp
+*.swo
+.vscode/
+.idea/
