@@ -98,29 +98,41 @@ systemctl status llama-cpp open-webui searx
 
 ## Git and GitHub
 
-This repo uses SSH for GitHub authentication so `git push` and `git pull` work
-without entering credentials each time.
+This repo uses the GitHub CLI (`gh`) as a credential helper so `git push` and
+`git pull` work without entering a username or password each time.
 
 Remote:
 
 ```sh
-git@github.com:riley1802/Nixos-config.git
+https://github.com/riley1802/Nixos-config.git
 ```
 
-If SSH is not set up yet on a new machine:
+One-time setup on a new machine:
 
 ```sh
-mkdir -p ~/.ssh && chmod 700 ~/.ssh
-ssh-keygen -t ed25519 -C "your-email@example.com" -f ~/.ssh/id_ed25519 -N ""
-ssh-keyscan github.com >> ~/.ssh/known_hosts
+nix shell nixpkgs#gh
+gh auth login
+gh auth setup-git
 ```
 
-Add the public key at https://github.com/settings/keys, then verify:
+Verify:
 
 ```sh
-ssh -T git@github.com
 git pull
 git push
+```
+
+The `gh` token is stored in the system keyring and refreshed automatically.
+
+### SSH (optional)
+
+SSH is also configured at `~/.ssh/id_ed25519`. To use it instead of HTTPS:
+
+```sh
+git remote set-url origin git@github.com:riley1802/Nixos-config.git
+gh auth refresh -h github.com -s admin:public_key
+gh ssh-key add ~/.ssh/id_ed25519.pub --title "nixos-$(hostname)"
+ssh -T git@github.com
 ```
 
 ## Publishing Notes
