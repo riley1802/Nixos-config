@@ -22,17 +22,13 @@ configuration lives under `modules/`, while user configuration lives under
 
 ## Local AI Stack
 
-This system runs a local LLM stack with Goose as the agent layer, all bound to
-localhost.
+This system runs llama.cpp for local inference and SearXNG for search, both
+bound to localhost.
 
 | Service | URL | Module |
 |---------|-----|--------|
 | llama.cpp API | http://127.0.0.1:8080/v1 | `modules/services/llama-cpp.nix` |
-| Goose agent | CLI + desktop app | `home/programs/goose.nix`, `packages/goose-desktop.nix` |
 | SearXNG | http://127.0.0.1:8888 | `modules/services/searxng.nix` |
-
-Goose is the local AI agent. It uses llama.cpp for inference and can edit
-files, run shell commands, and manage tasks on your system.
 
 ### llama.cpp
 
@@ -50,27 +46,8 @@ Configured model presets:
 | `nemotron-nano-12b-v2-q4` | Nemotron Nano 12B v2 Q4_K_M | NVIDIA reasoning model |
 | `gemma-4-12b-q4-mtp` | Gemma 4 12B Q4_K_M + MTP drafter | ~27% faster than baseline on this hardware |
 
-Select a model in Goose by its alias after the service starts.
-
-### Goose
-
-- CLI agent from `goose-cli`, configured in Home Manager.
-- Desktop app from the official Goose `.deb` release (`goose-desktop` package).
-- Both share `~/.config/goose/` and connect to llama.cpp at `http://127.0.0.1:8080/v1`.
-- Default model: `gemma-4-e4b-q8`.
-- Enabled extensions: Developer (files + shell), Analyze, Summon, Todo.
-- Tool mode: `smart_approve` (asks before running tools).
-- Launch CLI from terminal: `goose session`
-- Launch CLI from app menu: **Goose CLI** (opens GNOME Console)
-- Launch desktop app from app menu: **Goose**, or run `goose-desktop`
-
-Change model in a session:
-
-```sh
-goose configure
-```
-
-Or edit `~/.config/goose/config.yaml` and set `GOOSE_MODEL` to another alias.
+Switch the active model by restarting the service with a different preset alias
+in `modules/services/llama-cpp.nix`.
 
 ### SearXNG
 
@@ -108,9 +85,8 @@ Check service status after applying:
 
 ```sh
 systemctl status llama-cpp searx
-goose info -v
-goose session
-goose-desktop
+curl http://127.0.0.1:8080/v1/models
+curl http://127.0.0.1:8888
 ```
 
 ## Git and GitHub
