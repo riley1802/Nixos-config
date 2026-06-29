@@ -5,5 +5,6 @@
     wget
     git
     curl
+    gh
   ];
 }
