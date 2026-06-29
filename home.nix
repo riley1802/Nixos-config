@@ -15,7 +15,8 @@
     google-chrome
     spotify
     discord
-    codex
-    gemini-cli
+    cursor-cli
+    code-cursor
+    kdePackages.plasma-browser-integration
   ];
 }

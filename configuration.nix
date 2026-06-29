@@ -102,6 +102,7 @@
 	wget
 	git
 	curl
+    kdePackages.plasma-browser-integration
   ];
 
   # Some programs need SUID wrappers, can be configured further or are
@@ -140,6 +141,7 @@
 	package = config.boot.kernelPackages.nvidiaPackages.stable;
 };
  
+ programs.kdeconnect.enable = true;
 
 # Steam
 programs.steam = {
