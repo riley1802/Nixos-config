@@ -18,6 +18,7 @@ configuration lives under `modules/`, while user configuration lives under
 - `modules/programs/` - system-level applications and program settings.
 - `modules/services/` - system services.
 - `modules/users/` - local user accounts.
+- `secrets/` - agenix-encrypted secrets (`*.age`) and `secrets.nix` public keys.
 - `home/` - Home Manager modules for user packages and desktop preferences.
 
 ## Local AI Stack
@@ -29,6 +30,7 @@ bound to localhost.
 |---------|-----|--------|
 | llama.cpp API | http://127.0.0.1:8080/v1 | `modules/services/llama-cpp.nix` |
 | SearXNG | http://127.0.0.1:8888 | `modules/services/searxng.nix` |
+| Tailscale | tailnet (MagicDNS) | `modules/services/tailscale.nix` |
 
 ### llama.cpp
 
@@ -52,7 +54,36 @@ in `modules/services/llama-cpp.nix`.
 ### SearXNG
 
 - Local meta-search engine with JSON output.
-- Secret key generated at runtime in `/var/lib/searx/searx.env`.
+- Secret key managed by agenix (`secrets/searxng-secret-key.age`).
+
+### Tailscale
+
+- Mesh VPN via `services.tailscale`.
+- Auth key managed by agenix (`secrets/tailscale-auth-key.age`).
+- Replace the placeholder key before rebuild — see [Secrets](#secrets-agenix).
+
+## Secrets (agenix)
+
+All secrets use [agenix](https://github.com/ryantm/agenix). Encrypted files in `secrets/` are safe to commit; decrypted copies live in `/run/agenix/` at activation only.
+
+| Secret | File |
+|--------|------|
+| Tailscale auth key | `secrets/tailscale-auth-key.age` |
+| SearXNG secret key | `secrets/searxng-secret-key.age` |
+
+Edit secrets:
+
+```sh
+nix shell github:ryantm/agenix
+cd /etc/nixos/secrets
+agenix -e tailscale-auth-key.age
+```
+
+Full instructions: [secrets/README.md](secrets/README.md)
+
+**Before Tailscale works:** create a reusable auth key at [Tailscale admin → Keys](https://login.tailscale.com/admin/settings/keys), then `agenix -e tailscale-auth-key.age` and paste the key.
+
+After first rebuild with OpenSSH, add the host public key to `secrets/secrets.nix` and run `agenix -r` so the machine can decrypt secrets without your user key.
 
 ## Usage
 
@@ -84,9 +115,10 @@ nix fmt
 Check service status after applying:
 
 ```sh
-systemctl status llama-cpp searx
+systemctl status llama-cpp searx tailscaled
 curl http://127.0.0.1:8080/v1/models
 curl http://127.0.0.1:8888
+tailscale status
 ```
 
 ## Git and GitHub
@@ -136,6 +168,6 @@ Before pushing this repository publicly, review machine-specific files:
 - `modules/core/networking.nix` includes the hostname.
 - `modules/users/rileyt.nix` includes the local username and groups.
 - Do not commit private keys, access tokens, age identities, or plaintext credentials.
+- Encrypted `secrets/*.age` files **are** intended for git (agenix).
 
-Commit secrets only if they are encrypted with a tool such as `sops-nix` or
-`agenix`, and keep the decryption keys outside the repository.
+Commit secrets only via agenix-encrypted `.age` files. Keep decryption keys (SSH host key, user key) off GitHub.

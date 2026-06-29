@@ -9,9 +9,13 @@
       url = "github:nix-community/home-manager/release-26.05";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    agenix = {
+      url = "github:ryantm/agenix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { self, nixpkgs, home-manager, ... }@inputs:
+  outputs = { self, nixpkgs, home-manager, agenix, ... }@inputs:
     let
       system = "x86_64-linux";
       pkgs = nixpkgs.legacyPackages.${system};
@@ -26,10 +30,16 @@
       nixosConfigurations.nixos = nixpkgs.lib.nixosSystem {
         inherit system;
         specialArgs = {
-          inherit pkgsUnstable;
+          inherit pkgsUnstable inputs;
         };
 
         modules = [
+          agenix.nixosModules.default
+          {
+            environment.systemPackages = [
+              agenix.packages.${system}.default
+            ];
+          }
           ./configuration.nix
           home-manager.nixosModules.home-manager
           {

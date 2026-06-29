@@ -212,14 +212,15 @@ home.stateVersion = "XX.XX";
 
 The nix store is **world-readable**. Never put secrets in `.nix` files or derivations.
 
+**This config standard: agenix only.** All secrets go in `secrets/*.age` via `agenix -e`.
+
 | Approach | Use when |
 |----------|----------|
-| **sops-nix** | Encrypted secrets in git, decrypted at activation → `/run/secrets/` |
-| **agenix** | Age-encrypted secrets in git |
-| Runtime-generated secrets | e.g. SearXNG key in `/var/lib/searx/searx.env` via activation script |
-| Plaintext in git | **Never** for passwords, API keys, tokens |
+| **agenix** (required here) | Every secret — Tailscale keys, service tokens, passwords |
+| Runtime-generated secrets | **Do not use** — migrate to agenix instead |
+| Plaintext in git | **Never** |
 
-Secrets are available at **activation time**, not evaluation time — you cannot use sops secrets inside arbitrary Nix expressions.
+Secrets decrypt at activation to `/run/agenix/`, not at eval time.
 
 ### Network exposure
 

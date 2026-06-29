@@ -1,46 +1,18 @@
-{ pkgs, ... }:
+{ pkgs, config, ... }:
 
-let
-  searxEnvFile = "/var/lib/searx/searx.env";
-in
 {
-  systemd.tmpfiles.rules = [
-    "d /var/lib/searx 0750 searx searx -"
-  ];
-
-  systemd.services.searx-secret = {
-    description = "Generate SearXNG secret key";
-    requiredBy = [ "searx-init.service" ];
-    before = [ "searx-init.service" ];
-
-    path = [
-      pkgs.coreutils
-      pkgs.openssl
-    ];
-
-    serviceConfig = {
-      Type = "oneshot";
-      RemainAfterExit = true;
-    };
-
-    script = ''
-      install -d -m 0750 -o searx -g searx /var/lib/searx
-
-      if [ ! -s ${searxEnvFile} ]; then
-        umask 077
-        printf 'SEARXNG_SECRET_KEY=%s\n' "$(openssl rand -hex 32)" > ${searxEnvFile}
-      fi
-
-      chown searx:searx ${searxEnvFile}
-      chmod 0600 ${searxEnvFile}
-    '';
+  age.secrets.searxng-secret-key = {
+    file = ../../secrets/searxng-secret-key.age;
+    owner = "searx";
+    group = "searx";
+    mode = "0400";
   };
 
   services.searx = {
     enable = true;
     package = pkgs.searxng;
 
-    environmentFile = searxEnvFile;
+    environmentFile = config.age.secrets.searxng-secret-key.path;
     settingsFile = "/run/searx/settings.yml";
 
     openFirewall = false;

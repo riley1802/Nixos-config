@@ -129,3 +129,17 @@ Errors and fixes from past NixOS work on this machine. **Append a new entry when
 **Fix:** Run rebuild sequence; if sudo fails, give user the exact command to run locally.
 
 **Avoid:** Never assume sudo works in agent context — always have a fallback command ready.
+
+---
+
+### 2026-06 — Flake ignores untracked new modules
+
+**Context:** Added new `.nix` module files for Tailscale and agenix.
+
+**Error:** `Path 'modules/core/openssh.nix' in the repository is not tracked by Git`.
+
+**Cause:** Nix flakes only copy git-tracked files into the store.
+
+**Fix:** `git add` new files before `nix flake check` or rebuild.
+
+**Avoid:** Always stage new modules before validating or rebuilding.

@@ -38,7 +38,8 @@ Discovery:
 - [ ] pkgs vs pkgsUnstable?
 - [ ] README impact?
 - [ ] reference/ updated?
-- [ ] Rebuild after?
+- [ ] secrets/ + agenix updated?
+- [ ] config audit pass?
 - [ ] Push after commit?
 ```
 
@@ -52,6 +53,7 @@ Discovery:
 | System packages/programs | `modules/programs/` | `configuration.nix` |
 | **Each service gets its own file** | `modules/services/<name>.nix` | `configuration.nix` |
 | Users | `modules/users/` | `configuration.nix` |
+| Secrets (agenix) | `secrets/*.age`, `secrets/secrets.nix` | per-service `age.secrets` |
 | User desktop/programs | `home/desktop/`, `home/programs/` | `home.nix` |
 
 Rules:
@@ -60,9 +62,29 @@ Rules:
 - `configuration.nix` and `home.nix` are **import lists only** — no logic.
 - Match naming and style of neighboring modules. Minimal diff.
 - Do not edit `hardware-configuration.nix` unless the user explicitly asks.
-- Do not commit secrets, tokens, or private keys.
+- **All secrets use agenix** — never plaintext in `.nix`, README, or git. See [Secrets policy](#secrets-policy-agenix-mandatory).
 
 Details: [reference/](reference/README.md)
+
+## Secrets policy (agenix mandatory)
+
+**Every secret** on this system must go through agenix. No exceptions.
+
+| Do | Don't |
+|----|-------|
+| `agenix -e secrets/foo.age` for create/edit | Plaintext in `.nix` or `.env` |
+| `age.secrets.<name>.file` in service module | `systemd` scripts that `openssl rand` secrets |
+| `config.age.secrets.<name>.path` at runtime | `builtins.readFile` on secret files at eval time |
+| Encrypted `*.age` committed to git | Runtime-only files like `/var/lib/*/secret` for managed secrets |
+
+Workflow for a new secret:
+
+1. Add public keys in `secrets/secrets.nix` if needed
+2. `agenix -e secrets/<name>.age`
+3. Declare `age.secrets.<name>` in the service module
+4. Update `reference/secrets.md`, `secrets/README.md`, README if user-facing
+
+See [reference/secrets.md](reference/secrets.md) and [secrets/README.md](../../../secrets/README.md).
 
 ## Implementation rules
 
@@ -82,12 +104,25 @@ On **every** config change, update the matching file(s) in `.cursor/skills/edit-
 |---------------|--------|
 | New/removed import in `configuration.nix` | [reference/layout.md](reference/layout.md) |
 | New/removed/changed service | [reference/services.md](reference/services.md) |
+| New/removed/changed agenix secret | [reference/secrets.md](reference/secrets.md) |
 | New/removed HM module or user package | [reference/home-manager.md](reference/home-manager.md) |
 | Flake inputs, outputs, overlays, specialArgs | [reference/flake.md](reference/flake.md) |
 | Hardware, hostname, user, GPU | [reference/machine.md](reference/machine.md) |
 | New reusable pattern worth documenting | [reference/patterns.md](reference/patterns.md) |
 
 Reference must reflect **current** state after the change, not a changelog.
+
+## Config audit (required before handoff)
+
+After every change, run the full checklist in [reference/audit.md](reference/audit.md):
+
+- Import graph: `configuration.nix` / `home.nix` vs files on disk — no orphans, no stale imports
+- Secrets: `age.secrets` ↔ `secrets/*.age` ↔ `secrets/secrets.nix` all aligned
+- Reference docs and README match live config
+- Grep for removed service/package names still mentioned elsewhere
+- `nix flake check` and toplevel build pass
+
+Fix stale or mismatched entries before committing.
 
 ## Log errors in lessons.md (required)
 
@@ -167,6 +202,7 @@ After work, report:
 
 - Files changed and why
 - Reference / lessons updates made
+- Config audit results (stale items found and fixed)
 - Whether rebuild ran or command to run
 - Commit hash (if committed)
 - Whether push is pending (ask if they want it)

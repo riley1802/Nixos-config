@@ -3,7 +3,8 @@
 | Service | Module | URL / port | Notes |
 |---------|--------|------------|-------|
 | llama.cpp | `modules/services/llama-cpp.nix` | http://127.0.0.1:8080/v1 | CUDA via `pkgsUnstable`, localhost only |
-| SearXNG | `modules/services/searxng.nix` | http://127.0.0.1:8888 | Secret in `/var/lib/searx/searx.env` |
+| SearXNG | `modules/services/searxng.nix` | http://127.0.0.1:8888 | Secret via agenix |
+| Tailscale | `modules/services/tailscale.nix` | tailnet | Auth key via agenix |
 | printing | `modules/services/printing.nix` | — | CUPS |
 
 ## llama.cpp
@@ -30,5 +31,13 @@
 
 - Instance: Local SearXNG
 - Bind: 127.0.0.1:8888
+- Secret: `secrets/searxng-secret-key.age` → `/run/agenix/searxng-secret-key`
 - Formats: html, json
 - Firewall: closed
+
+## Tailscale
+
+- Enabled via `services.tailscale`
+- Auth key: `secrets/tailscale-auth-key.age` → `authKeyFile`
+- Firewall: closed (`openFirewall = false`)
+- Replace placeholder auth key before expecting connectivity
