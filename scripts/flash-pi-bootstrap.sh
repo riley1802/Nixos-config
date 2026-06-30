@@ -55,12 +55,10 @@ show_device_info() {
 
 unmount_device() {
   log "Unmounting ${DEVICE} and all partitions..."
-  # Stop automount from re-grabbing the drive mid-flash.
   if command -v udisksctl >/dev/null 2>&1; then
     while read -r part _; do
       [[ -n "${part}" ]] || continue
-      udisksctl unmount -b "${part}" 2>/dev/null || true
-      udisksctl power-off -b "${part}" 2>/dev/null || true
+      timeout 5 udisksctl unmount -b "${part}" 2>/dev/null || true
     done < <(lsblk -ln -o NAME "${DEVICE}" | tail -n +2 | sed "s|^|/dev/|")
   fi
   umount -R "${DEVICE}"* 2>/dev/null || true
@@ -136,9 +134,19 @@ flash_device() {
   show_device_info
   unmount_device
 
-  if findmnt -rn -S "${DEVICE}" >/dev/null 2>&1; then
-    warn "Something is still mounted on ${DEVICE}. Unmount manually, then retry."
-    findmnt -S "${DEVICE}" || true
+  sync
+
+  # Only block if a partition still has a live mountpoint.
+  if lsblk -ln -o MOUNTPOINT "${DEVICE}"* 2>/dev/null | rg -q '^/'; then
+    warn "Partitions still mounted:"
+    lsblk -o NAME,MOUNTPOINT "${DEVICE}"
+    warn "Trying lazy unmount..."
+    umount -lf "${DEVICE}"* 2>/dev/null || true
+    sync
+  fi
+
+  if lsblk -ln -o MOUNTPOINT "${DEVICE}"* 2>/dev/null | rg -q '^/'; then
+    warn "Could not unmount ${DEVICE}. Unplug/replug the USB, then retry."
     exit 1
   fi
 
