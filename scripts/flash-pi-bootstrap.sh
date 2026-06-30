@@ -55,16 +55,7 @@ show_device_info() {
 
 unmount_device() {
   log "Unmounting ${DEVICE} and all partitions..."
-  if command -v udisksctl >/dev/null 2>&1; then
-    while read -r part _; do
-      [[ -n "${part}" ]] || continue
-      timeout 5 udisksctl unmount -b "${part}" 2>/dev/null || true
-    done < <(lsblk -ln -o NAME "${DEVICE}" | tail -n +2 | sed "s|^|/dev/|")
-  fi
-  umount -R "${DEVICE}"* 2>/dev/null || true
-  findmnt -rn -S "${DEVICE}" -o TARGET 2>/dev/null | sort -r | while read -r mnt; do
-    umount -lf "${mnt}" 2>/dev/null || true
-  done
+  umount -lf "${DEVICE}"* 2>/dev/null || true
   sync
 }
 
