@@ -143,3 +143,31 @@ Errors and fixes from past NixOS work on this machine. **Append a new entry when
 **Fix:** `git add` new files before `nix flake check` or rebuild.
 
 **Avoid:** Always stage new modules before validating or rebuilding.
+
+---
+
+### 2026-06 — Revoked Tailscale auth key fails rebuild
+
+**Context:** Tailscale auth key revoked in admin after being set in agenix.
+
+**Error:** `tailscaled-autoconnect.service` failed — `invalid key: unable to validate API key`; `nixos-rebuild switch` exit 4.
+
+**Cause:** `secrets/tailscale-auth-key.age` still contained the revoked key.
+
+**Fix:** Create new auth key in Tailscale admin → `agenix -e secrets/tailscale-auth-key.age` → rebuild.
+
+**Avoid:** Rotate keys only via agenix; never paste keys in chat; update secret before rebuild after revoking.
+
+---
+
+### 2026-06 — Placeholder Tailscale auth key
+
+**Context:** Initial agenix setup with placeholder text in `tailscale-auth-key.age`.
+
+**Error:** Same as revoked key — `invalid key: unable to validate API key`.
+
+**Cause:** Placeholder is not a valid Tailscale auth key.
+
+**Fix:** Replace with real key via `agenix -e`.
+
+**Avoid:** Never commit or deploy without a valid encrypted auth key when `authKeyFile` is set.

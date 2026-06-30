@@ -40,4 +40,9 @@
 - Enabled via `services.tailscale`
 - Auth key: `secrets/tailscale-auth-key.age` → `authKeyFile`
 - Firewall: closed (`openFirewall = false`)
-- SSH: port 22 allowed on `tailscale0` only (see `modules/core/openssh.nix`)
+- SSH: port 22 on `tailscale0` only (`modules/core/openssh.nix`)
+- Revoked keys must be replaced via `agenix -e` before rebuild
+
+## Gaming (Steam)
+
+- Steam enabled; Remote Play does **not** open firewall ports

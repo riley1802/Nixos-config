@@ -75,7 +75,9 @@ Details: [reference/](reference/README.md)
 | `agenix -e secrets/foo.age` for create/edit | Plaintext in `.nix` or `.env` |
 | `age.secrets.<name>.file` in service module | `systemd` scripts that `openssl rand` secrets |
 | `config.age.secrets.<name>.path` at runtime | `builtins.readFile` on secret files at eval time |
-| Encrypted `*.age` committed to git | Runtime-only files like `/var/lib/*/secret` for managed secrets |
+| Encrypted `*.age` committed to git | Plaintext keys in chat, `.nix`, or README |
+
+**Never ask the user to paste secrets in chat.** Direct them to `agenix -e` locally.
 
 Workflow for a new secret:
 

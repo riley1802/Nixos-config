@@ -16,7 +16,7 @@ From `/etc/nixos`:
 ```sh
 nix shell github:ryantm/agenix
 cd secrets
-agenix -e tailscale-auth-key.age   # opens $EDITOR
+agenix -e tailscale-auth-key.age   # paste key only — no quotes, no trailing newline
 agenix -e searxng-secret-key.age   # file content: SEARXNG_SECRET_KEY=<hex>
 ```
 
@@ -26,25 +26,33 @@ After changing `secrets.nix` public keys, rekey everything:
 cd secrets && agenix -r
 ```
 
-## One-time: add host SSH key
-
-After the first rebuild with `openssh` enabled:
+Then rebuild:
 
 ```sh
-# Add host pubkey to secrets.nix publicKeys, then:
-cd /etc/nixos/secrets && agenix -r
 sudo nixos-rebuild switch --flake /etc/nixos#nixos
 ```
 
-Host key path: `/etc/ssh/ssh_host_ed25519_key.pub`
-
 ## Tailscale auth key
 
-1. Create a reusable auth key at [Tailscale admin → Keys](https://login.tailscale.com/admin/settings/keys)
-2. `agenix -e tailscale-auth-key.age` — paste the key only (no quotes, no newline)
+1. Create a **reusable** auth key at [Tailscale admin → Keys](https://login.tailscale.com/admin/settings/keys)
+2. `agenix -e tailscale-auth-key.age` — paste the key only
 3. Rebuild
 
-Until the placeholder is replaced, Tailscale will not authenticate.
+If a key is **revoked or rotated** in the Tailscale admin, create a new key and repeat step 2 before the next rebuild. A revoked key causes `tailscaled-autoconnect.service` to fail and can fail `nixos-rebuild switch`.
+
+**Never paste auth keys in chat** — use `agenix -e` only.
+
+## Host SSH key (done on this machine)
+
+Host pubkey is in `secrets.nix`. The machine decrypts secrets at activation via `/etc/ssh/ssh_host_ed25519_key`.
+
+To add a new host after reinstall:
+
+```sh
+# Add host pubkey from /etc/ssh/ssh_host_ed25519_key.pub to secrets.nix, then:
+cd /etc/nixos/secrets && agenix -r
+sudo nixos-rebuild switch --flake /etc/nixos#nixos
+```
 
 ## Add a new secret
 

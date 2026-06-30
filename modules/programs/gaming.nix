@@ -3,7 +3,7 @@
 {
   programs.steam = {
     enable = true;
-    remotePlay.openFirewall = true;
+    remotePlay.openFirewall = false;
   };
 
   systemd.tmpfiles.rules = [

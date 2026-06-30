@@ -61,7 +61,19 @@ in `modules/services/llama-cpp.nix`.
 - Mesh VPN via `services.tailscale`.
 - Auth key managed by agenix (`secrets/tailscale-auth-key.age`).
 - SSH (`port 22`) allowed on `tailscale0` only — not open on LAN/WAN.
-- Connect remotely: `ssh rileyt@nixos` or `ssh rileyt@100.121.132.40` from another tailnet device.
+- Connect remotely: `ssh rileyt@nixos` from another tailnet device.
+- **After revoking a key in Tailscale admin**, create a new key and run `agenix -e secrets/tailscale-auth-key.age` before rebuilding.
+
+## Firewall policy
+
+Services do not open the public firewall unless explicitly intended:
+
+| Service | Firewall |
+|---------|----------|
+| SSH | `tailscale0` only (port 22) |
+| llama.cpp, SearXNG | localhost only |
+| Tailscale | closed (`openFirewall = false`) |
+| Steam Remote Play | closed (`remotePlay.openFirewall = false`) |
 
 ## Secrets (agenix)
 
@@ -82,9 +94,7 @@ agenix -e tailscale-auth-key.age
 
 Full instructions: [secrets/README.md](secrets/README.md)
 
-**Before Tailscale works:** create a reusable auth key at [Tailscale admin → Keys](https://login.tailscale.com/admin/settings/keys), then `agenix -e tailscale-auth-key.age` and paste the key.
-
-After first rebuild with OpenSSH, add the host public key to `secrets/secrets.nix` and run `agenix -r` so the machine can decrypt secrets without your user key. (Done on this machine.)
+Create or rotate a Tailscale key at [Tailscale admin → Keys](https://login.tailscale.com/admin/settings/keys), then `agenix -e secrets/tailscale-auth-key.age`. Do not paste keys in chat.
 
 ## Usage
 
