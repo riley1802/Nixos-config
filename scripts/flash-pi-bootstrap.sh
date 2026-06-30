@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 # Flash a prebuilt NixOS aarch64 bootstrap image to a USB/SD device.
 # Your full nixos-pi config is applied later via `nixos-rebuild` ON THE PI.
+#
+# WARNING: This generic image often FAILS on Pi 4 USB boot (stage1/stage2 then off).
+# Prefer flashing to a microSD card, or use Raspberry Pi OS + nixos-rebuild instead.
+# See README.md "Troubleshooting Pi boot".
 set -euo pipefail
 
 DEVICE="${1:-}"

@@ -10,6 +10,10 @@
   boot.initrd.availableKernelModules = [
     "usbhid"
     "usb_storage"
+    "uas" # USB-attached storage (required for USB root on Pi 4)
+    "pcie-brcmstb" # Pi 4 PCIe/USB3 bus
+    "reset-raspberrypi" # Pi firmware loader
+    "vc4" # display (so HDMI works during early boot)
   ];
   boot.initrd.kernelModules = [ ];
   boot.kernelModules = [ ];

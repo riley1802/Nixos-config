@@ -67,9 +67,16 @@ everything on first rebuild.
 
 #### 2. Boot the Pi
 
-1. Plug the USB drive into the Pi 4 (USB 3.0 port is fine).
-2. Connect **ethernet**.
-3. Power on. If USB boot fails, update Pi EEPROM firmware once from Raspberry Pi OS.
+**Use a microSD card in the Pi's SD slot if you have one** — it is far more reliable
+than USB for the generic bootstrap image.
+
+1. Insert the flashed media (SD card preferred; USB 3.0 port if not).
+2. Connect **ethernet** and a **good power supply** (official 3A USB-C).
+3. Power on.
+
+If the screen shows Raspberry Pi **stage 1 / stage 2** then goes black and the Pi
+shuts off, the generic bootstrap image cannot mount root from USB. See
+[Troubleshooting Pi boot](#troubleshooting-pi-boot) below.
 
 #### 3. Find the Pi and SSH in (bootstrap login)
 
@@ -128,6 +135,40 @@ nixos-rebuild switch --flake /etc/nixos#nixos-pi \
 ```
 
 Nix builds on the Pi, not your x86 machine.
+
+### Troubleshooting Pi boot
+
+The Hydra bootstrap image is a **generic** aarch64 NixOS image. It often **fails
+to boot from USB** on a Pi 4 (stage 1 / stage 2, then black screen or power off)
+because the Pi needs extra firmware, kernel, and initrd modules that only exist in
+your full `nixos-pi` flake — which you cannot apply until the Pi boots once.
+
+**Try these in order:**
+
+1. **microSD card** — Re-flash the same bootstrap image to an SD card, insert it
+   in the Pi's **SD slot** (not USB), and boot. This works for most people.
+
+2. **USB boot EEPROM** — If you must use USB, the Pi 4 EEPROM must support USB
+   boot. On another machine, use [Raspberry Pi Imager](https://www.raspberrypi.com/software/)
+   → Choose OS → Misc utility images → Bootloader → USB Boot, flash to a spare SD,
+   boot the Pi once to update EEPROM, then retry your USB stick.
+
+3. **Raspberry Pi OS bridge (most reliable)** — Boot official Pi OS Lite 64-bit,
+   then install NixOS from your flake on the running Pi:
+   ```sh
+   # On Pi OS (after ethernet works)
+   curl -L https://nixos.org/nix/install | sh
+   . ~/.nix-profile/etc/profile.d/nix.sh
+   sudo mkdir -p /etc/nixos && sudo chown $USER /etc/nixos
+   git clone https://github.com/riley1802/Nixos-config.git /etc/nixos
+   cd /etc/nixos
+   # Copy id_ed25519 from desktop for agenix
+   sudo nixos-rebuild switch --flake .#nixos-pi --impure
+   ```
+   This skips the broken bootstrap entirely and builds your real Pi config natively.
+
+4. **Power** — Use the official 3A USB-C supply. Under-powered Pis fail during boot
+   with no clear error.
 
 ### Ongoing Pi updates
 
