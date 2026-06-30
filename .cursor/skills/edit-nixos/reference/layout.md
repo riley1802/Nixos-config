@@ -7,7 +7,7 @@
 | `modules/core/boot.nix` | Boot |
 | `modules/core/locale.nix` | Locale |
 | `modules/core/networking.nix` | Networking |
-| `modules/core/openssh.nix` | OpenSSH (host keys for agenix) |
+| `modules/core/openssh.nix` | OpenSSH — Tailscale-only, host keys for agenix |
 | `modules/core/agenix.nix` | agenix identity paths |
 | `modules/core/system.nix` | System defaults |
 | `modules/hardware/nvidia.nix` | NVIDIA |

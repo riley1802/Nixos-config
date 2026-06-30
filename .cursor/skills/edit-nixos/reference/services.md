@@ -40,4 +40,4 @@
 - Enabled via `services.tailscale`
 - Auth key: `secrets/tailscale-auth-key.age` → `authKeyFile`
 - Firewall: closed (`openFirewall = false`)
-- Replace placeholder auth key before expecting connectivity
+- SSH: port 22 allowed on `tailscale0` only (see `modules/core/openssh.nix`)
