@@ -1,27 +1,113 @@
 # NixOS Config
 
-Personal NixOS configuration for the `nixos` host and `rileyt` user.
+Personal NixOS flake for two hosts:
 
-This repository uses Nix flakes and Home Manager as a NixOS module. System
-configuration lives under `modules/`, while user configuration lives under
-`home/`.
+| Host | Platform | Role |
+|------|----------|------|
+| `nixos` | x86_64 | Desktop workstation (GNOME, NVIDIA, local AI) |
+| `nixos-pi` | aarch64 (Raspberry Pi 4) | Homelab infocenter (XFCE, dashboards) |
+
+System configuration lives under `hosts/` and `modules/`. User configuration
+lives under `home/`.
 
 ## Layout
 
-- `flake.nix` - flake inputs and the `nixos` system output.
-- `configuration.nix` - top-level NixOS module imports.
-- `hardware-configuration.nix` - generated hardware and filesystem settings for this machine.
-- `home.nix` - top-level Home Manager imports.
+- `flake.nix` - flake inputs and `nixos` / `nixos-pi` outputs.
+- `hosts/<hostname>/` - per-host `configuration.nix` and `hardware-configuration.nix`.
+- `configuration.nix` - re-exports `hosts/nixos/` for compatibility.
+- `home.nix` - Home Manager imports for the desktop.
+- `home/home-pi.nix` - lightweight Home Manager imports for the Pi.
 - `modules/core/` - boot, locale, networking, and system defaults.
-- `modules/desktop/` - GNOME and audio configuration.
-- `modules/hardware/` - hardware-specific modules.
+- `modules/desktop/` - GNOME (desktop) and XFCE (Pi).
+- `modules/hardware/` - NVIDIA (desktop) and Raspberry Pi 4.
 - `modules/programs/` - system-level applications and program settings.
 - `modules/services/` - system services.
 - `modules/users/` - local user accounts.
 - `secrets/` - agenix-encrypted secrets (`*.age`) and `secrets.nix` public keys.
 - `home/` - Home Manager modules for user packages and desktop preferences.
 
-## Local AI Stack
+## Raspberry Pi 4 (`nixos-pi`)
+
+Homelab infocenter node: XFCE desktop, Homepage dashboard, Uptime Kuma, and
+Tailscale. Heavy desktop services (llama.cpp, SearXNG, NVIDIA, gaming) stay on
+`nixos` only.
+
+| Service | URL | Module |
+|---------|-----|--------|
+| Homepage | http://127.0.0.1:8082 | `modules/services/homepage.nix` |
+| Uptime Kuma | http://127.0.0.1:3001 | `modules/services/uptime-kuma.nix` |
+| Tailscale | tailnet (MagicDNS) | `modules/services/tailscale.nix` |
+
+### First-time install (from the desktop)
+
+1. **Enable aarch64 builds on the desktop** (one-time rebuild):
+
+   ```sh
+   sudo nixos-rebuild switch --flake .#nixos
+   ```
+
+   This applies `modules/core/binfmt.nix` so the desktop can build Pi images.
+
+2. **Build the SD card image** (30–60+ minutes the first time):
+
+   ```sh
+   cd /etc/nixos
+   nix build .#nixos-pi-sd-image
+   ```
+
+3. **Flash the image** (replace `/dev/sdX` with your SD card device):
+
+   ```sh
+   sudo dd if=result/sd-image/*.img of=/dev/sdX bs=4M status=progress conv=fsync
+   ```
+
+4. **Boot the Pi** with ethernet connected. Find its IP on your router, then SSH:
+
+   ```sh
+   ssh rileyt@<pi-ip>
+   ```
+
+5. **Add the Pi host key to agenix** (on the desktop):
+
+   ```sh
+   ssh rileyt@<pi-ip> 'sudo cat /etc/ssh/ssh_host_ed25519_key.pub'
+   ```
+
+   Add that key as `nixos-pi-host` in `secrets/secrets.nix`, uncomment it in
+   `tailscale-auth-key.age` public keys, then rekey:
+
+   ```sh
+   cd /etc/nixos/secrets
+   agenix -r
+   ```
+
+6. **Deploy config to the Pi** (from the desktop):
+
+   ```sh
+   nixos-rebuild switch --flake .#nixos-pi --target-host rileyt@<pi-ip> --use-remote-sudo
+   ```
+
+   Or on the Pi directly after cloning this repo to `/etc/nixos`:
+
+   ```sh
+   sudo nixos-rebuild switch --flake .#nixos-pi
+   ```
+
+7. **Set up Uptime Kuma** at http://127.0.0.1:3001 (create admin account, add
+   monitors, create a status page). Wire the status page into Homepage widgets
+   in `modules/services/homepage.nix` when ready.
+
+### Ongoing Pi updates
+
+```sh
+# From the Pi
+sudo nixos-rebuild switch --flake .#nixos-pi
+
+# Or remotely from the desktop
+nixos-rebuild switch --flake .#nixos-pi --target-host rileyt@nixos-pi --use-remote-sudo
+```
+
+## Local AI Stack (desktop only)
 
 This system runs llama.cpp for local inference and SearXNG for search, both
 bound to localhost.
@@ -71,7 +157,8 @@ Services do not open the public firewall unless explicitly intended:
 | Service | Firewall |
 |---------|----------|
 | SSH | `tailscale0` only (port 22) |
-| llama.cpp, SearXNG | localhost only |
+| llama.cpp, SearXNG | localhost only (desktop) |
+| Homepage, Uptime Kuma | localhost only (Pi) |
 | Tailscale | closed (`openFirewall = false`) |
 | Steam Remote Play | closed (`remotePlay.openFirewall = false`) |
 
@@ -98,16 +185,22 @@ Create or rotate a Tailscale key at [Tailscale admin → Keys](https://login.tai
 
 ## Usage
 
-Apply the system configuration from this repository:
+Apply the desktop configuration:
 
 ```sh
 sudo nixos-rebuild switch --flake .#nixos
 ```
 
-Build the system without switching:
+Build the desktop system without switching:
 
 ```sh
 nix build .#nixosConfigurations.nixos.config.system.build.toplevel
+```
+
+Build the Pi SD image (after binfmt is enabled on the desktop):
+
+```sh
+nix build .#nixos-pi-sd-image
 ```
 
 Update locked inputs:
