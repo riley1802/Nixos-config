@@ -38,6 +38,34 @@ Tailscale. Heavy desktop services (llama.cpp, SearXNG, NVIDIA, gaming) stay on
 | Uptime Kuma | http://127.0.0.1:3001 | `modules/services/uptime-kuma.nix` |
 | Tailscale | tailnet (MagicDNS) | `modules/services/tailscale.nix` |
 
+### No SD card reader? Use Raspberry Pi OS on USB
+
+The generic NixOS bootstrap image **does not boot reliably from USB** on Pi 4.
+Without an SD reader, flash **Raspberry Pi OS Lite** to your USB stick instead,
+boot the Pi, then install your NixOS flake on the running Pi.
+
+**On your desktop** (replaces the NixOS bootstrap on the USB):
+
+```sh
+chmod +x /etc/nixos/scripts/flash-pi-raspios.sh
+sudo /etc/nixos/scripts/flash-pi-raspios.sh /dev/sdb
+```
+
+**On the Pi** (after ~2 min boot, ethernet connected):
+
+```sh
+ssh rileyt@nixos-pi.local
+curl -fsSL https://raw.githubusercontent.com/riley1802/Nixos-config/main/scripts/install-nixos-on-pi.sh | bash
+```
+
+Or copy `scripts/install-nixos-on-pi.sh` from the repo after cloning. First build
+takes ~20–40 minutes on the Pi. Copy your `~/.ssh/id_ed25519` from the desktop
+before the rebuild so agenix can decrypt Tailscale secrets:
+
+```sh
+scp ~/.ssh/id_ed25519 rileyt@nixos-pi.local:~/.ssh/
+```
+
 ### First-time install (build on the Pi — not the desktop)
 
 **Do not** build the Pi image on your x86 desktop. Emulating aarch64 compiles the

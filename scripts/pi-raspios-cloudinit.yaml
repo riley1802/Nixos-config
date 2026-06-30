@@ -1,0 +1,17 @@
+#cloud-config
+hostname: nixos-pi
+manage_etc_hosts: true
+ssh_pwauth: false
+users:
+  - name: rileyt
+    gecos: riley thomason
+    groups: sudo,adm,dialout,audio,video,plugdev,games,users,input,render,netdev,gpio,i2c,spi
+    shell: /bin/bash
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    lock_passwd: true
+    ssh_authorized_keys:
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKZiF0zbAClDBzXGNoAMsz7/em4FQjJ+LvIZnxOpKLEV thomasonriley0@gmail.com
+package_update: true
+packages:
+  - git
+  - curl
