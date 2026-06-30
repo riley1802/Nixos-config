@@ -58,8 +58,18 @@ show_device_info() {
 }
 
 unmount_device() {
-  log "Unmounting ${DEVICE} and all partitions..."
-  umount -lf "${DEVICE}"* 2>/dev/null || true
+  log "Unmounting partitions on ${DEVICE}..."
+  if ! lsblk -ln -o MOUNTPOINT "${DEVICE}"?* "${DEVICE}"p* 2>/dev/null | grep -q '^/'; then
+    log "No partitions mounted, skipping unmount."
+    sync
+    return 0
+  fi
+  local part
+  for part in "${DEVICE}"?* "${DEVICE}"p*; do
+    [[ -e "${part}" ]] || continue
+    findmnt "${part}" >/dev/null 2>&1 || continue
+    umount -lf "${part}" 2>/dev/null || true
+  done
   sync
 }
 
@@ -132,15 +142,18 @@ flash_device() {
   sync
 
   # Only block if a partition still has a live mountpoint.
-  if lsblk -ln -o MOUNTPOINT "${DEVICE}"* 2>/dev/null | rg -q '^/'; then
+  if lsblk -ln -o MOUNTPOINT "${DEVICE}"?* "${DEVICE}"p* 2>/dev/null | grep -q '^/'; then
     warn "Partitions still mounted:"
     lsblk -o NAME,MOUNTPOINT "${DEVICE}"
     warn "Trying lazy unmount..."
-    umount -lf "${DEVICE}"* 2>/dev/null || true
+    for part in "${DEVICE}"?* "${DEVICE}"p*; do
+      [[ -e "${part}" ]] || continue
+      umount -lf "${part}" 2>/dev/null || true
+    done
     sync
   fi
 
-  if lsblk -ln -o MOUNTPOINT "${DEVICE}"* 2>/dev/null | rg -q '^/'; then
+  if lsblk -ln -o MOUNTPOINT "${DEVICE}"?* "${DEVICE}"p* 2>/dev/null | grep -q '^/'; then
     warn "Could not unmount ${DEVICE}. Unplug/replug the USB, then retry."
     exit 1
   fi
