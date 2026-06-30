@@ -6,7 +6,7 @@
 
     ../../modules/core/locale.nix
     ../../modules/core/networking-pi.nix
-    ../../modules/core/openssh.nix
+    ../../modules/core/openssh-pi.nix
     ../../modules/core/agenix.nix
     ../../modules/core/system.nix
 

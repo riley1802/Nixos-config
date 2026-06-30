@@ -18,6 +18,9 @@
 
   outputs = { self, nixpkgs, home-manager, agenix, ... }@inputs:
     let
+      piHostKey = builtins.readFile /etc/nixos/secrets/nixos-pi-ssh-host-key;
+      piHostKeyPub = builtins.readFile /etc/nixos/secrets/nixos-pi-ssh-host-key.pub;
+
       mkPkgsUnstable = system:
         import inputs.nixpkgs-unstable {
           inherit system;
@@ -33,7 +36,7 @@
           inherit system;
           specialArgs = {
             pkgsUnstable = mkPkgsUnstable system;
-            inherit inputs;
+            inherit inputs piHostKey piHostKeyPub;
           };
 
           modules = [
@@ -67,25 +70,5 @@
         system = "aarch64-linux";
         homeFile = ./home/home-pi.nix;
       };
-
-      nixosConfigurations.nixos-pi-sd = nixpkgs.lib.nixosSystem {
-        system = "aarch64-linux";
-        specialArgs = {
-          pkgsUnstable = mkPkgsUnstable "aarch64-linux";
-          inherit inputs;
-        };
-        modules = [
-          agenix.nixosModules.default
-          ./hosts/nixos-pi/configuration.nix
-          "${nixpkgs}/nixos/modules/installer/sd-card/sd-image-aarch64.nix"
-          {
-            sdImage.compressImage = false;
-            boot.supportedFilesystems.zfs = nixpkgs.lib.mkForce false;
-          }
-        ];
-      };
-
-      packages.x86_64-linux.nixos-pi-sd-image =
-        self.nixosConfigurations.nixos-pi-sd.config.system.build.sdImage;
     };
 }

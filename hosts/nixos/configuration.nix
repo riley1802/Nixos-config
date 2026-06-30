@@ -10,7 +10,6 @@
     ../../modules/core/openssh.nix
     ../../modules/core/agenix.nix
     ../../modules/core/system.nix
-    ../../modules/core/binfmt.nix
 
     ../../modules/hardware/nvidia.nix
 

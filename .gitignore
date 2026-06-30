@@ -16,7 +16,7 @@
 *.pfx
 /secrets/*.local.*
 /secrets/*.plain.*
-/secrets/*.decrypted.*
+/secrets/nixos-pi-ssh-host-key
 
 # Editor and OS files
 .DS_Store

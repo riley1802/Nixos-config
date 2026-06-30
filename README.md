@@ -38,64 +38,96 @@ Tailscale. Heavy desktop services (llama.cpp, SearXNG, NVIDIA, gaming) stay on
 | Uptime Kuma | http://127.0.0.1:3001 | `modules/services/uptime-kuma.nix` |
 | Tailscale | tailnet (MagicDNS) | `modules/services/tailscale.nix` |
 
-### First-time install (from the desktop)
+### First-time install (build on the Pi — not the desktop)
 
-1. **Enable aarch64 builds on the desktop** (one-time rebuild):
+**Do not** build the Pi image on your x86 desktop. Emulating aarch64 compiles the
+entire Pi kernel under QEMU and can peg the CPU for hours. Instead:
 
-   ```sh
-   sudo nixos-rebuild switch --flake .#nixos
-   ```
+1. Flash a small **prebuilt bootstrap image** (download only, ~2 minutes).
+2. Boot the Pi from USB/SD.
+3. Run `nixos-rebuild switch --flake .#nixos-pi` **on the Pi** (native aarch64).
 
-   This applies `modules/core/binfmt.nix` so the desktop can build Pi images.
+The first `nixos-rebuild` on the Pi still compiles the Pi kernel once, but runs
+at full native speed (typically 20–40 minutes, not hours). Later rebuilds are
+mostly cached.
 
-2. **Build the SD card image** (30–60+ minutes the first time):
+#### 1. Flash the USB drive (on the desktop)
 
-   ```sh
-   cd /etc/nixos
-   nix build .#nixos-pi-sd-image
-   ```
+Your drive is `/dev/sdb` (whole disk). Use `/dev/sdb`, **not** `/dev/sdb2`.
 
-3. **Flash the image** (replace `/dev/sdX` with your SD card device):
+```sh
+cd /etc/nixos
+chmod +x scripts/flash-pi-bootstrap.sh
+sudo ./scripts/flash-pi-bootstrap.sh /dev/sdb
+```
 
-   ```sh
-   sudo dd if=result/sd-image/*.img of=/dev/sdX bs=4M status=progress conv=fsync
-   ```
+This downloads the official Hydra aarch64 image (NixOS 25.11 minimal) and
+writes it to the USB stick. It is only a bootstrap — your flake replaces
+everything on first rebuild.
 
-4. **Boot the Pi** with ethernet connected. Find its IP on your router, then SSH:
+#### 2. Boot the Pi
 
-   ```sh
-   ssh rileyt@<pi-ip>
-   ```
+1. Plug the USB drive into the Pi 4 (USB 3.0 port is fine).
+2. Connect **ethernet**.
+3. Power on. If USB boot fails, update Pi EEPROM firmware once from Raspberry Pi OS.
 
-5. **Add the Pi host key to agenix** (on the desktop):
+#### 3. Find the Pi and SSH in (bootstrap login)
 
-   ```sh
-   ssh rileyt@<pi-ip> 'sudo cat /etc/ssh/ssh_host_ed25519_key.pub'
-   ```
+The bootstrap image ships a `nixos` user. Check your router for the Pi's IP, or try:
 
-   Add that key as `nixos-pi-host` in `secrets/secrets.nix`, uncomment it in
-   `tailscale-auth-key.age` public keys, then rekey:
+```sh
+ssh nixos@nixos-pi.local
+# password: nixos
+```
 
-   ```sh
-   cd /etc/nixos/secrets
-   agenix -r
-   ```
+#### 4. Clone this repo on the Pi
 
-6. **Deploy config to the Pi** (from the desktop):
+```sh
+sudo mkdir -p /etc/nixos
+sudo chown nixos:users /etc/nixos
+git clone https://github.com/riley1802/Nixos-config.git /etc/nixos
+cd /etc/nixos
+```
 
-   ```sh
-   nixos-rebuild switch --flake .#nixos-pi --target-host rileyt@<pi-ip> --use-remote-sudo
-   ```
+Copy your age identity so agenix can decrypt secrets (from the desktop):
 
-   Or on the Pi directly after cloning this repo to `/etc/nixos`:
+```sh
+# Run on the DESKTOP — copies your user key to the Pi
+scp ~/.ssh/id_ed25519 nixos@<pi-ip>:~/.ssh/
+ssh nixos@<pi-ip> 'mkdir -p ~/.ssh && chmod 700 ~/.ssh && chmod 600 ~/.ssh/id_ed25519'
+```
 
-   ```sh
-   sudo nixos-rebuild switch --flake .#nixos-pi
-   ```
+#### 5. Apply your full config (on the Pi)
 
-7. **Set up Uptime Kuma** at http://127.0.0.1:3001 (create admin account, add
-   monitors, create a status page). Wire the status page into Homepage widgets
-   in `modules/services/homepage.nix` when ready.
+```sh
+ssh nixos@<pi-ip>
+cd /etc/nixos
+sudo nixos-rebuild switch --flake .#nixos-pi --impure
+```
+
+`--impure` is required so the flake can read the predetermined host key at
+`/etc/nixos/secrets/nixos-pi-ssh-host-key` (gitignored, stays on disk only).
+
+This step builds natively on the Pi. Go get coffee — not hours on your desktop.
+
+After it finishes you will have user `rileyt`, XFCE, Homepage, Uptime Kuma,
+Tailscale, and SSH on LAN + tailnet. Log in with:
+
+```sh
+ssh rileyt@nixos-pi.local
+# or: ssh rileyt@<pi-ip>
+```
+
+#### 6. Remote rebuilds from the desktop (after first boot)
+
+Once the Pi is on your config, deploy updates without building on the desktop:
+
+```sh
+nixos-rebuild switch --flake /etc/nixos#nixos-pi \
+  --target-host rileyt@nixos-pi --use-remote-sudo --impure
+```
+
+Nix builds on the Pi, not your x86 machine.
 
 ### Ongoing Pi updates
 
@@ -197,10 +229,10 @@ Build the desktop system without switching:
 nix build .#nixosConfigurations.nixos.config.system.build.toplevel
 ```
 
-Build the Pi SD image (after binfmt is enabled on the desktop):
+Flash the Pi bootstrap USB image:
 
 ```sh
-nix build .#nixos-pi-sd-image
+sudo /etc/nixos/scripts/flash-pi-bootstrap.sh /dev/sdb
 ```
 
 Update locked inputs:
