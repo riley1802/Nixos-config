@@ -4,7 +4,6 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
     nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
-    nixos-hardware.url = "github:NixOS/nixos-hardware/master";
 
     home-manager = {
       url = "github:nix-community/home-manager/release-26.05";
@@ -18,9 +17,6 @@
 
   outputs = { self, nixpkgs, home-manager, agenix, ... }@inputs:
     let
-      piHostKey = builtins.readFile /etc/nixos/secrets/nixos-pi-ssh-host-key;
-      piHostKeyPub = builtins.readFile /etc/nixos/secrets/nixos-pi-ssh-host-key.pub;
-
       mkPkgsUnstable = system:
         import inputs.nixpkgs-unstable {
           inherit system;
@@ -31,12 +27,13 @@
         name,
         system,
         homeFile,
+        configFile ? ./hosts/${name}/configuration.nix,
       }:
         nixpkgs.lib.nixosSystem {
           inherit system;
           specialArgs = {
             pkgsUnstable = mkPkgsUnstable system;
-            inherit inputs piHostKey piHostKeyPub;
+            inherit inputs;
           };
 
           modules = [
@@ -52,7 +49,7 @@
               home-manager.useUserPackages = true;
               home-manager.users.rileyt = import homeFile;
             }
-            ./hosts/${name}/configuration.nix
+            configFile
           ];
         };
     in
@@ -63,12 +60,6 @@
         name = "nixos";
         system = "x86_64-linux";
         homeFile = ./home.nix;
-      };
-
-      nixosConfigurations.nixos-pi = mkNixos {
-        name = "nixos-pi";
-        system = "aarch64-linux";
-        homeFile = ./home/home-pi.nix;
       };
     };
 }
