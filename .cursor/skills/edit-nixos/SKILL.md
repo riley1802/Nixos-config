@@ -12,7 +12,7 @@ description: >-
 
 Personal flake for host `nixos`, user `rileyt`, repo at `/etc/nixos`.
 
-**Before any similar change:** read [lessons.md](lessons.md), [bestpracticesnixos.md](../../bestpracticesnixos.md), and relevant files in [reference/](reference/README.md).
+**Before any similar change:** read [lessons.md](lessons.md), [bestpracticesnixos.md](../../bestpracticesnixos.md), [troubleshooting.md](troubleshooting.md), and relevant files in [reference/](reference/README.md).
 
 ## Before editing anything
 
@@ -47,21 +47,21 @@ Discovery:
 
 | Change type | Location | Import via |
 |-------------|----------|------------|
-| Boot, locale, network, system | `modules/core/` | `configuration.nix` |
-| GNOME, audio (system) | `modules/desktop/` | `configuration.nix` |
-| NVIDIA, hardware | `modules/hardware/` | `configuration.nix` |
-| System packages/programs | `modules/programs/` | `configuration.nix` |
-| **Each service gets its own file** | `modules/services/<name>.nix` | `configuration.nix` |
-| Users | `modules/users/` | `configuration.nix` |
+| Boot, locale, network, system | `modules/core/` | `hosts/nixos/configuration.nix` |
+| GNOME, audio (system) | `modules/desktop/` | `hosts/nixos/configuration.nix` |
+| NVIDIA, hardware | `modules/hardware/` | `hosts/nixos/configuration.nix` |
+| System packages/programs | `modules/programs/` | `hosts/nixos/configuration.nix` |
+| **Each service gets its own file** | `modules/services/<name>.nix` | `hosts/nixos/configuration.nix` |
+| Users | `modules/users/` | `hosts/nixos/configuration.nix` |
 | Secrets (agenix) | `secrets/*.age`, `secrets/secrets.nix` | per-service `age.secrets` |
 | User desktop/programs | `home/desktop/`, `home/programs/` | `home.nix` |
 
 Rules:
 
 - **One service = one `.nix` file.** Never cram unrelated services together.
-- `configuration.nix` and `home.nix` are **import lists only** — no logic.
+- `configuration.nix` (root), `hosts/nixos/configuration.nix`, and `home.nix` are **import lists only** — no logic.
 - Match naming and style of neighboring modules. Minimal diff.
-- Do not edit `hardware-configuration.nix` unless the user explicitly asks.
+- Do not edit `hosts/nixos/hardware-configuration.nix` unless the user explicitly asks.
 - **All secrets use agenix** — never plaintext in `.nix`, README, or git. See [Secrets policy](#secrets-policy-agenix-mandatory).
 
 Details: [reference/](reference/README.md)
@@ -91,7 +91,7 @@ See [reference/secrets.md](reference/secrets.md) and [secrets/README.md](../../.
 ## Implementation rules
 
 1. Read the target module, a similar existing module, [lessons.md](lessons.md), and [bestpracticesnixos.md](../../bestpracticesnixos.md) before writing.
-2. New service → create `modules/services/<name>.nix`, add one import line to `configuration.nix`.
+2. New service → create `modules/services/<name>.nix`, add one import line to `hosts/nixos/configuration.nix`.
 3. Newer packages than stable → `{ pkgsUnstable, ... }` from `specialArgs` (see `flake.nix`).
 4. Custom derivations → only if nixpkgs and `pkgsUnstable` cannot provide it; prefer upstream packages.
 5. Home Manager managed files that may exist on disk → use `force = true` when replacing user state.
@@ -104,7 +104,7 @@ On **every** config change, update the matching file(s) in `.cursor/skills/edit-
 
 | Config change | Update |
 |---------------|--------|
-| New/removed import in `configuration.nix` | [reference/layout.md](reference/layout.md) |
+| New/removed import in `hosts/nixos/configuration.nix` | [reference/layout.md](reference/layout.md) |
 | New/removed/changed service | [reference/services.md](reference/services.md) |
 | New/removed/changed agenix secret | [reference/secrets.md](reference/secrets.md) |
 | New/removed HM module or user package | [reference/home-manager.md](reference/home-manager.md) |
@@ -118,7 +118,7 @@ Reference must reflect **current** state after the change, not a changelog.
 
 After every change, run the full checklist in [reference/audit.md](reference/audit.md):
 
-- Import graph: `configuration.nix` / `home.nix` vs files on disk — no orphans, no stale imports
+- Import graph: `hosts/nixos/configuration.nix` / `home.nix` vs files on disk — no orphans, no stale imports
 - Secrets: `age.secrets` ↔ `secrets/*.age` ↔ `secrets/secrets.nix` all aligned
 - Reference docs and README match live config
 - Grep for removed service/package names still mentioned elsewhere

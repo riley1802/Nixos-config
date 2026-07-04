@@ -12,3 +12,4 @@ Living docs for `/etc/nixos`. **Update these files on every config change** — 
 | [home-manager.md](home-manager.md) | User packages, desktop, HM modules |
 | [patterns.md](patterns.md) | New recurring module patterns worth documenting |
 | [audit.md](audit.md) | Cross-reference checklist (run every change) |
+| [../troubleshooting.md](../troubleshooting.md) | Debugging commands and common failure modes |

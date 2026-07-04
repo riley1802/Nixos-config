@@ -2,7 +2,17 @@
 
 Curated rules for maintaining `/etc/nixos`. Synthesized from the [NixOS Wiki](https://wiki.nixos.org/), [Nix manual](https://nix.dev/), [Home Manager docs](https://home-manager.dev/), community guides (Discourse, dendritic/deferred-module patterns), and lessons from this machine.
 
-Use alongside `@edit-nixos`, [lessons.md](skills/edit-nixos/lessons.md), and [reference/](skills/edit-nixos/reference/).
+### Document hierarchy
+
+| Doc | Role |
+|-----|------|
+| **This file** | Summary of philosophy, layout, security, validation, and git policy |
+| [@edit-nixos](skills/edit-nixos/SKILL.md) | Full agent workflow: discovery checklist, implementation, audit, handoff |
+| [reference/](skills/edit-nixos/reference/) | Living index of current config state (update on every config change) |
+| [lessons.md](skills/edit-nixos/lessons.md) | Resolved errors — log as soon as cause and fix are known |
+| [troubleshooting.md](skills/edit-nixos/troubleshooting.md) | Debugging commands and common failure modes |
+
+When this file and `@edit-nixos` overlap, the skill has the detailed workflow; this file has the rules and rationale.
 
 ---
 
@@ -15,60 +25,101 @@ Use alongside `@edit-nixos`, [lessons.md](skills/edit-nixos/lessons.md), and [re
 | Modular | One concern per file. Top-level entrypoints are import lists only. |
 | Minimal diff | Change only what the task requires. Match existing style. |
 | Safe by default | Localhost-first services, closed firewall, no secrets in the store. |
-| Validate before switch | `nix flake check` → build toplevel → then rebuild. |
+| Validate before switch | `nix fmt` → `nix flake check` → build toplevel → config audit → then rebuild. |
 
-Start simple. Add structure when duplication or file size makes changes painful — do not over-engineer a single-host setup into a multi-machine framework prematurely.
+Start simple. This is a **single-host** setup — `hosts/nixos/` organizes the one machine, not a multi-machine fleet.
 
 ---
 
-## 2. Repository layout
+## 2. Research before implementation
 
-### Recommended for this config (single host)
+Before writing or editing config for a non-trivial change, **search the web** for the current best way to implement it. NixOS evolves quickly; wiki pages, Discourse threads, and upstream module docs often beat model training data.
+
+### When to research
+
+| Research first | Skip research |
+|----------------|---------------|
+| New services, packages, or integrations | Typo fixes, one-line tweaks |
+| Unfamiliar options (agenix, GPU/CUDA, custom derivations, HM modules) | Bumping a package already in config |
+| Upgrading flake inputs or migrating patterns | Docs-only edits |
+| Anything where the obvious approach might be outdated or suboptimal | Changes that mirror an existing module in this repo |
+
+### Workflow
+
+1. **Search** — use web search for NixOS-specific guidance: official wiki, nixpkgs options, Home Manager manual, GitHub issues, Discourse.
+2. **Summarize** — tell the user what you found: recommended approach, alternatives, trade-offs, and how it fits this repo's layout and security rules (see sections 3–8).
+3. **Ask** — explicitly ask whether to proceed with implementation using that approach. **Do not edit files until the user confirms.**
+
+For the full pre-edit discovery checklist (scope, persistence, packages, removal, apply, git), see [@edit-nixos](skills/edit-nixos/SKILL.md).
+
+Example handoff:
+
+> I looked up how to add X on NixOS. The recommended approach is … (module Y, localhost bind, agenix for secrets). Alternatives: … Trade-offs: …
+>
+> Do you want me to implement this?
+
+### Research quality
+
+- Prefer **NixOS Wiki**, **nixpkgs source/options**, **Home Manager manual**, and **recent Discourse** over generic Stack Overflow.
+- Cross-check against [lessons.md](skills/edit-nixos/lessons.md) and existing modules in this repo — reuse patterns before inventing new ones.
+- If sources conflict, say so and recommend one path with reasons.
+
+---
+
+## 3. Repository layout
+
+### Canonical layout (this config)
 
 ```
 /etc/nixos/
-├── flake.nix              # inputs, outputs, specialArgs
-├── flake.lock             # committed — always
-├── configuration.nix      # system import list only
-├── hardware-configuration.nix  # generated; rarely hand-edited
-├── home.nix               # Home Manager import list only
+├── flake.nix                    # inputs, mkNixos helper, specialArgs
+├── flake.lock                   # committed — always
+├── configuration.nix            # delegates to hosts/nixos/
+├── home.nix                     # Home Manager import list only
+├── hosts/
+│   └── nixos/
+│       ├── configuration.nix    # host import list (modules + hardware)
+│       └── hardware-configuration.nix  # generated; rarely hand-edited
 ├── modules/
-│   ├── core/              # boot, locale, networking, system
-│   ├── desktop/           # GNOME, audio (system)
-│   ├── hardware/          # nvidia, etc.
-│   ├── programs/          # system packages & program config
-│   ├── services/          # one file per service
+│   ├── core/                    # boot, locale, networking, agenix, openssh, system
+│   ├── desktop/                 # GNOME, audio (system)
+│   ├── hardware/                # nvidia, etc.
+│   ├── programs/                # system packages & program config
+│   ├── services/                # one file per service
 │   └── users/
-└── home/
-    ├── core/
-    ├── desktop/
-    └── programs/
+├── home/
+│   ├── core/
+│   ├── desktop/
+│   └── programs/
+└── secrets/
+    ├── secrets.nix              # agenix public keys
+    └── *.age                    # encrypted secrets (committed)
 ```
+
+The flake's `mkNixos` helper wires agenix, Home Manager, and `specialArgs` (`pkgsUnstable`, `inputs`); the host config file is `./hosts/nixos/configuration.nix`.
 
 ### Layout rules
 
 - **One service = one file** under `modules/services/<name>.nix`.
-- **Never** put business logic in `configuration.nix` or `home.nix` — only `imports = [ ... ]`.
+- Add new system modules with **one import line** in `hosts/nixos/configuration.nix` (not business logic in that file).
+- **`configuration.nix`** (repo root) and **`home.nix`** are import lists only — no logic.
 - Colocate packages with the module that needs them (`environment.systemPackages` in the relevant module, not a giant global list).
 - Split Home Manager the same way: `home/programs/`, `home/desktop/`, etc.
-- Do not edit `hardware-configuration.nix` unless hardware changed or the user explicitly asks.
+- Do not edit `hosts/nixos/hardware-configuration.nix` unless hardware changed or the user explicitly asks.
+- Modules that need unstable packages or flake inputs must declare them in the function head: `{ pkgsUnstable, inputs, ... }:`.
+- Paths from `modules/services/` to secrets use relative paths (e.g. `../../secrets/foo.age`).
 
-### When you outgrow single-host layout
-
-Common evolutions (only when needed):
+### Future evolution (not planned now)
 
 | Pattern | When | Idea |
 |---------|------|------|
-| `hosts/<hostname>/` | Multiple machines | Per-host `configuration.nix` + hardware |
+| Additional `hosts/<name>/` | Second machine someday | Reuse `mkNixos` with a new host entry |
 | Feature modules with `enable` | Reuse across hosts | `options.myfeature.enable` + `lib.mkIf` |
 | Auto-import (`import-tree`, haumea) | 40+ modules | Drop new `.nix` files without editing import lists |
-| Dendritic / deferred composition | Cross-platform (NixOS + HM + darwin) | Organize by feature/aspect, not by host |
-
-For one machine, manual imports in `configuration.nix` are fine and easier to reason about.
 
 ---
 
-## 3. Flakes
+## 4. Flakes
 
 ### Inputs
 
@@ -80,6 +131,11 @@ inputs = {
   home-manager = {
     url = "github:nix-community/home-manager/release-26.05";
     inputs.nixpkgs.follows = "nixpkgs";  # required
+  };
+
+  agenix = {
+    url = "github:ryantm/agenix";
+    inputs.nixpkgs.follows = "nixpkgs";
   };
 };
 ```
@@ -114,12 +170,12 @@ Read release notes before bumping `nixpkgs` branch.
 
 ---
 
-## 4. NixOS module system
+## 5. NixOS module system
 
 ### Module structure
 
 ```nix
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, pkgsUnstable, ... }:
 
 let
   cfg = config.services.my-service;
@@ -145,6 +201,7 @@ in
 | `lib.mkDefault` for overridable defaults | Hard defaults that hosts cannot override |
 | `lib.mkForce` sparingly, with comment | Force overrides without documenting why |
 | `imports = [ ./other.nix ]` for submodules | Monolithic 500-line modules |
+| Declare `pkgsUnstable`, `inputs` in `{ ... }:` when used | Assume specialArgs without listing them |
 
 Circular option references are a common footgun — if config depends on an option defined in the same module, wrap with `mkIf`.
 
@@ -156,16 +213,17 @@ Circular option references are a common footgun — if config depends on an opti
 
 ---
 
-## 5. Home Manager
+## 6. Home Manager
 
 ### Integration (NixOS module)
+
+Wired in `flake.nix` via `mkNixos`:
 
 ```nix
 home-manager.nixosModules.home-manager
 {
   home-manager.useGlobalPkgs = true;
   home-manager.useUserPackages = true;
-  home-manager.extraSpecialArgs = { inherit inputs; };
   home-manager.users.rileyt = import ./home.nix;
 }
 ```
@@ -174,7 +232,6 @@ home-manager.nixosModules.home-manager
 |---------|---------|
 | `useGlobalPkgs = true` | Single nixpkgs eval; HM uses system `pkgs` |
 | `useUserPackages = true` | Packages via NixOS user options / proper PATH integration |
-| `extraSpecialArgs` | Pass flake inputs to HM modules |
 
 ### Home Manager rules
 
@@ -185,7 +242,7 @@ home-manager.nixosModules.home-manager
 
 ---
 
-## 6. State, versions, and persistence
+## 7. State, versions, and persistence
 
 ### stateVersion
 
@@ -206,7 +263,7 @@ home.stateVersion = "XX.XX";
 
 ---
 
-## 7. Security
+## 8. Security
 
 ### Secrets
 
@@ -222,6 +279,18 @@ The nix store is **world-readable**. Never put secrets in `.nix` files or deriva
 
 Secrets decrypt at activation to `/run/agenix/`, not at eval time.
 
+**Never ask the user to paste secrets in chat.** Direct them to run `agenix -e secrets/<name>.age` locally.
+
+#### agenix workflow
+
+1. Add recipient public keys in `secrets/secrets.nix` if needed; run `agenix -r` after key changes.
+2. Create or edit: `agenix -e secrets/<name>.age`
+3. Declare `age.secrets.<name>` in the service module with `file = ../../secrets/<name>.age` (adjust path from module location).
+4. Reference at runtime via `config.age.secrets.<name>.path` — never `builtins.readFile` at eval time.
+5. Host decryption uses keys in `modules/core/agenix.nix` (`age.identityPaths`).
+
+See [reference/secrets.md](skills/edit-nixos/reference/secrets.md) and `@edit-nixos` for the full secrets policy.
+
 ### Network exposure
 
 | Rule | Example |
@@ -231,24 +300,36 @@ Secrets decrypt at activation to `/run/agenix/`, not at eval time.
 | Explicitly open ports in `networking.firewall` when exposing to LAN/WAN | Conscious admin decision |
 | Review `hardware-configuration.nix` and user modules before public git push | Disk UUIDs, hostnames |
 
+Service-specific remote access patterns (e.g. Tailscale) live in [reference/services.md](skills/edit-nixos/reference/services.md).
+
 ### Systemd hardening
 
-For custom services, consider `DynamicUser`, `ProtectSystem`, `PrivateTmp`, and dedicated service users — unless the service needs broad filesystem access (e.g. llama.cpp running as `rileyt` for GPU/model access).
+For custom services, consider `DynamicUser`, `ProtectSystem`, `PrivateTmp`, and dedicated service users — unless the service needs broad filesystem access. GPU/model details for this machine are in [reference/machine.md](skills/edit-nixos/reference/machine.md) and [reference/services.md](skills/edit-nixos/reference/services.md).
 
 ---
 
-## 8. Services
+## 9. Services
 
 ### New service checklist
 
 - [ ] Dedicated `modules/services/<name>.nix`
-- [ ] One import line in `configuration.nix`
+- [ ] One import line in `hosts/nixos/configuration.nix`
 - [ ] `enable` option if toggling on/off matters
-- [ ] Persistent state directory if needed
+- [ ] Persistent state directory if needed (`systemd.tmpfiles.rules`)
 - [ ] `openFirewall = false` unless exposure is intended
 - [ ] Localhost bind for internal-only APIs
+- [ ] agenix secret if the service needs credentials
 - [ ] README + `reference/services.md` updated
 - [ ] `systemctl status <service>` documented
+
+### Remove service checklist
+
+- [ ] Remove import from `hosts/nixos/configuration.nix`
+- [ ] Delete `modules/services/<name>.nix`
+- [ ] **Ask user** whether to delete data under `/var/lib/<service>` — never delete without confirmation
+- [ ] Remove agenix secret if no longer used
+- [ ] Grep repo for stale references to the service
+- [ ] Update README + `reference/services.md` + `reference/layout.md`
 
 ### Rebuild subcommands
 
@@ -260,17 +341,44 @@ For custom services, consider `DynamicUser`, `ProtectSystem`, `PrivateTmp`, and 
 | `build` | Build only, no activation |
 | `--rollback` | Emergency revert — **only when user asks** |
 
-Safe sequence for this config:
+### Confirm with user before `switch`
+
+**Always ask** before switching when the change touches:
+
+- Services (new, changed, or removed)
+- Hardware / NVIDIA
+- Boot loader or kernel
+- Users or permissions
+- Networking or firewall
+- Anything that can break login or GPU
+
+**Proceed without extra confirmation** after a green build for small changes: Home Manager packages, desktop tweaks, docs-only edits.
+
+### Safe sequence for this config
 
 ```sh
+nix fmt .
 nix flake check
 nix build .#nixosConfigurations.nixos.config.system.build.toplevel --no-link
+# Run config audit — see section 12
 sudo nixos-rebuild switch --flake /etc/nixos#nixos
 ```
 
+### Commands requiring explicit user request
+
+Never run these unless the user explicitly asks:
+
+| Command | Why |
+|---------|-----|
+| `nixos-rebuild switch --rollback` | Destructive to current generation |
+| `nix-collect-garbage -d` | Can remove rollback paths |
+| `git push --force` to `main` | Rewrites shared history |
+| `git commit --no-verify` | Skips hooks |
+| `git push` to `main` | **Always ask first** (even without `--force`) |
+
 ---
 
-## 9. Packages and overlays
+## 10. Packages and overlays
 
 ### Preference order
 
@@ -287,19 +395,29 @@ sudo nixos-rebuild switch --flake /etc/nixos#nixos
 
 ---
 
-## 10. Testing and CI
+## 11. Testing and CI
 
-### Local validation
+### Local validation (required before switch)
 
 ```sh
-nix fmt -- --check .     # or nix fmt to fix
+nix fmt .
 nix flake check
 nix build .#nixosConfigurations.nixos.config.system.build.toplevel --no-link
 ```
 
+Local validation is **stricter than CI** — it performs a full toplevel build, not just eval.
+
 ### CI (this repo)
 
-`.github/workflows/check.yml` runs fmt check, flake check, and eval toplevel on push/PR. Keep CI green before pushing.
+`.github/workflows/check.yml` on push/PR:
+
+| Step | Command | Purpose |
+|------|---------|---------|
+| Format | `nix fmt -- --check .` | Style consistency |
+| Flake | `nix flake check --no-build` | Output validity |
+| Eval | `nix eval .#nixosConfigurations.nixos.config.system.build.toplevel.drvPath` | System evaluates (lighter than full build) |
+
+Keep CI green before pushing. A passing local build implies CI eval should pass; CI does not substitute for local build before switch.
 
 ### Optional (when complexity grows)
 
@@ -307,40 +425,56 @@ nix build .#nixosConfigurations.nixos.config.system.build.toplevel --no-link
 - `nixos-rebuild build-vm` for manual smoke test in QEMU
 - Pre-commit hooks for `nix fmt`
 
+For build failures, see [troubleshooting.md](skills/edit-nixos/troubleshooting.md).
+
 ---
 
-## 11. Documentation
+## 12. Documentation and audit
 
-Update on every meaningful change:
+### Config audit (required before commit)
+
+After every config change, run the checklist in [reference/audit.md](skills/edit-nixos/reference/audit.md):
+
+- Import graph: no orphans, no stale imports, every service file imported
+- Secrets: `age.secrets` ↔ `secrets/*.age` ↔ `secrets/secrets.nix` aligned
+- Reference docs and README match live config
+- Grep for removed service/package names
+- Validation commands pass
+
+Fix stale or mismatched entries before committing. Full workflow details in [@edit-nixos](skills/edit-nixos/SKILL.md).
+
+### Update on every meaningful change
 
 | File | When |
 |------|------|
 | `README.md` | Services, layout, usage, endpoints — always (except trivial syntax) |
-| `.cursor/skills/edit-nixos/reference/` | Any config change affecting layout, services, flake, machine |
-| `.cursor/skills/edit-nixos/lessons.md` | Any error encountered and fixed |
+| `.cursor/skills/edit-nixos/reference/` | Any config change affecting layout, services, flake, machine — see SKILL.md mapping table |
+| `.cursor/skills/edit-nixos/lessons.md` | As soon as cause and fix for an error are known (flexible timing vs commit) |
+| [troubleshooting.md](skills/edit-nixos/troubleshooting.md) | New recurring failure modes worth documenting |
 | This file | When a new **general** best practice is learned |
 
 ---
 
-## 12. Git workflow (this repo)
+## 13. Git workflow (this repo)
 
 | Action | Policy |
 |--------|--------|
-| Commit | Automatic after validated changes |
+| Commit | **Automatic** after validated changes |
 | Push to `main` | **Always ask user first** |
 | Commit message | Imperative, 1–2 sentences, focus on why |
 | `flake.lock` | Commit with intentional input updates |
-| Secrets | Never commit plaintext |
+| Secrets | Never commit plaintext (`.env`, `*.key`, `secrets/*.plain.*` — see `.gitignore`) |
 | Force push | Never to `main` without explicit user request |
 
 ---
 
-## 13. Anti-patterns
+## 14. Anti-patterns
 
 | Anti-pattern | Why it hurts |
 |--------------|--------------|
 | Monolithic `configuration.nix` | Unreviewable, merge conflicts, unclear ownership |
 | Secrets in nix files | World-readable store |
+| Pasting secrets in chat | Exposure outside agenix workflow |
 | Changing `stateVersion` to "current release" | Data path migrations, breakage |
 | Skipping `flake check` before switch | Broken system activation |
 | Untracked new `.nix` files | Flake silently ignores them |
@@ -348,19 +482,21 @@ Update on every meaningful change:
 | Multiple unrelated services in one file | Violates this repo's modularity rule |
 | Auto-opening firewall on service enable | Surprises, unintended exposure |
 | Duplicating nixpkgs without `follows` | Slow evals, subtle version conflicts |
+| Deleting `/var/lib/` data when removing a service | Data loss without user consent |
 | `--option require-sigs false` / disabled sandbox | Security risk |
 
 ---
 
-## 14. Alignment with this machine
+## 15. Alignment with this machine
 
 These practices are tuned for riley's setup:
 
 - Flake host: `nixos`, user: `rileyt`
 - Stable `nixos-26.05` + `pkgsUnstable` for CUDA llama.cpp
-- GNOME desktop, dual NVIDIA GPUs
-- Local AI: llama.cpp (8080) + SearXNG (8888), localhost-only
+- GNOME desktop, dual NVIDIA GPUs — details in [reference/machine.md](skills/edit-nixos/reference/machine.md)
+- Local AI: llama.cpp (8080) + SearXNG (8888), localhost-only — details in [reference/services.md](skills/edit-nixos/reference/services.md)
 - Home Manager as NixOS module with `useGlobalPkgs` / `useUserPackages`
+- agenix for all secrets; OpenSSH over Tailscale only (see reference)
 
 When a general best practice conflicts with an explicit user preference in `@edit-nixos` or user rules, **ask** — user preference wins.
 
@@ -375,6 +511,7 @@ When a general best practice conflicts with an explicit user preference in `@edi
 - [NixOS Wiki — Updating NixOS](https://wiki.nixos.org/wiki/Updating_NixOS)
 - [NixOS Wiki — Firewall](https://wiki.nixos.org/wiki/Firewall)
 - [NixOS Wiki — Module system vs Nix language](https://wiki.nixos.org/wiki/The_Nix_Language_versus_the_NixOS_Module_System)
+- [NixOS Wiki — Troubleshooting](https://wiki.nixos.org/wiki/Troubleshooting)
 - [Nix manual — nix flake](https://nix.dev/manual/nix/latest/command-ref/new-cli/nix3-flake.html)
 - [Nix manual — Secrets in the store](https://github.com/NixOS/nix/blob/master/doc/manual/source/store/secrets.md)
 - [Home Manager — NixOS module](https://home-manager.dev/manual/unstable/#ch-nixos-module)
