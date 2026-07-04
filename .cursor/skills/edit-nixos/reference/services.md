@@ -3,6 +3,8 @@
 | Service | Module | URL / port | Notes |
 |---------|--------|------------|-------|
 | llama.cpp | `modules/services/llama-cpp.nix` | http://127.0.0.1:8080/v1 | CUDA via `pkgsUnstable`, localhost only |
+| whisper.cpp | `modules/services/whisper-cpp.nix` | http://127.0.0.1:8081/v1/audio/transcriptions | Runs as `rileyt`, model dir persisted |
+| Piper TTS | `modules/services/piper.nix` | http://127.0.0.1:8082 | Runs as `rileyt`, voice dir persisted |
 | SearXNG | `modules/services/searxng.nix` | http://127.0.0.1:8888 | Secret via agenix |
 | Tailscale | `modules/services/tailscale.nix` | tailnet | Auth key via agenix |
 | printing | `modules/services/printing.nix` | — | CUPS |
@@ -26,6 +28,26 @@
 
 - `--n-gpu-layers 999`, `--flash-attn on`, `--ctx-size 4096`
 - Dual GPU: `--split-mode layer`, `--tensor-split 1,1`, `--main-gpu 0`
+
+## whisper.cpp
+
+- Package: `pkgs.whisper-cpp`
+- Service: `systemd.services.whisper-cpp` (custom module)
+- Bind: `127.0.0.1:8081`
+- Inference path: `/v1/audio/transcriptions`
+- Model dir: `/var/lib/whisper-cpp/models` (persistent, tmpfiles rule)
+- Default startup model: `ggml-base.bin` (auto-downloaded if missing)
+- Runs as `rileyt` with `DynamicUser = false`
+
+## Piper TTS
+
+- Package: `pkgs.piper-tts`
+- Service: `systemd.services.piper` (custom module, stdlib HTTP wrapper)
+- Bind: `127.0.0.1:8082`
+- Health endpoint: `/health`
+- Voice dir: `/var/lib/piper/voices` (persistent, tmpfiles rule)
+- Default voice name: `en_US-lessac-medium` (if present)
+- Runs as `rileyt` with `DynamicUser = false`
 
 ## SearXNG
 

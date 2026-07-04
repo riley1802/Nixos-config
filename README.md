@@ -19,15 +19,30 @@ lives under `home/`.
 - `modules/users/` - local user accounts.
 - `secrets/` - agenix-encrypted secrets (`*.age`) and `secrets.nix` public keys.
 - `home/` - Home Manager modules: one file per program, dconf domain, or core setting.
+- `projects/` - Local checkout of personal apps during development (e.g. [Widdershins](https://github.com/riley1802/Widdershins); NixOS service modules for its local AI stack live in `modules/services/` — see `projects/widdershins/docs/SERVICES.md`).
+- `.cursor/` - Cursor agent skills and rules (NixOS workflow + [agent-rules-books](https://github.com/ciembor/agent-rules-books)).
+
+## Cursor agent setup
+
+| Path | Purpose |
+|------|---------|
+| `.cursor/bestpracticesnixos.md` | NixOS config philosophy and rules |
+| `.cursor/skills/edit-nixos/` | Agent workflow for flake changes (`@edit-nixos`) |
+| `.cursor/skills/agent-rules-books/` | Index of book-based coding rules |
+| `.cursor/skills/<book>/` | Per-book skills (Clean Code, Refactoring, DDD, …) |
+| `.cursor/rules/` | Always-on NixOS rules + scoped `.nix` conventions |
+
+Invoke `@edit-nixos` for config changes. For code quality work, invoke a book skill (e.g. `@refactoring`, `@clean-code`) or see `.cursor/skills/agent-rules-books/SKILL.md`.
 
 ## Local AI Stack
 
-This system runs llama.cpp for local inference and SearXNG for search, both
-bound to localhost.
+This system runs local AI/search services bound to localhost.
 
 | Service | URL | Module |
 |---------|-----|--------|
 | llama.cpp API | http://127.0.0.1:8080/v1 | `modules/services/llama-cpp.nix` |
+| whisper.cpp | http://127.0.0.1:8081/v1/audio/transcriptions | `modules/services/whisper-cpp.nix` |
+| Piper TTS | http://127.0.0.1:8082 | `modules/services/piper.nix` |
 | SearXNG | http://127.0.0.1:8888 | `modules/services/searxng.nix` |
 | Tailscale | tailnet (MagicDNS) | `modules/services/tailscale.nix` |
 
@@ -55,6 +70,18 @@ in `modules/services/llama-cpp.nix`.
 - Local meta-search engine with JSON output.
 - Secret key managed by agenix (`secrets/searxng-secret-key.age`).
 
+### whisper.cpp
+
+- Local speech-to-text HTTP service.
+- Runs as `rileyt` and binds to `127.0.0.1:8081`.
+- Models persist under `/var/lib/whisper-cpp/models`.
+
+### Piper TTS
+
+- Local text-to-speech HTTP wrapper around `piper`.
+- Runs as `rileyt` and binds to `127.0.0.1:8082`.
+- Voices persist under `/var/lib/piper/voices`.
+
 ### Tailscale
 
 - Mesh VPN via `services.tailscale`.
@@ -70,7 +97,7 @@ Services do not open the public firewall unless explicitly intended:
 | Service | Firewall |
 |---------|----------|
 | SSH | `tailscale0` only (port 22) |
-| llama.cpp, SearXNG | localhost only |
+| llama.cpp, whisper.cpp, Piper, SearXNG | localhost only |
 | Tailscale | closed (`openFirewall = false`) |
 | Steam Remote Play | closed (`remotePlay.openFirewall = false`) |
 
@@ -125,8 +152,10 @@ nix fmt
 Check service status after applying:
 
 ```sh
-systemctl status llama-cpp searx tailscaled
+systemctl status llama-cpp whisper-cpp piper searx tailscaled
 curl http://127.0.0.1:8080/v1/models
+curl http://127.0.0.1:8081/v1/audio/transcriptions
+curl http://127.0.0.1:8082/health
 curl http://127.0.0.1:8888
 tailscale status
 ```

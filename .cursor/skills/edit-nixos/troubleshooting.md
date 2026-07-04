@@ -109,6 +109,7 @@ journalctl -u <service> -b --no-pager
 | `nix fmt .` | Fix formatting before commit |
 | `nixos-rebuild build --flake /etc/nixos#nixos` | Build without activating |
 | `nixos-rebuild test --flake /etc/nixos#nixos` | Activate without new boot entry |
+| `pkexec nixos-rebuild switch --flake /etc/nixos#nixos` | Apply config (user allows `pkexec` for sudo-equivalent commands) |
 | `nix log <drvpath>` | Show build log for a failed derivation |
 
 ### Impure eval (development only)

@@ -163,13 +163,13 @@ Follow [bestpracticesnixos.md](../../bestpracticesnixos.md) for flake, module, s
    - networking
    - anything that can break login or GPU
 4. Small changes (home packages, desktop tweaks, docs-only) → proceed without extra confirmation if build passed.
-5. Apply:
+5. Apply (use **`pkexec`**, not `sudo` — user approved for all privileged agent commands):
 
 ```sh
-sudo nixos-rebuild switch --flake /etc/nixos#nixos
+pkexec nixos-rebuild switch --flake /etc/nixos#nixos
 ```
 
-If sudo needs a password and fails, show the exact command for the user to run.
+If `pkexec` fails (policy kit denied, etc.), show the exact command for the user to run.
 
 **Never** without explicit user request:
 

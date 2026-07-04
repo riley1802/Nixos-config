@@ -1,0 +1,21 @@
+---
+description: Apply programming book rules (Clean Code, Refactoring, DDD, Clean Architecture, DDIA) when doing code review, refactoring, architecture, or general software design work
+alwaysApply: false
+---
+
+# Software Engineering Book Rules
+
+On-demand guidance from [agent-rules-books](https://github.com/ciembor/agent-rules-books). Invoke the matching skill or read its `rules.md`:
+
+| Task | Skill |
+|------|-------|
+| Refactoring / cleanup | @refactoring or @refactoring-guru |
+| Code review / readability | @clean-code |
+| Architecture / boundaries | @clean-architecture or @a-philosophy-of-software-design |
+| Domain modeling | @domain-driven-design-distilled (light) or @domain-driven-design |
+| Data / consistency / events | @designing-data-intensive-applications |
+| Production reliability | @release-it |
+| Legacy / untested code | @working-effectively-with-legacy-code |
+| General engineering | @the-pragmatic-programmer |
+
+**One primary book per task.** Check [COMPATIBILITY.md](../agent-rules-books/COMPATIBILITY.md) before combining. For NixOS flake edits, @edit-nixos wins over book rules.

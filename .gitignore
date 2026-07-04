@@ -24,3 +24,6 @@
 *.swo
 .vscode/
 .idea/
+
+# App source lives in https://github.com/riley1802/Widdershins (local checkout only)
+/projects/widdershins/

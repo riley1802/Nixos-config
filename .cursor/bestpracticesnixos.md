@@ -11,6 +11,8 @@ Curated rules for maintaining `/etc/nixos`. Synthesized from the [NixOS Wiki](ht
 | [reference/](skills/edit-nixos/reference/) | Living index of current config state (update on every config change) |
 | [lessons.md](skills/edit-nixos/lessons.md) | Resolved errors — log as soon as cause and fix are known |
 | [troubleshooting.md](skills/edit-nixos/troubleshooting.md) | Debugging commands and common failure modes |
+| [@agent-rules-books](skills/agent-rules-books/SKILL.md) | On-demand coding rules from classic SE books ([source](https://github.com/ciembor/agent-rules-books)) |
+| [rules/](rules/) | Cursor project rules: NixOS always-on + scoped `.nix` + on-demand book index |
 
 When this file and `@edit-nixos` overlap, the skill has the detailed workflow; this file has the rules and rationale.
 
@@ -362,8 +364,10 @@ nix fmt .
 nix flake check
 nix build .#nixosConfigurations.nixos.config.system.build.toplevel --no-link
 # Run config audit — see section 12
-sudo nixos-rebuild switch --flake /etc/nixos#nixos
+pkexec nixos-rebuild switch --flake /etc/nixos#nixos
 ```
+
+**Privileged commands:** User **rileyt** allows agents to use **`pkexec`** for any command that would otherwise require `sudo`. `modules/core/polkit-pkexec.nix` grants passwordless `pkexec` for user `rileyt`. Prefer `pkexec` in non-interactive agent sessions. Rollback and GC still require an explicit user request before agents run them.
 
 ### Commands requiring explicit user request
 
@@ -500,6 +504,21 @@ These practices are tuned for riley's setup:
 - agenix for all secrets; OpenSSH over Tailscale only (see reference)
 
 When a general best practice conflicts with an explicit user preference in `@edit-nixos` or user rules, **ask** — user preference wins.
+
+---
+
+## 16. Agent rules from programming books
+
+Vendored from [ciembor/agent-rules-books](https://github.com/ciembor/agent-rules-books) (MIT) under `.cursor/agent-rules-books/`.
+
+| Mechanism | Location | When |
+|-----------|----------|------|
+| Index skill | [skills/agent-rules-books/SKILL.md](skills/agent-rules-books/SKILL.md) | Pick which book applies |
+| Per-book skills | [skills/\<book\>/SKILL.md](skills/) | Refactoring, review, DDD, architecture, etc. |
+| Source files | [agent-rules-books/](agent-rules-books/) | `mini` (active), `full` (reference), `nano` (compact) |
+| Cursor rules | [rules/](rules/) | NixOS always-on; books on-demand |
+
+**Precedence:** `@edit-nixos` and this file override book rules for NixOS flake work. Use **one primary** book skill per task; check [COMPATIBILITY.md](agent-rules-books/COMPATIBILITY.md) before combining overlapping sets (e.g. Clean Code vs Pragmatic Programmer).
 
 ---
 

@@ -13,6 +13,7 @@
 | `modules/core/nix.nix` | Nix daemon settings |
 | `modules/core/nixpkgs.nix` | nixpkgs config (allowUnfree) |
 | `modules/core/state-version.nix` | system.stateVersion |
+| `modules/core/polkit-pkexec.nix` | Passwordless pkexec for `rileyt` (agent admin) |
 | `modules/hardware/graphics.nix` | OpenGL/Vulkan userspace |
 | `modules/hardware/nvidia.nix` | NVIDIA proprietary driver |
 | `modules/desktop/gdm.nix` | GDM display manager |
@@ -24,6 +25,8 @@
 | `modules/programs/games-dirs.nix` | `/games` directory layout |
 | `modules/programs/packages.nix` | Essential system CLI tools |
 | `modules/services/llama-cpp.nix` | llama.cpp |
+| `modules/services/whisper-cpp.nix` | whisper.cpp |
+| `modules/services/piper.nix` | Piper TTS |
 | `modules/services/printing.nix` | CUPS printing |
 | `modules/services/searxng.nix` | SearXNG |
 | `modules/services/tailscale.nix` | Tailscale |

@@ -13,6 +13,7 @@
     ../../modules/core/nix.nix
     ../../modules/core/nixpkgs.nix
     ../../modules/core/state-version.nix
+    ../../modules/core/polkit-pkexec.nix
 
     ../../modules/hardware/graphics.nix
     ../../modules/hardware/nvidia.nix
@@ -28,6 +29,8 @@
     ../../modules/programs/packages.nix
 
     ../../modules/services/llama-cpp.nix
+    ../../modules/services/whisper-cpp.nix
+    ../../modules/services/piper.nix
     ../../modules/services/printing.nix
     ../../modules/services/searxng.nix
     ../../modules/services/tailscale.nix

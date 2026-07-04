@@ -1,0 +1,36 @@
+---
+description: NixOS module patterns for .nix files in this flake
+globs: "**/*.nix"
+alwaysApply: false
+---
+
+# Nix Module Conventions
+
+Read [bestpracticesnixos.md](../bestpracticesnixos.md) sections 5–8 before editing.
+
+## Structure
+
+```nix
+{ config, lib, pkgs, pkgsUnstable, ... }:
+let cfg = config.services.my-service; in
+{
+  options.services.my-service.enable = lib.mkEnableOption "my service";
+  config = lib.mkIf cfg.enable { /* ... */ };
+}
+```
+
+## Do / Don't
+
+| Do | Don't |
+|----|-------|
+| `lib.mkIf`, `lib.mkMerge` | `if` on config options; `//` with mkIf values |
+| Declare `pkgsUnstable`, `inputs` in `{ ... }:` when used | Assume specialArgs silently |
+| `openFirewall = false`; localhost bind for internal APIs | Auto-open firewall |
+| One service → `modules/services/<name>.nix` | Bundle unrelated services |
+| `config.age.secrets.*.path` at runtime | `builtins.readFile` secrets at eval |
+
+## Paths
+
+- New service: create `modules/services/<name>.nix`, add one import to `hosts/nixos/configuration.nix`.
+- Secrets from services: `../../secrets/<name>.age`.
+- Never bump `system.stateVersion` or `home.stateVersion` casually.

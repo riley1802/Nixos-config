@@ -1,0 +1,30 @@
+---
+description: NixOS flake conventions for /etc/nixos — validation, security, modularity, git policy
+alwaysApply: true
+---
+
+# NixOS Config (this repo)
+
+Host `nixos`, user `rileyt`. Full rules: [bestpracticesnixos.md](../bestpracticesnixos.md). Config changes: invoke **@edit-nixos**.
+
+## Non-negotiables
+
+- **Modular**: one concern per file; import lists only in `configuration.nix`, `hosts/nixos/configuration.nix`, `home.nix`.
+- **Secrets**: agenix only — never plaintext in `.nix`, git, or chat.
+- **Validate before switch**: `nix fmt` → `nix flake check` → toplevel build → config audit.
+- **Minimal diff**: match existing style; change only what the task requires.
+- **Research first** for new services, unfamiliar options, or input upgrades — ask before editing.
+
+## Privileged commands
+
+User **rileyt** approves agents using **`pkexec`** for any command that would otherwise need `sudo`. Polkit is configured (`modules/core/polkit-pkexec.nix`) for passwordless `pkexec` as **rileyt** — prefer `pkexec` over `sudo` in non-interactive agent shells. Rollback and GC still need an explicit user request before agents run them (policy, not polkit).
+
+## Git
+
+- Auto-commit after validated changes.
+- **Always ask before push to `main`.**
+- Never force-push `main`, skip hooks, or run rollback/GC without explicit request.
+
+## Book rules
+
+For general coding quality, use on-demand skills from [agent-rules-books](../skills/agent-rules-books/SKILL.md). NixOS rules above take precedence for flake edits.
