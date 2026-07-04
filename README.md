@@ -19,7 +19,6 @@ lives under `home/`.
 - `modules/users/` - local user accounts.
 - `secrets/` - agenix-encrypted secrets (`*.age`) and `secrets.nix` public keys.
 - `home/` - Home Manager modules: one file per program, dconf domain, or core setting.
-- `projects/` - Local checkout of personal apps during development (e.g. [Widdershins](https://github.com/riley1802/Widdershins); NixOS service modules for its local AI stack live in `modules/services/` — see `projects/widdershins/docs/SERVICES.md`).
 - `.cursor/` - Cursor agent skills and rules (NixOS workflow + [agent-rules-books](https://github.com/ciembor/agent-rules-books)).
 
 ## Cursor agent setup
