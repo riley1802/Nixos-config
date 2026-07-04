@@ -11,14 +11,14 @@ lives under `home/`.
 - `hosts/nixos/` - `configuration.nix` and `hardware-configuration.nix`.
 - `configuration.nix` - re-exports `hosts/nixos/` for compatibility.
 - `home.nix` - Home Manager imports for the desktop.
-- `modules/core/` - boot, locale, networking, and system defaults.
-- `modules/desktop/` - GNOME.
-- `modules/hardware/` - NVIDIA.
-- `modules/programs/` - system-level applications and program settings.
+- `modules/core/` - boot, locale, hostname, NetworkManager, Nix settings, agenix, OpenSSH.
+- `modules/desktop/` - GDM, GNOME, extensions, audio.
+- `modules/hardware/` - graphics userspace and NVIDIA driver.
+- `modules/programs/` - one file per program or concern (Firefox, Steam, CLI tools).
 - `modules/services/` - system services.
 - `modules/users/` - local user accounts.
 - `secrets/` - agenix-encrypted secrets (`*.age`) and `secrets.nix` public keys.
-- `home/` - Home Manager modules for user packages and desktop preferences.
+- `home/` - Home Manager modules: one file per program, dconf domain, or core setting.
 
 ## Local AI Stack
 
@@ -175,7 +175,7 @@ ssh -T git@github.com
 Before pushing this repository publicly, review machine-specific files:
 
 - `hardware-configuration.nix` includes disk UUIDs and hardware details.
-- `modules/core/networking.nix` includes the hostname.
+- `modules/core/hostname.nix` includes the hostname.
 - `modules/users/rileyt.nix` includes the local username and groups.
 - Do not commit private keys, access tokens, age identities, or plaintext credentials.
 - Encrypted `secrets/*.age` files **are** intended for git (agenix).

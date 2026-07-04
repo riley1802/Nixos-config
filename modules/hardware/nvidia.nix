@@ -3,13 +3,6 @@
 {
   services.xserver.videoDrivers = [ "nvidia" ];
 
-  hardware.graphics = {
-    enable = true;
-
-    # Required for Steam and Proton
-    enable32Bit = true;
-  };
-
   hardware.nvidia = {
     # Use the proprietary NVIDIA kernel module
     open = false;

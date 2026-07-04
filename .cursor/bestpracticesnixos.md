@@ -81,10 +81,10 @@ Example handoff:
 │       ├── configuration.nix    # host import list (modules + hardware)
 │       └── hardware-configuration.nix  # generated; rarely hand-edited
 ├── modules/
-│   ├── core/                    # boot, locale, networking, agenix, openssh, system
-│   ├── desktop/                 # GNOME, audio (system)
-│   ├── hardware/                # nvidia, etc.
-│   ├── programs/                # system packages & program config
+│   ├── core/                    # boot, locale, hostname, networkmanager, nix, agenix, openssh
+│   ├── desktop/                 # gdm, gnome, extensions, audio (one concern per file)
+│   ├── hardware/                # graphics userspace, nvidia driver
+│   ├── programs/                # one file per program or directory layout
 │   ├── services/                # one file per service
 │   └── users/
 ├── home/
@@ -100,6 +100,7 @@ The flake's `mkNixos` helper wires agenix, Home Manager, and `specialArgs` (`pkg
 
 ### Layout rules
 
+- **One concern = one file** — a service, program, dconf domain, or single NixOS option group. No bundled "system defaults" catch-alls.
 - **One service = one file** under `modules/services/<name>.nix`.
 - Add new system modules with **one import line** in `hosts/nixos/configuration.nix` (not business logic in that file).
 - **`configuration.nix`** (repo root) and **`home.nix`** are import lists only — no logic.
