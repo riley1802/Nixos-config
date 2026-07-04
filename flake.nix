@@ -13,6 +13,10 @@
       url = "github:ryantm/agenix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    hermes-agent = {
+      url = "github:NousResearch/hermes-agent";
+      inputs.nixpkgs.follows = "nixpkgs-unstable";
+    };
   };
 
   outputs = { self, nixpkgs, home-manager, agenix, ... }@inputs:
@@ -23,12 +27,13 @@
           config.allowUnfree = true;
         };
 
-      mkNixos = {
-        name,
-        system,
-        homeFile,
-        configFile ? ./hosts/${name}/configuration.nix,
-      }:
+      mkNixos =
+        { name
+        , system
+        , homeFile
+        , configFile ? ./hosts/${name}/configuration.nix
+        ,
+        }:
         nixpkgs.lib.nixosSystem {
           inherit system;
           specialArgs = {

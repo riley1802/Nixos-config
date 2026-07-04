@@ -44,6 +44,7 @@ This system runs local AI/search services bound to localhost.
 | Piper TTS | http://127.0.0.1:8082 | `modules/services/piper.nix` |
 | SearXNG | http://127.0.0.1:8888 | `modules/services/searxng.nix` |
 | Tailscale | tailnet (MagicDNS) | `modules/services/tailscale.nix` |
+| Hermes Agent | CLI + gateway (local llama.cpp) | `modules/services/hermes-agent.nix` |
 
 ### llama.cpp
 
@@ -89,6 +90,16 @@ in `modules/services/llama-cpp.nix`.
 - Connect remotely: `ssh rileyt@nixos` from another tailnet device.
 - **After revoking a key in Tailscale admin**, create a new key and run `agenix -e secrets/tailscale-auth-key.age` before rebuilding.
 
+### Hermes Agent
+
+- [Hermes Agent](https://github.com/NousResearch/hermes-agent) installed from the upstream Nix flake (v0.18.0+).
+- CLI: run `hermes` in a new shell after rebuild (system-wide via `addToSystemPackages`).
+- Gateway: `systemctl status hermes-agent` — starts after llama.cpp is up.
+- Shared state lives in `/var/lib/hermes/.hermes` (`HERMES_HOME`); user `rileyt` is in the `hermes` group.
+- Default model provider: local llama.cpp at `http://127.0.0.1:8080/v1`, model alias `gemma-4-e4b-q8`.
+- Change model: `hermes model` or edit `modules/services/hermes-agent.nix` settings.
+- Messaging platforms (Telegram, Discord, etc.): run `hermes gateway setup` after install.
+
 ## Firewall policy
 
 Services do not open the public firewall unless explicitly intended:
@@ -97,6 +108,7 @@ Services do not open the public firewall unless explicitly intended:
 |---------|----------|
 | SSH | `tailscale0` only (port 22) |
 | llama.cpp, whisper.cpp, Piper, SearXNG | localhost only |
+| Hermes Agent gateway | localhost / systemd only (no firewall ports) |
 | Tailscale | closed (`openFirewall = false`) |
 | Steam Remote Play | closed (`remotePlay.openFirewall = false`) |
 
@@ -151,7 +163,8 @@ nix fmt
 Check service status after applying:
 
 ```sh
-systemctl status llama-cpp whisper-cpp piper searx tailscaled
+systemctl status llama-cpp whisper-cpp piper searx hermes-agent tailscaled
+hermes doctor
 curl http://127.0.0.1:8080/v1/models
 curl http://127.0.0.1:8081/v1/audio/transcriptions
 curl http://127.0.0.1:8082/health

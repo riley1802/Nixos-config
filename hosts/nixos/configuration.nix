@@ -34,6 +34,7 @@
     ../../modules/services/printing.nix
     ../../modules/services/searxng.nix
     ../../modules/services/tailscale.nix
+    ../../modules/services/hermes-agent.nix
 
     ../../modules/users/rileyt.nix
   ];

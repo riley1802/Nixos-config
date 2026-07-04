@@ -7,6 +7,7 @@
 | Piper TTS | `modules/services/piper.nix` | http://127.0.0.1:8082 | Runs as `rileyt`, voice dir persisted |
 | SearXNG | `modules/services/searxng.nix` | http://127.0.0.1:8888 | Secret via agenix |
 | Tailscale | `modules/services/tailscale.nix` | tailnet | Auth key via agenix |
+| Hermes Agent | `modules/services/hermes-agent.nix` | gateway (systemd) | CLI + gateway; local llama.cpp provider |
 | printing | `modules/services/printing.nix` | — | CUPS |
 
 ## llama.cpp
@@ -64,6 +65,18 @@
 - Firewall: closed (`openFirewall = false`)
 - SSH: port 22 on `tailscale0` only (`modules/core/openssh.nix`)
 - Revoked keys must be replaced via `agenix -e` before rebuild
+
+## Hermes Agent
+
+- Flake input: `github:NousResearch/hermes-agent` (package v0.18.0+)
+- Module: upstream `nixosModules.default` via `modules/services/hermes-agent.nix`
+- CLI: `hermes` on system PATH (`addToSystemPackages = true`)
+- Gateway: `systemd.services.hermes-agent` (`hermes gateway`)
+- State: `/var/lib/hermes/.hermes` (`HERMES_HOME`, shared with CLI)
+- User `rileyt` in `hermes` group for read/write to shared state
+- LLM: local llama.cpp at `http://127.0.0.1:8080/v1`, model `gemma-4-e4b-q8`
+- Depends on `llama-cpp.service`
+- Messaging (Telegram, Discord, etc.): configure with `hermes gateway setup` after install; platform tokens via agenix if added later
 
 ## Gaming (Steam)
 

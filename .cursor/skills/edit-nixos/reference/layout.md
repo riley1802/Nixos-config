@@ -30,6 +30,7 @@
 | `modules/services/printing.nix` | CUPS printing |
 | `modules/services/searxng.nix` | SearXNG |
 | `modules/services/tailscale.nix` | Tailscale |
+| `modules/services/hermes-agent.nix` | Hermes Agent (CLI + gateway) |
 | `modules/users/rileyt.nix` | User account |
 
 ## Home Manager (`home.nix` imports)
