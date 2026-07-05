@@ -6,6 +6,7 @@ All machine secrets are managed with [agenix](https://github.com/ryantm/agenix).
 |--------|----------------|--------|
 | Tailscale auth key | `secrets/tailscale-auth-key.age` | `modules/services/tailscale.nix` |
 | SearXNG secret key | `secrets/searxng-secret-key.age` | `modules/services/searxng.nix` |
+| Hermes Discord + email env | `secrets/hermes-env.age` | `modules/services/hermes-agent/secrets.nix` |
 
 ## Core modules
 

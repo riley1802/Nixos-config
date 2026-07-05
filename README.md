@@ -92,13 +92,45 @@ in `modules/services/llama-cpp.nix`.
 
 ### Hermes Agent
 
-- [Hermes Agent](https://github.com/NousResearch/hermes-agent) installed from the upstream Nix flake (v0.18.0+).
-- CLI: run `hermes` in a new shell after rebuild (system-wide via `addToSystemPackages`).
-- Gateway: `systemctl status hermes-agent` — starts after llama.cpp is up.
-- Shared state lives in `/var/lib/hermes/.hermes` (`HERMES_HOME`); user `rileyt` is in the `hermes` group.
-- Default model provider: local llama.cpp at `http://127.0.0.1:8080/v1`, model alias `gemma-4-e4b-q8`.
-- Change model: `hermes model` or edit `modules/services/hermes-agent.nix` settings.
-- Messaging platforms (Telegram, Discord, etc.): run `hermes gateway setup` after install.
+Declarative config under `modules/services/hermes-agent/` (settings, secrets, documents).
+
+| Piece | Path |
+|-------|------|
+| Service module | `modules/services/hermes-agent/default.nix` |
+| Config settings | `modules/services/hermes-agent/settings.nix` |
+| Discord + email secrets | `modules/services/hermes-agent/secrets.nix` + `secrets/hermes-env.age` |
+| Persona files | `modules/hermes/SOUL.md`, `modules/hermes/USER.md` |
+
+**Already wired:** local llama.cpp chat, SearXNG web search, full CLI toolset, Discord gateway (after secrets), optional email, DM pairing, compression, memory, Edge TTS, local STT. Discord is set for **mention-free** chat in server channels (private server use).
+
+#### One-time setup (you do these once)
+
+1. **Discord bot** — [Discord Developer Portal](https://discord.com/developers/applications): New Application → Bot → copy token. Enable **Message Content Intent** (and **Server Members Intent** if using role allowlists). Invite the bot to your server (OAuth2 → URL Generator: `bot` + `applications.commands`).
+
+2. **Discord secrets** — create agenix secret from `secrets/hermes-env.example`:
+
+   ```sh
+   cd /etc/nixos/secrets
+   agenix -e hermes-env.age
+   sudo nixos-rebuild switch --flake /etc/nixos#nixos
+   ```
+
+   Required keys: `DISCORD_BOT_TOKEN`, `DISCORD_ALLOWED_USERS` (your Discord user snowflake — Settings → Advanced → Developer Mode → right-click avatar → Copy User ID). Full guide: [Hermes Discord docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/discord).
+
+3. **Email (optional, Gmail example)** — add to the same `hermes-env.age` file. Use a [Gmail app password](https://myaccount.google.com/apppasswords), not your login password.
+
+4. **Approve DMs (optional)** — unauthorized DMs get a pairing code when `gateway.unauthorized_dm_behavior = pair`:
+
+   ```sh
+   hermes pairing list
+   hermes pairing approve discord ABCD1234
+   ```
+
+#### Day-to-day
+
+- CLI: `hermes`
+- Change declarative settings: edit `settings.nix` or `modules/hermes/*.md`, rebuild
+- Runtime-only changes (`hermes setup`) live in `/var/lib/hermes/.hermes/` and may be overwritten for keys defined in Nix
 
 ## Firewall policy
 
@@ -120,6 +152,7 @@ All secrets use [agenix](https://github.com/ryantm/agenix). Encrypted files in `
 |--------|------|
 | Tailscale auth key | `secrets/tailscale-auth-key.age` |
 | SearXNG secret key | `secrets/searxng-secret-key.age` |
+| Hermes email creds | `secrets/hermes-env.age` (optional — see `secrets/hermes-env.example`) |
 
 Edit secrets:
 

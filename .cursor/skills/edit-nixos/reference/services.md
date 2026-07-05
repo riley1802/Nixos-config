@@ -7,7 +7,7 @@
 | Piper TTS | `modules/services/piper.nix` | http://127.0.0.1:8082 | Runs as `rileyt`, voice dir persisted |
 | SearXNG | `modules/services/searxng.nix` | http://127.0.0.1:8888 | Secret via agenix |
 | Tailscale | `modules/services/tailscale.nix` | tailnet | Auth key via agenix |
-| Hermes Agent | `modules/services/hermes-agent.nix` | gateway (systemd) | CLI + gateway; local llama.cpp provider |
+| Hermes Agent | `modules/services/hermes-agent/` | gateway (systemd) | Declarative settings; Discord + email; local llama + SearXNG |
 | printing | `modules/services/printing.nix` | — | CUPS |
 
 ## llama.cpp
@@ -27,7 +27,7 @@
 
 ### GPU flags
 
-- `--n-gpu-layers 999`, `--flash-attn on`, `--ctx-size 4096`
+- `--n-gpu-layers 999`, `--flash-attn on`, `--ctx-size 24000`
 - Dual GPU: `--split-mode layer`, `--tensor-split 1,1`, `--main-gpu 0`
 
 ## whisper.cpp
@@ -69,14 +69,17 @@
 ## Hermes Agent
 
 - Flake input: `github:NousResearch/hermes-agent` (package v0.18.0+)
-- Module: upstream `nixosModules.default` via `modules/services/hermes-agent.nix`
+- Module dir: `modules/services/hermes-agent/` (`default.nix`, `settings.nix`, `secrets.nix`)
+- Documents: `modules/hermes/SOUL.md`, `modules/hermes/USER.md`
 - CLI: `hermes` on system PATH (`addToSystemPackages = true`)
 - Gateway: `systemd.services.hermes-agent` (`hermes gateway`)
 - State: `/var/lib/hermes/.hermes` (`HERMES_HOME`, shared with CLI)
-- User `rileyt` in `hermes` group for read/write to shared state
+- User `rileyt` in `hermes` group
 - LLM: local llama.cpp at `http://127.0.0.1:8080/v1`, model `gemma-4-e4b-q8`
-- Depends on `llama-cpp.service`
-- Messaging (Telegram, Discord, etc.): configure with `hermes gateway setup` after install; platform tokens via agenix if added later
+- Web search: SearXNG at `http://127.0.0.1:8888` (`web.search_backend = searxng`)
+- Messaging: Discord (+ optional email); see README one-time setup
+- Depends on: `llama-cpp.service`, `searx.service` (after)
+- Secret: `secrets/hermes-env.age` for `DISCORD_BOT_TOKEN` / `DISCORD_ALLOWED_USERS` (+ optional email IMAP/SMTP)
 
 ## Gaming (Steam)
 

@@ -63,7 +63,7 @@ in
       "--flash-attn"
       "on"
       "--ctx-size"
-      "4096"
+      "24000"
       "--parallel"
       "1"
       "--split-mode"
