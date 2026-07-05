@@ -62,16 +62,25 @@ in
       "999"
       "--flash-attn"
       "on"
+      # Hermes Agent requires ≥64K context per slot for tool-calling workflows.
+      # q4_0 KV cache cuts KV VRAM ~75% vs default f16 so 64K fits on limited GPUs.
       "--ctx-size"
-      "24000"
+      "65536"
+      "--cache-type-k"
+      "q4_0"
+      "--cache-type-v"
+      "q4_0"
       "--parallel"
       "1"
+      "--kv-unified"
       "--split-mode"
       "layer"
       "--tensor-split"
       "1,1"
       "--main-gpu"
       "0"
+      "--sleep-idle-seconds"
+      "1800"
     ];
   };
 

@@ -47,13 +47,15 @@ If a key is **revoked or rotated** in the Tailscale admin, create a new key and 
 
 ## Hermes Discord + email (`hermes-env.age`)
 
-Required for Discord messaging. Optional for email.
+Required for Discord messaging. Optional for email and Spotify.
 
 1. Copy fields from `hermes-env.example`
-2. `agenix -e hermes-env.age` — paste `DISCORD_BOT_TOKEN` and `DISCORD_ALLOWED_USERS` (no quotes)
+2. `agenix -e hermes-env.age` — paste `DISCORD_BOT_TOKEN`, `DISCORD_ALLOWED_USERS`, and optionally `HERMES_SPOTIFY_CLIENT_ID` (no quotes)
 3. Rebuild — `secrets.nix` is imported automatically when the file exists
 
 Discord bot setup: [Hermes Discord docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/discord).
+
+Spotify: add `HERMES_SPOTIFY_CLIENT_ID`, rebuild, then run `hermes auth spotify` once for OAuth. [Hermes Spotify docs](https://hermes-agent.nousresearch.com/docs/user-guide/features/spotify).
 
 ## Host SSH key (done on this machine)
 

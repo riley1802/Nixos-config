@@ -13,6 +13,7 @@
     ./home/programs/google-chrome.nix
     ./home/programs/spotify.nix
     ./home/programs/discord.nix
+    ./home/programs/hermes.nix
     ./home/programs/cursor.nix
   ];
 }

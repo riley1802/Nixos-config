@@ -97,11 +97,12 @@ Declarative config under `modules/services/hermes-agent/` (settings, secrets, do
 | Piece | Path |
 |-------|------|
 | Service module | `modules/services/hermes-agent/default.nix` |
+| Web dashboard | `modules/services/hermes-dashboard.nix` → http://127.0.0.1:9119 |
 | Config settings | `modules/services/hermes-agent/settings.nix` |
 | Discord + email secrets | `modules/services/hermes-agent/secrets.nix` + `secrets/hermes-env.age` |
 | Persona files | `modules/hermes/SOUL.md`, `modules/hermes/USER.md` |
 
-**Already wired:** local llama.cpp chat, SearXNG web search, full CLI toolset, Discord gateway (after secrets), optional email, DM pairing, compression, memory, Edge TTS, local STT. Discord is set for **mention-free** chat in server channels (private server use).
+**Already wired:** local llama.cpp chat, SearXNG web search, full CLI toolset, Discord gateway (after secrets), Spotify tools (after client ID + OAuth), optional email, DM pairing, compression, memory, Edge TTS, local STT, **web dashboard** (systemd, port 9119), **desktop app** (`hermes-desktop` in app menu). Discord is set for **mention-free** chat in server channels (private server use).
 
 #### One-time setup (you do these once)
 
@@ -126,9 +127,26 @@ Declarative config under `modules/services/hermes-agent/` (settings, secrets, do
    hermes pairing approve discord ABCD1234
    ```
 
+5. **Spotify** — create a [Spotify Developer app](https://developer.spotify.com/dashboard) (Web API, redirect URI `http://127.0.0.1:43827/spotify/callback`). Add to `hermes-env.age`:
+
+   ```
+   HERMES_SPOTIFY_CLIENT_ID=your-client-id
+   ```
+
+   Rebuild, then complete OAuth once (opens browser). **Use the shared state** — `hermes auth spotify` (not `~/.hermes`; a symlink is created automatically):
+
+   ```sh
+   hermes auth spotify
+   sudo systemctl restart hermes-agent
+   ```
+
+   Spotify tools are enabled on CLI and Discord. Playback control requires Spotify Premium and an active device (phone/desktop app open).
+
 #### Day-to-day
 
-- CLI: `hermes`
+- **Web dashboard:** http://127.0.0.1:9119 (`systemctl status hermes-dashboard`)
+- **Desktop app:** launch **Hermes Agent** from the app menu, or run `hermes-desktop`
+- CLI: `hermes` or `hermes --tui`
 - Change declarative settings: edit `settings.nix` or `modules/hermes/*.md`, rebuild
 - Runtime-only changes (`hermes setup`) live in `/var/lib/hermes/.hermes/` and may be overwritten for keys defined in Nix
 

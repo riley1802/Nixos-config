@@ -15,10 +15,16 @@
   };
 
   platform_toolsets = {
-    cli = [ "hermes-cli" ];
+    cli = [
+      "hermes-cli"
+      "spotify"
+    ];
   }
   // lib.optionalAttrs hasHermesEnv {
-    discord = [ "hermes-discord" ];
+    discord = [
+      "hermes-discord"
+      "spotify"
+    ];
   };
 
   web = {
@@ -81,5 +87,10 @@
     allowed_channels = [
       "1523125568856653874"
     ];
+    channel_prompts = {
+      "1523125568856653874" = ''
+        Spotify is connected. For play/pause/queue requests: use spotify_devices then spotify_playback — do not refuse or offer manual URIs. Liked songs: spotify_library (kind=tracks) then spotify_playback play with uris + shuffle.
+      '';
+    };
   };
 }
