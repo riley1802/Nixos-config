@@ -20,16 +20,9 @@ Append entries when a build, rebuild, or runtime error is resolved. Format:
 - **Fix:** `git add` new modules before rebuild; commit when ready.
 - **Avoid:** Leaving new `.nix` files untracked when testing on another host.
 
-### Hermes WhatsApp before bridge install (2026-07-04)
-- **Context:** Declarative Hermes with `WHATSAPP_ENABLED=true` on first deploy.
-- **Error:** `hermes-agent.service` exit status 78 (CONFIG); `WhatsApp bridge script missing at .../scripts/whatsapp-bridge/bridge.js`.
-- **Cause:** Nix-packaged Hermes does not ship the WhatsApp bridge in the store path; `hermes whatsapp` installs it into `$HERMES_HOME` first.
-- **Fix:** Set `WHATSAPP_ENABLED=false` until after `hermes whatsapp` pairing; add `nodejs` to `extraPackages`; then enable and rebuild.
-- **Avoid:** Enabling WhatsApp in Nix env before running the one-time `hermes whatsapp` setup.
-
-### Hermes config merge keeps removed keys (2026-07-04)
-- **Context:** Disabling WhatsApp in Nix `settings.nix` after a failed deploy.
-- **Error:** Gateway still tried WhatsApp despite `WHATSAPP_ENABLED=false`.
-- **Cause:** NixOS activation deep-merges into existing `config.yaml`; removing keys from Nix does not delete them from the on-disk file.
-- **Fix:** Back up and remove `/var/lib/hermes/.hermes/config.yaml`, then rebuild/restart so activation writes a fresh file from Nix settings only.
-- **Avoid:** Assuming comment-out in `settings.nix` alone disables a platform that was previously merged in.
+### Bare `nix fmt` hangs (2026-07-04)
+- **Context:** Pre-rebuild validation.
+- **Error:** `nix fmt && nix flake check && nix build …` never progressed; `nixpkgs-fmt` slept 12+ minutes with no output.
+- **Cause:** `nix fmt` with **no path arguments** launches `nixpkgs-fmt` without a file list and waits indefinitely.
+- **Fix:** Pass paths: `nix fmt .` or `nix fmt path/to/changed.nix`; CI-style check: `nix fmt -- --check .`.
+- **Avoid:** Chaining bare `nix fmt` in validation scripts or agent shells.

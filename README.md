@@ -44,7 +44,6 @@ This system runs local AI/search services bound to localhost.
 | Piper TTS | http://127.0.0.1:8082 | `modules/services/piper.nix` |
 | SearXNG | http://127.0.0.1:8888 | `modules/services/searxng.nix` |
 | Tailscale | tailnet (MagicDNS) | `modules/services/tailscale.nix` |
-| Hermes Agent | CLI + gateway (local llama.cpp) | `modules/services/hermes-agent.nix` |
 
 ### llama.cpp
 
@@ -90,66 +89,6 @@ in `modules/services/llama-cpp.nix`.
 - Connect remotely: `ssh rileyt@nixos` from another tailnet device.
 - **After revoking a key in Tailscale admin**, create a new key and run `agenix -e secrets/tailscale-auth-key.age` before rebuilding.
 
-### Hermes Agent
-
-Declarative config under `modules/services/hermes-agent/` (settings, secrets, documents).
-
-| Piece | Path |
-|-------|------|
-| Service module | `modules/services/hermes-agent/default.nix` |
-| Web dashboard | `modules/services/hermes-dashboard.nix` → http://127.0.0.1:9119 |
-| Config settings | `modules/services/hermes-agent/settings.nix` |
-| Discord + email secrets | `modules/services/hermes-agent/secrets.nix` + `secrets/hermes-env.age` |
-| Persona files | `modules/hermes/SOUL.md`, `modules/hermes/USER.md` |
-
-**Already wired:** local llama.cpp chat, SearXNG web search, full CLI toolset, Discord gateway (after secrets), Spotify tools (after client ID + OAuth), optional email, DM pairing, compression, memory, Edge TTS, local STT, **web dashboard** (systemd, port 9119), **desktop app** (`hermes-desktop` in app menu). Discord is set for **mention-free** chat in server channels (private server use).
-
-#### One-time setup (you do these once)
-
-1. **Discord bot** — [Discord Developer Portal](https://discord.com/developers/applications): New Application → Bot → copy token. Enable **Message Content Intent** (and **Server Members Intent** if using role allowlists). Invite the bot to your server (OAuth2 → URL Generator: `bot` + `applications.commands`).
-
-2. **Discord secrets** — create agenix secret from `secrets/hermes-env.example`:
-
-   ```sh
-   cd /etc/nixos/secrets
-   agenix -e hermes-env.age
-   sudo nixos-rebuild switch --flake /etc/nixos#nixos
-   ```
-
-   Required keys: `DISCORD_BOT_TOKEN`, `DISCORD_ALLOWED_USERS` (your Discord user snowflake — Settings → Advanced → Developer Mode → right-click avatar → Copy User ID). Full guide: [Hermes Discord docs](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/discord).
-
-3. **Email (optional, Gmail example)** — add to the same `hermes-env.age` file. Use a [Gmail app password](https://myaccount.google.com/apppasswords), not your login password.
-
-4. **Approve DMs (optional)** — unauthorized DMs get a pairing code when `gateway.unauthorized_dm_behavior = pair`:
-
-   ```sh
-   hermes pairing list
-   hermes pairing approve discord ABCD1234
-   ```
-
-5. **Spotify** — create a [Spotify Developer app](https://developer.spotify.com/dashboard) (Web API, redirect URI `http://127.0.0.1:43827/spotify/callback`). Add to `hermes-env.age`:
-
-   ```
-   HERMES_SPOTIFY_CLIENT_ID=your-client-id
-   ```
-
-   Rebuild, then complete OAuth once (opens browser). **Use the shared state** — `hermes auth spotify` (not `~/.hermes`; a symlink is created automatically):
-
-   ```sh
-   hermes auth spotify
-   sudo systemctl restart hermes-agent
-   ```
-
-   Spotify tools are enabled on CLI and Discord. Playback control requires Spotify Premium and an active device (phone/desktop app open).
-
-#### Day-to-day
-
-- **Web dashboard:** http://127.0.0.1:9119 (`systemctl status hermes-dashboard`)
-- **Desktop app:** launch **Hermes Agent** from the app menu, or run `hermes-desktop`
-- CLI: `hermes` or `hermes --tui`
-- Change declarative settings: edit `settings.nix` or `modules/hermes/*.md`, rebuild
-- Runtime-only changes (`hermes setup`) live in `/var/lib/hermes/.hermes/` and may be overwritten for keys defined in Nix
-
 ## Firewall policy
 
 Services do not open the public firewall unless explicitly intended:
@@ -158,7 +97,6 @@ Services do not open the public firewall unless explicitly intended:
 |---------|----------|
 | SSH | `tailscale0` only (port 22) |
 | llama.cpp, whisper.cpp, Piper, SearXNG | localhost only |
-| Hermes Agent gateway | localhost / systemd only (no firewall ports) |
 | Tailscale | closed (`openFirewall = false`) |
 | Steam Remote Play | closed (`remotePlay.openFirewall = false`) |
 
@@ -170,7 +108,6 @@ All secrets use [agenix](https://github.com/ryantm/agenix). Encrypted files in `
 |--------|------|
 | Tailscale auth key | `secrets/tailscale-auth-key.age` |
 | SearXNG secret key | `secrets/searxng-secret-key.age` |
-| Hermes email creds | `secrets/hermes-env.age` (optional — see `secrets/hermes-env.example`) |
 
 Edit secrets:
 
@@ -214,8 +151,7 @@ nix fmt
 Check service status after applying:
 
 ```sh
-systemctl status llama-cpp whisper-cpp piper searx hermes-agent tailscaled
-hermes doctor
+systemctl status llama-cpp whisper-cpp piper searx tailscaled
 curl http://127.0.0.1:8080/v1/models
 curl http://127.0.0.1:8081/v1/audio/transcriptions
 curl http://127.0.0.1:8082/health

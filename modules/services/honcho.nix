@@ -3,7 +3,7 @@
 # Self-hosted Honcho = API + deriver worker + PostgreSQL (pgvector) + Redis.
 # Upstream: https://github.com/plastic-labs/honcho
 #
-# Recommended first run: Docker Compose on the host (see README Hermes section).
+# Recommended first run: Docker Compose on the host (see Honcho upstream docs).
 # This module is a placeholder for a future declarative NixOS service.
 #
 # To enable later:

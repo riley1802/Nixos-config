@@ -34,8 +34,6 @@
     ../../modules/services/printing.nix
     ../../modules/services/searxng.nix
     ../../modules/services/tailscale.nix
-    ../../modules/services/hermes-agent
-    ../../modules/services/hermes-dashboard.nix
     # ../../modules/services/honcho.nix # Honcho server stack — uncomment when ready
 
     ../../modules/users/rileyt.nix
