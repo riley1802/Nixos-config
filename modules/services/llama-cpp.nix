@@ -58,6 +58,10 @@ in
     };
 
     extraFlags = [
+      # Only one model fits in VRAM; evict the loaded model before switching
+      # instead of OOMing on a second instance.
+      "--models-max"
+      "1"
       "--n-gpu-layers"
       "999"
       "--flash-attn"

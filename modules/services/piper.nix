@@ -3,6 +3,8 @@
 let
   piperVoicesDir = "/var/lib/piper/voices";
   defaultVoice = "en_US-lessac-medium";
+  # HuggingFace rhasspy/piper-voices path for the default voice.
+  defaultVoiceUrlBase = "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/medium";
   piperHttpServer = pkgs.writeTextFile {
     name = "piper-http-server.py";
     executable = true;
@@ -107,7 +109,8 @@ let
                   )
                   return
 
-              cmd = [PIPER_BIN, "--model", str(model_path)]
+              # "-f -" forces WAV to stdout; otherwise piper writes output.wav to cwd.
+              cmd = [PIPER_BIN, "--model", str(model_path), "--output-file", "-"]
               for key, flag in [
                   ("speaker_id", "--speaker"),
                   ("length_scale", "--length-scale"),
@@ -179,6 +182,11 @@ in
       User = "rileyt";
       Group = "users";
       WorkingDirectory = piperVoicesDir;
+      ExecStartPre = [
+        "${pkgs.coreutils}/bin/mkdir -p ${piperVoicesDir}"
+        "${pkgs.runtimeShell} -c '${pkgs.coreutils}/bin/test -f ${piperVoicesDir}/${defaultVoice}.onnx || ${pkgs.curl}/bin/curl -fsSL -o ${piperVoicesDir}/${defaultVoice}.onnx ${defaultVoiceUrlBase}/${defaultVoice}.onnx'"
+        "${pkgs.runtimeShell} -c '${pkgs.coreutils}/bin/test -f ${piperVoicesDir}/${defaultVoice}.onnx.json || ${pkgs.curl}/bin/curl -fsSL -o ${piperVoicesDir}/${defaultVoice}.onnx.json ${defaultVoiceUrlBase}/${defaultVoice}.onnx.json'"
+      ];
       ExecStart = "${pkgs.python3}/bin/python ${piperHttpServer}";
       Restart = "on-failure";
       RestartSec = "5s";

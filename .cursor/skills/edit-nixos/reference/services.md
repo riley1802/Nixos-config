@@ -2,9 +2,9 @@
 
 | Service | Module | URL / port | Notes |
 |---------|--------|------------|-------|
-| llama.cpp | `modules/services/llama-cpp.nix` | http://127.0.0.1:8080/v1 | CUDA via `pkgsUnstable`, localhost only |
-| whisper.cpp | `modules/services/whisper-cpp.nix` | http://127.0.0.1:8081/v1/audio/transcriptions | Runs as `rileyt`, model dir persisted |
-| Piper TTS | `modules/services/piper.nix` | http://127.0.0.1:8082 | Runs as `rileyt`, voice dir persisted |
+| llama.cpp | `modules/services/llama-cpp.nix` | https://nixos.taile9f484.ts.net:8080 (local `127.0.0.1:8080`) | CUDA via `pkgsUnstable`, localhost bind; Serve TLS |
+| whisper.cpp | `modules/services/whisper-cpp.nix` | https://nixos.taile9f484.ts.net:8081 (local `127.0.0.1:8081`) | Runs as `rileyt`, model dir persisted; Serve TLS |
+| Piper TTS | `modules/services/piper.nix` | https://nixos.taile9f484.ts.net:8082 (local `127.0.0.1:8082`) | Runs as `rileyt`, voice auto-download; Serve TLS |
 | SearXNG | `modules/services/searxng.nix` | http://127.0.0.1:8888 | Secret via agenix |
 | Tailscale | `modules/services/tailscale.nix` | tailnet | Auth key via agenix |
 | Tailscale Serve | `modules/services/tailscale-serve.nix` | HTTPS on MagicDNS | CLI oneshot (not `services.tailscale.serve` — HTTPS broken in set-config) |
@@ -34,6 +34,7 @@
 
 ### GPU flags
 
+- `--models-max 1` (router evicts loaded model before switching — one model max in VRAM)
 - `--n-gpu-layers 999`, `--flash-attn on`, `--ctx-size 16384`, `--cache-type-k/v q8_0`, `--parallel 1`, `--kv-unified`, `--sleep-idle-seconds 1800`
 - Dual GPU: `--split-mode layer`, `--tensor-split 1,1`, `--main-gpu 0`
 
@@ -54,7 +55,7 @@
 - Bind: `127.0.0.1:8082`
 - Health endpoint: `/health`
 - Voice dir: `/var/lib/piper/voices` (persistent, tmpfiles rule)
-- Default voice name: `en_US-lessac-medium` (if present)
+- Default voice: `en_US-lessac-medium` — `ExecStartPre` downloads `.onnx` + `.onnx.json` from HF `rhasspy/piper-voices` if missing
 - Runs as `rileyt` with `DynamicUser = false`
 
 ## SearXNG
@@ -99,6 +100,7 @@
 - `:443` → Homepage `http://127.0.0.1:8083`
 - `:5678` → n8n `http://127.0.0.1:5678` (n8n `N8N_LISTEN_ADDRESS=127.0.0.1`, `N8N_PROTOCOL=https`, `N8N_PROXY_HOPS=1`)
 - `:9443` → Portainer `https+insecure://127.0.0.1:9443` (no `--base-url`)
+- `:8080` / `:8081` / `:8082` → llama.cpp / whisper.cpp / Piper on localhost
 - Uptime Kuma (`:3001`) and ntfy (`:8090`) stay direct on `tailscale0`
 - Uptime Kuma monitors: Nix list in `uptime-kuma.nix` → `uptime-kuma-sync.py` (uptime-kuma-api); tag `nix-managed`; ntfy provider `ntfy-homeport`; secret `uptime-kuma-sync.env.age`
 - Homepage `allowedHosts` includes `nixos.taile9f484.ts.net` and localhost `:8083`

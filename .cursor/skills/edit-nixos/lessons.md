@@ -13,6 +13,27 @@ Append entries when a build, rebuild, or runtime error is resolved. Format:
 
 ---
 
+### Dashboard tiles with 127.0.0.1 hrefs are dead for remote clients (2026-07-18)
+- **Context:** Homepage is served via Tailscale Serve; AI tiles (llama/whisper/piper) linked to `http://127.0.0.1:808x`.
+- **Error:** Clicking whisper.cpp / Piper tiles from another tailnet device did nothing ("doesn't work at all"), though services were healthy.
+- **Cause:** `href` is followed by the *client* browser — 127.0.0.1 resolves to the client, not the server. `siteMonitor` (server-side) can stay localhost.
+- **Fix:** Added Serve mappings `:8080/:8081/:8082` in `tailscale-serve.nix` and pointed tile `href`s at `https://nixos.taile9f484.ts.net:<port>`.
+- **Avoid:** Never use localhost URLs in Homepage `href`s; localhost is fine only for `siteMonitor`/widget URLs.
+
+### llama.cpp router OOMs loading a second model (2026-07-18)
+- **Context:** llama-server router mode (`modelsPreset`) with default `max_instances=4` on 6 GiB + 6 GiB GPUs.
+- **Error:** Web UI model switch → `cudaMalloc failed: out of memory`, `model failed to load` 500.
+- **Cause:** Router keeps the current model resident and tries to load the next one alongside it; VRAM only fits one.
+- **Fix:** `--models-max 1` in `extraFlags` — router evicts the loaded model before loading the requested one.
+- **Avoid:** Leaving router `--models-max` at default on VRAM-constrained hosts with multiple presets.
+
+### piper CLI writes output.wav to cwd, not stdout (2026-07-18)
+- **Context:** Piper HTTP wrapper captured `subprocess.run(...).stdout` for the WAV response.
+- **Error:** `/synthesize` returned HTTP 200 with 0-byte body; stray `output.wav` appeared in the voices dir.
+- **Cause:** This piper build defaults `-f/--output-file` to a file in cwd despite help text claiming stdout default.
+- **Fix:** Pass `--output-file -` explicitly to force WAV to stdout.
+- **Avoid:** Trusting piper's default output target; always pass `-f -` when capturing stdout.
+
 ### Tauri Homeport webview caches Homepage CSS across rebuilds (2026-07-18)
 - **Context:** Updated `homepage-dashboard` `customCSS` / layout; browser at `:8083` showed the new chrome, but the Homeport tray window still looked unchanged.
 - **Error:** Stale dashboard UI in `homeport-tray` after `nixos-rebuild switch` + `homepage-dashboard` restart.

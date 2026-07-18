@@ -315,7 +315,7 @@
               {
                 "llama.cpp" = {
                   icon = "si-ollama";
-                  href = "http://127.0.0.1:8080";
+                  href = "https://nixos.taile9f484.ts.net:8080";
                   description = "Local LLM inference";
                   siteMonitor = "http://127.0.0.1:8080/v1/models";
                 };
@@ -323,7 +323,7 @@
               {
                 "whisper.cpp" = {
                   icon = "mdi-microphone";
-                  href = "http://127.0.0.1:8081/v1/audio/transcriptions";
+                  href = "https://nixos.taile9f484.ts.net:8081";
                   description = "Speech-to-text";
                   siteMonitor = "http://127.0.0.1:8081";
                 };
@@ -331,7 +331,7 @@
               {
                 "Piper TTS" = {
                   icon = "mdi-volume-high";
-                  href = "http://127.0.0.1:8082";
+                  href = "https://nixos.taile9f484.ts.net:8082/health";
                   description = "Text-to-speech";
                   siteMonitor = "http://127.0.0.1:8082/health";
                 };

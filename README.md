@@ -48,9 +48,9 @@ This system runs local AI/search services bound to localhost.
 | Portainer (via Tailscale Serve) | https://nixos.taile9f484.ts.net:9443 | `modules/services/docker.nix` + `tailscale-serve.nix` |
 | ntfy | http://nixos.taile9f484.ts.net:8090 | `modules/services/ntfy-sh.nix` |
 | Uptime Kuma | http://nixos.taile9f484.ts.net:3001 | `modules/services/uptime-kuma.nix` |
-| llama.cpp API | http://127.0.0.1:8080/v1 | `modules/services/llama-cpp.nix` |
-| whisper.cpp | http://127.0.0.1:8081/v1/audio/transcriptions | `modules/services/whisper-cpp.nix` |
-| Piper TTS | http://127.0.0.1:8082 | `modules/services/piper.nix` |
+| llama.cpp (via Tailscale Serve) | https://nixos.taile9f484.ts.net:8080 (local `http://127.0.0.1:8080/v1`) | `modules/services/llama-cpp.nix` + `tailscale-serve.nix` |
+| whisper.cpp (via Tailscale Serve) | https://nixos.taile9f484.ts.net:8081 (local `http://127.0.0.1:8081`) | `modules/services/whisper-cpp.nix` + `tailscale-serve.nix` |
+| Piper TTS (via Tailscale Serve) | https://nixos.taile9f484.ts.net:8082 (local `http://127.0.0.1:8082`) | `modules/services/piper.nix` + `tailscale-serve.nix` |
 | SearXNG | http://127.0.0.1:8888 | `modules/services/searxng.nix` |
 | Tailscale | tailnet (MagicDNS) | `modules/services/tailscale.nix` |
 
@@ -62,6 +62,9 @@ This system runs local AI/search services bound to localhost.
 - Context window: 16k tokens (`--ctx-size 16384`) with `q8_0` KV cache.
 - Models are stored in `/var/lib/llama-cpp/models` and survive NixOS upgrades.
 - Models download automatically from Hugging Face on first use.
+- Router mode with `--models-max 1`: only one model fits in VRAM, so the
+  loaded model is evicted before another preset is loaded (avoids CUDA OOM
+  when switching models in the web UI).
 
 Configured model presets:
 
@@ -89,7 +92,8 @@ in `modules/services/llama-cpp.nix`.
 
 - Local text-to-speech HTTP wrapper around `piper`.
 - Runs as `rileyt` and binds to `127.0.0.1:8082`.
-- Voices persist under `/var/lib/piper/voices`.
+- Voices persist under `/var/lib/piper/voices`; the default voice
+  (`en_US-lessac-medium`) downloads automatically on service start.
 
 ### Tailscale
 
@@ -101,7 +105,7 @@ in `modules/services/llama-cpp.nix`.
 
 ### Tailscale Serve + apps
 
-- HTTPS via Tailscale Serve (`modules/services/tailscale-serve.nix`): Homepage `:443` → `:8083`, n8n `:5678` → localhost, Portainer `:9443` → localhost HTTPS.
+- HTTPS via Tailscale Serve (`modules/services/tailscale-serve.nix`): Homepage `:443` → `:8083`, n8n `:5678` → localhost, Portainer `:9443` → localhost HTTPS, llama.cpp `:8080`, whisper.cpp `:8081`, Piper `:8082` → localhost.
 - Homepage ("Homeport"): cool slate geometric theme, dark default with soft cool light mode. Its balanced single-row top bar is optimized for fullscreen 2560×1440 and contains resources, time/weather, host, primary-Ethernet throughput, and dual GPUs. Apps + Bookmarks sit beside Automation/Monitoring, then AI / Local beside Containers. `siteMonitor` latency appears on service tiles.
 - Uptime Kuma (`3001`) and ntfy (`8090`) stay direct HTTP on `tailscale0` (ntfy rejects a path in `base-url`).
 - Uptime Kuma monitors are declared in `modules/services/uptime-kuma.nix` and synced on boot via `uptime-kuma-sync.service` (Socket.IO API). Alerts go to ntfy. Credentials: `secrets/uptime-kuma-sync.env.age` (`KUMA_USERNAME`, `KUMA_PASSWORD`, `NTFY_TOPIC`) — create/edit with `agenix -e` after the Kuma admin account exists in the UI.
