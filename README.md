@@ -99,6 +99,7 @@ in `modules/services/llama-cpp.nix`.
 - HTTPS via Tailscale Serve (`modules/services/tailscale-serve.nix`): Homepage `:443` → `:8083`, n8n `:5678` → localhost, Portainer `:9443` → localhost HTTPS.
 - Homepage ("Homeport"): cool slate geometric theme, dark default with soft cool light mode, System section (host + dual GPU util/VRAM), weather/time/search, and `siteMonitor` latency on every tile.
 - Uptime Kuma (`3001`) and ntfy (`8090`) stay direct HTTP on `tailscale0` (ntfy rejects a path in `base-url`).
+- Uptime Kuma monitors are declared in `modules/services/uptime-kuma.nix` and synced on boot via `uptime-kuma-sync.service` (Socket.IO API). Alerts go to ntfy. Credentials: `secrets/uptime-kuma-sync.env.age` (`KUMA_USERNAME`, `KUMA_PASSWORD`, `NTFY_TOPIC`) — create/edit with `agenix -e` after the Kuma admin account exists in the UI.
 - n8n listens on `127.0.0.1` only; Serve terminates TLS. Do not use `N8N_PATH` (broken in 2.x).
 - PostgreSQL 16 backs n8n; DB password via agenix (`secrets/n8n-db-password.age`).
 - Docker + nvidia-container-toolkit; Portainer image pinned to `portainer/portainer-ce:2.39.4`.
@@ -127,6 +128,7 @@ All secrets use [agenix](https://github.com/ryantm/agenix). Encrypted files in `
 | Tailscale auth key | `secrets/tailscale-auth-key.age` |
 | SearXNG secret key | `secrets/searxng-secret-key.age` |
 | n8n DB password | `secrets/n8n-db-password.age` |
+| Uptime Kuma sync env | `secrets/uptime-kuma-sync.env.age` |
 
 Edit secrets:
 

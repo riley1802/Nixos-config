@@ -22,6 +22,8 @@ Only options **set in this flake** are listed (not nixpkgs defaults). Secrets ar
 | SearXNG | `modules/services/searxng.nix` | Active | `127.0.0.1:8888` |
 | Homepage | `modules/services/homepage-dashboard.nix` | Active | port `8083` (direct firewall closed); via Tailscale Serve HTTPS `:443` |
 | GPU stats API | `modules/services/gpu-stats.nix` | Active | `127.0.0.1:8091` (Homepage System widgets) |
+| Uptime Kuma | `modules/services/uptime-kuma.nix` | Active | `0.0.0.0:3001` (`tailscale0`); declarative API sync |
+| ntfy | `modules/services/ntfy-sh.nix` | Active | `0.0.0.0:8090` (`tailscale0`) |
 | Tailscale | `modules/services/tailscale.nix` | Active | tailnet |
 | Printing (CUPS) | `modules/services/printing.nix` | Active | local |
 | OpenSSH | `modules/core/openssh.nix` | Active | TCP 22 on `tailscale0` only |
@@ -312,6 +314,34 @@ GPUs (util, VRAM, temp) via `gpu-stats` on `127.0.0.1:8091`. Widgets: datetime,
 Open-Meteo (Chicago coords — adjust if needed), CPU/RAM/disk/uptime, SearXNG search.
 Every service tile uses `siteMonitor` for live HTTP latency (ms); Piper monitors
 `/health`.
+
+---
+
+### Uptime Kuma
+
+**Module:** `modules/services/uptime-kuma.nix` (+ `uptime-kuma-sync.py`)  
+**URL:** http://nixos.taile9f484.ts.net:3001
+
+| Option | Value |
+|--------|-------|
+| `services.uptime-kuma.enable` | `true` |
+| `settings.HOST` | `"0.0.0.0"` |
+| `settings.PORT` | `"3001"` |
+| Firewall | `tailscale0` TCP `3001` |
+
+#### Declarative sync (`uptime-kuma-sync.service`)
+
+| Setting | Value |
+|---------|-------|
+| Type | oneshot (`RemainAfterExit`) |
+| After | `uptime-kuma.service`, `ntfy-sh.service` |
+| Env | `age.secrets.uptime-kuma-sync` → `secrets/uptime-kuma-sync.env.age` |
+| Env keys | `KUMA_USERNAME`, `KUMA_PASSWORD`, `NTFY_TOPIC` |
+| Tooling | `python3Packages.uptime-kuma-api` |
+| Tag | `nix-managed` (stale tagged monitors deleted; manual UI monitors left alone) |
+| Notifications | ntfy provider `ntfy-homeport` → `http://127.0.0.1:8090/<topic>` |
+
+Monitors (interval 60s, maxretries 3): localhost HTTP for Homepage, llama.cpp, whisper.cpp, Piper, SearXNG, n8n, Portainer (ignore TLS), GPU stats, ntfy, Kuma; Tailscale/Serve HTTP for Homepage, n8n, Portainer, ntfy, Kuma; TCP for PostgreSQL `:5432` and OpenSSH `:22`. Docker covered via Portainer. Groups match Homepage sections. Admin user must exist in the Kuma UI before sync can login.
 
 ---
 

@@ -12,7 +12,7 @@
 | n8n | `modules/services/n8n.nix` | https://nixos.taile9f484.ts.net:5678 | Localhost bind; Serve TLS; Postgres + agenix password |
 | Portainer | `modules/services/docker.nix` | https://nixos.taile9f484.ts.net:9443 | Localhost `:9443`; Serve TLS (`https+insecure` backend) |
 | ntfy | `modules/services/ntfy-sh.nix` | http://nixos.taile9f484.ts.net:8090 | Own port on `tailscale0` (no subpath — upstream rejects path in `base-url`) |
-| Uptime Kuma | `modules/services/uptime-kuma.nix` | http://nixos.taile9f484.ts.net:3001 | Not proxied (no subpath support) |
+| Uptime Kuma | `modules/services/uptime-kuma.nix` | http://nixos.taile9f484.ts.net:3001 | Not proxied; declarative sync via `uptime-kuma-sync.service` + ntfy alerts |
 | PostgreSQL | `modules/services/postgresql.nix` | `127.0.0.1:5432` | DB `n8n` only |
 | Docker | `modules/services/docker.nix` | — | `oci-containers` + nvidia-container-toolkit |
 | printing | `modules/services/printing.nix` | — | CUPS |
@@ -99,6 +99,7 @@
 - `:5678` → n8n `http://127.0.0.1:5678` (n8n `N8N_LISTEN_ADDRESS=127.0.0.1`, `N8N_PROTOCOL=https`, `N8N_PROXY_HOPS=1`)
 - `:9443` → Portainer `https+insecure://127.0.0.1:9443` (no `--base-url`)
 - Uptime Kuma (`:3001`) and ntfy (`:8090`) stay direct on `tailscale0`
+- Uptime Kuma monitors: Nix list in `uptime-kuma.nix` → `uptime-kuma-sync.py` (uptime-kuma-api); tag `nix-managed`; ntfy provider `ntfy-homeport`; secret `uptime-kuma-sync.env.age`
 - Homepage `allowedHosts` includes `nixos.taile9f484.ts.net` and localhost `:8083`
 - n8n DB password: agenix → oneshot `n8n-postgres-password` → `ALTER USER n8n`
 - `rileyt` in `docker` group

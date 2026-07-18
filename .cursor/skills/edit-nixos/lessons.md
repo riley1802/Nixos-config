@@ -13,6 +13,13 @@ Append entries when a build, rebuild, or runtime error is resolved. Format:
 
 ---
 
+### agenix EDITOR must write `$1` (2026-07-18)
+- **Context:** Creating `secrets/uptime-kuma-sync.env.age` non-interactively with `EDITOR="cp /tmp/file"`.
+- **Error:** Decrypted `/run/agenix/uptime-kuma-sync` was 0 bytes; sync failed with `missing required env var`.
+- **Cause:** agenix invokes `$EDITOR <tempfile>`; `cp src` ignores the destination path argument, so the temp file stays empty and that empty content is encrypted.
+- **Fix:** Use an editor script that writes to `"$1"`, or encrypt with `age -e -r … -o secret.age plaintext`.
+- **Avoid:** `EDITOR="cp …"` without copying *into* the path agenix passes as `$1`.
+
 ### Flakes ignore untracked files (2026-06-30)
 - **Context:** Adding new modules before `nixos-rebuild`.
 - **Error:** Rebuild used old config; new files missing from evaluation.

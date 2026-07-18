@@ -33,7 +33,8 @@
 | `modules/services/postgresql.nix` | PostgreSQL 16 (n8n DB) |
 | `modules/services/n8n.nix` | n8n (localhost `:5678`; HTTPS via Serve) |
 | `modules/services/docker.nix` | Docker + Portainer (localhost `:9443`; HTTPS via Serve) |
-| `modules/services/uptime-kuma.nix` | Uptime Kuma (port 3001) |
+| `modules/services/uptime-kuma.nix` | Uptime Kuma (port 3001) + declarative monitor sync |
+| `modules/services/uptime-kuma-sync.py` | Sync script (used by `uptime-kuma-sync.service`) |
 | `modules/services/homepage-dashboard.nix` | Homepage (localhost `:8083`; HTTPS via Serve `:443`) |
 | `modules/services/gpu-stats.nix` | NVIDIA GPU JSON API (`127.0.0.1:8091`) for Homepage |
 | `modules/services/ntfy-sh.nix` | ntfy (port 8090 on `tailscale0`) |
