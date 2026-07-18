@@ -8,10 +8,13 @@
   services.n8n = {
     enable = true;
     environment = {
-      N8N_HOST = "127.0.0.1";
+      # Direct Tailscale access — n8n's N8N_PATH subpath support is broken in 2.x
+      # (UI prefixes assets/API with /n8n/ but the server still serves them at /).
+      N8N_HOST = "nixos.taile9f484.ts.net";
       N8N_PORT = "5678";
       N8N_PROTOCOL = "http";
-      N8N_PATH = "/n8n/";
+      N8N_LISTEN_ADDRESS = "0.0.0.0";
+      WEBHOOK_URL = "http://nixos.taile9f484.ts.net:5678/";
       DB_TYPE = "postgresdb";
       DB_POSTGRESDB_HOST = "127.0.0.1";
       DB_POSTGRESDB_DATABASE = "n8n";
@@ -48,5 +51,5 @@
     requires = [ "n8n-postgres-password.service" ];
   };
 
-  # No tailscale0 firewall rule here on purpose — n8n is only reached via nginx (port 80).
+  networking.firewall.interfaces.tailscale0.allowedTCPPorts = [ 5678 ];
 }

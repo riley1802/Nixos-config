@@ -31,12 +31,12 @@
 | `modules/services/searxng.nix` | SearXNG |
 | `modules/services/tailscale.nix` | Tailscale |
 | `modules/services/postgresql.nix` | PostgreSQL 16 (n8n DB) |
-| `modules/services/n8n.nix` | n8n (via nginx `/n8n/`) |
+| `modules/services/n8n.nix` | n8n (port 5678 on `tailscale0`) |
 | `modules/services/docker.nix` | Docker + Portainer |
 | `modules/services/uptime-kuma.nix` | Uptime Kuma (port 3001) |
 | `modules/services/homepage-dashboard.nix` | Homepage (via nginx `/`) |
 | `modules/services/gpu-stats.nix` | NVIDIA GPU JSON API (`127.0.0.1:8091`) for Homepage |
-| `modules/services/ntfy-sh.nix` | ntfy (via nginx `/ntfy/`) |
+| `modules/services/ntfy-sh.nix` | ntfy (port 8090 on `tailscale0`) |
 | `modules/services/nginx.nix` | nginx reverse proxy (port 80) |
 | `modules/users/rileyt.nix` | User account |
 

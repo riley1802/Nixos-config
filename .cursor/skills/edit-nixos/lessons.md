@@ -62,3 +62,10 @@ Append entries when a build, rebuild, or runtime error is resolved. Format:
 - **Cause:** psql does not perform `:'variable'` interpolation inside `-c` command strings.
 - **Fix:** Pass the password directly in `-c` when the secret charset cannot include `'`, or use a SQL file / here-doc where interpolation works.
 - **Avoid:** Relying on `:'var'` with `psql -c`.
+
+### n8n `N8N_PATH` subpath is broken (2026-07-18)
+- **Context:** n8n behind nginx at `/n8n/` with `N8N_PATH=/n8n/`.
+- **Error:** Homepage link to `/n8n/` showed a broken UI / 404; `/n8n/assets/…` and `/n8n/rest/…` returned HTML (`text/html`) instead of JS/JSON.
+- **Cause:** n8n 2.25.7 prefixes the editor HTML with `/n8n/` but still serves assets and REST at `/assets/` and `/rest/`.
+- **Fix:** Drop `N8N_PATH` and the nginx `/n8n/` location; expose n8n on `tailscale0:5678` (same pattern as ntfy / Uptime Kuma).
+- **Avoid:** Hosting n8n under a path prefix; prefer a dedicated port or subdomain.

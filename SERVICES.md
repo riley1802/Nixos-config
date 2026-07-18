@@ -679,12 +679,17 @@ Imported via `home.nix`. User: `rileyt` (`home/core/identity.nix`).
 | Port | Service |
 |------|---------|
 | 22 | OpenSSH (`tailscale0` only) |
-| 80 | nginx → Homepage (`tailscale0` only) |
+| 80 | nginx → Homepage / Portainer (`tailscale0` only) |
+| 3001 | Uptime Kuma (`tailscale0` only) |
+| 5432 | PostgreSQL (localhost) |
+| 5678 | n8n (`tailscale0` only) |
 | 8080 | llama.cpp |
 | 8081 | whisper.cpp |
 | 8082 | Piper TTS |
 | 8083 | Homepage (direct firewall closed; nginx upstream) |
+| 8090 | ntfy (`tailscale0` only) |
 | 8091 | GPU stats JSON API (localhost) |
 | 8888 | SearXNG |
+| 9443 | Portainer HTTPS (localhost; nginx upstream) |
 
 Agent quick-refs: `.cursor/skills/edit-nixos/reference/services.md`, `reference/home-manager.md`.

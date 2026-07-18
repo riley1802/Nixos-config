@@ -40,7 +40,7 @@ This system runs local AI/search services bound to localhost.
 | Service | URL | Module |
 |---------|-----|--------|
 | Homepage (via nginx) | http://nixos.taile9f484.ts.net/ | `modules/services/homepage-dashboard.nix` + `nginx.nix` |
-| n8n | http://nixos.taile9f484.ts.net/n8n/ | `modules/services/n8n.nix` |
+| n8n | http://nixos.taile9f484.ts.net:5678 | `modules/services/n8n.nix` |
 | Portainer | http://nixos.taile9f484.ts.net/portainer/ | `modules/services/docker.nix` |
 | ntfy | http://nixos.taile9f484.ts.net:8090 | `modules/services/ntfy-sh.nix` |
 | Uptime Kuma | http://nixos.taile9f484.ts.net:3001 | `modules/services/uptime-kuma.nix` |
@@ -96,9 +96,9 @@ in `modules/services/llama-cpp.nix`.
 
 ### nginx reverse proxy + apps
 
-- Plain HTTP on port 80 (`tailscale0` only). Path routing to Homepage (`/`), n8n (`/n8n/`), Portainer (`/portainer/`).
+- Plain HTTP on port 80 (`tailscale0` only). Path routing to Homepage (`/`) and Portainer (`/portainer/`).
 - Homepage ("Homeport"): cool slate geometric theme, dark default with soft cool light mode, System section (host + dual GPU util/VRAM), weather/time/search, and `siteMonitor` latency on every tile.
-- Uptime Kuma (`3001`) and ntfy (`8090`) are **not** proxied — direct on `tailscale0` (ntfy rejects a path in `base-url`).
+- Uptime Kuma (`3001`), ntfy (`8090`), and n8n (`5678`) are **not** proxied — direct on `tailscale0` (ntfy rejects a path in `base-url`; n8n's `N8N_PATH` subpath is broken in 2.x).
 - PostgreSQL 16 backs n8n; DB password via agenix (`secrets/n8n-db-password.age`).
 - Docker + nvidia-container-toolkit; Portainer image pinned to `portainer/portainer-ce:2.39.4`.
 - `rileyt` is in the `docker` group.
@@ -113,7 +113,8 @@ Services do not open the public firewall unless explicitly intended:
 | nginx | `tailscale0` only (port 80) |
 | Uptime Kuma | `tailscale0` only (port 3001) |
 | ntfy | `tailscale0` only (port 8090) |
-| llama.cpp, whisper.cpp, Piper, SearXNG, n8n, Portainer, Homepage, PostgreSQL | localhost only (or via nginx) |
+| n8n | `tailscale0` only (port 5678) |
+| llama.cpp, whisper.cpp, Piper, SearXNG, Portainer, Homepage, PostgreSQL | localhost only (or via nginx) |
 | Tailscale | closed (`openFirewall = false`) |
 | Steam Remote Play | closed (`remotePlay.openFirewall = false`) |
 

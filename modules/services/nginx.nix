@@ -16,11 +16,6 @@
         proxyPass = "http://127.0.0.1:8083";
       };
 
-      locations."/n8n/" = {
-        proxyPass = "http://127.0.0.1:5678/n8n/";
-        proxyWebsockets = true;
-      };
-
       locations."/portainer/" = {
         # Strip /portainer/ before proxying; Portainer's --base-url handles generated links.
         proxyPass = "https://127.0.0.1:9443/";

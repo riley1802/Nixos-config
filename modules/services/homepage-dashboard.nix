@@ -207,7 +207,7 @@
           {
             n8n = {
               icon = "n8n.png";
-              href = "/n8n/";
+              href = "http://nixos.taile9f484.ts.net:5678";
               description = "Workflow automation";
               siteMonitor = "http://127.0.0.1:5678/healthz";
             };

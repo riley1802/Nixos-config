@@ -10,7 +10,7 @@
 | printing | `modules/services/printing.nix` | — | CUPS |
 | nginx | `modules/services/nginx.nix` | http://nixos.taile9f484.ts.net/ (port 80 on `tailscale0`) | Path proxy front door |
 | Homepage | `modules/services/homepage-dashboard.nix` | via nginx `/` (upstream port 8083) | Direct firewall closed; remote access via nginx on `tailscale0:80` |
-| n8n | `modules/services/n8n.nix` | via nginx `/n8n/` (upstream `127.0.0.1:5678`) | Postgres + agenix password |
+| n8n | `modules/services/n8n.nix` | http://nixos.taile9f484.ts.net:5678 | Own port on `tailscale0` (no subpath — `N8N_PATH` broken in 2.x); Postgres + agenix password |
 | Portainer | `modules/services/docker.nix` | via nginx `/portainer/` (upstream `127.0.0.1:9443`) | `portainer/portainer-ce:2.39.4` |
 | ntfy | `modules/services/ntfy-sh.nix` | http://nixos.taile9f484.ts.net:8090 | Own port on `tailscale0` (no subpath — upstream rejects path in `base-url`) |
 | Uptime Kuma | `modules/services/uptime-kuma.nix` | http://nixos.taile9f484.ts.net:3001 | Not proxied (no subpath support) |
@@ -95,8 +95,8 @@
 ## nginx + dashboard stack
 
 - nginx listens on `0.0.0.0:80`, firewall open on `tailscale0` only
-- Path routing: `/` → Homepage `:8083`, `/n8n/` → n8n, `/portainer/` → Portainer HTTPS
-- Uptime Kuma (`:3001`) and ntfy (`:8090`) stay direct on `tailscale0` (ntfy rejects path in `base-url`)
+- Path routing: `/` → Homepage `:8083`, `/portainer/` → Portainer HTTPS
+- Uptime Kuma (`:3001`), ntfy (`:8090`), and n8n (`:5678`) stay direct on `tailscale0`
 - Homepage `allowedHosts` includes `nixos.taile9f484.ts.net` and localhost `:8083`
 - n8n DB password: agenix → oneshot `n8n-postgres-password` → `ALTER USER n8n`
 - `rileyt` in `docker` group
