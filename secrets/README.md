@@ -7,12 +7,8 @@ All secrets for this config are encrypted with [agenix](https://github.com/ryant
 | Tailscale auth key | `tailscale-auth-key.age` | `modules/services/tailscale.nix` |
 | SearXNG secret key | `searxng-secret-key.age` | `modules/services/searxng.nix` |
 | n8n DB password | `n8n-db-password.age` | `modules/services/n8n.nix` |
-| World Monitor env | `worldmonitor-env.age` | `modules/services/worldmonitor.nix` |
 
 Public keys allowed to decrypt are listed in `secrets.nix`. **Never commit plaintext secrets.**
-
-`worldmonitor-env.age` is a dotenv file with `RELAY_SHARED_SECRET`, `REDIS_PASSWORD`,
-`REDIS_TOKEN`, and `WM_PORT=3000` (generate hex secrets with `openssl rand -hex 32`).
 
 ## Edit a secret
 

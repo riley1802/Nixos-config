@@ -40,7 +40,6 @@ This system runs local AI/search services bound to localhost.
 | Service | URL | Module |
 |---------|-----|--------|
 | Homepage (via Tailscale Serve) | https://nixos.taile9f484.ts.net/ | `modules/services/homepage-dashboard.nix` + `tailscale-serve.nix` |
-| World Monitor (via Tailscale Serve) | https://nixos.taile9f484.ts.net:3000 | `modules/services/worldmonitor.nix` + `tailscale-serve.nix` |
 | n8n (via Tailscale Serve) | https://nixos.taile9f484.ts.net:5678 | `modules/services/n8n.nix` + `tailscale-serve.nix` |
 | Portainer (via Tailscale Serve) | https://nixos.taile9f484.ts.net:9443 | `modules/services/docker.nix` + `tailscale-serve.nix` |
 | ntfy | http://nixos.taile9f484.ts.net:8090 | `modules/services/ntfy-sh.nix` |
@@ -97,9 +96,8 @@ in `modules/services/llama-cpp.nix`.
 
 ### Tailscale Serve + apps
 
-- HTTPS via Tailscale Serve (`modules/services/tailscale-serve.nix`): Homepage `:443` → `:8083`, World Monitor `:3000` → localhost, n8n `:5678` → localhost, Portainer `:9443` → localhost HTTPS.
-- Homepage ("Homeport"): cool slate geometric theme, dark default with soft cool light mode, System section (host + dual GPU util/VRAM), World Monitor tile, weather/time/search, and `siteMonitor` latency on every tile.
-- World Monitor: upstream docker compose under `/var/lib/worldmonitor`; secrets via `secrets/worldmonitor-env.age`; Redis seeders every 30 minutes (public feeds; optional API keys later).
+- HTTPS via Tailscale Serve (`modules/services/tailscale-serve.nix`): Homepage `:443` → `:8083`, n8n `:5678` → localhost, Portainer `:9443` → localhost HTTPS.
+- Homepage ("Homeport"): cool slate geometric theme, dark default with soft cool light mode, System section (host + dual GPU util/VRAM), weather/time/search, and `siteMonitor` latency on every tile.
 - Uptime Kuma (`3001`) and ntfy (`8090`) stay direct HTTP on `tailscale0` (ntfy rejects a path in `base-url`).
 - n8n listens on `127.0.0.1` only; Serve terminates TLS. Do not use `N8N_PATH` (broken in 2.x).
 - PostgreSQL 16 backs n8n; DB password via agenix (`secrets/n8n-db-password.age`).
@@ -116,7 +114,7 @@ Services do not open the public firewall unless explicitly intended:
 | SSH | `tailscale0` only (port 22) |
 | Uptime Kuma | `tailscale0` only (port 3001) |
 | ntfy | `tailscale0` only (port 8090) |
-| llama.cpp, whisper.cpp, Piper, SearXNG, n8n, Portainer, Homepage, World Monitor, PostgreSQL | localhost only (Serve for HTTPS front doors) |
+| llama.cpp, whisper.cpp, Piper, SearXNG, n8n, Portainer, Homepage, PostgreSQL | localhost only (Serve for HTTPS front doors) |
 | Tailscale | closed (`openFirewall = false`) |
 | Steam Remote Play | closed (`remotePlay.openFirewall = false`) |
 
@@ -129,7 +127,6 @@ All secrets use [agenix](https://github.com/ryantm/agenix). Encrypted files in `
 | Tailscale auth key | `secrets/tailscale-auth-key.age` |
 | SearXNG secret key | `secrets/searxng-secret-key.age` |
 | n8n DB password | `secrets/n8n-db-password.age` |
-| World Monitor env | `secrets/worldmonitor-env.age` |
 
 Edit secrets:
 

@@ -13,7 +13,6 @@
 | Portainer | `modules/services/docker.nix` | https://nixos.taile9f484.ts.net:9443 | Localhost `:9443`; Serve TLS (`https+insecure` backend) |
 | ntfy | `modules/services/ntfy-sh.nix` | http://nixos.taile9f484.ts.net:8090 | Own port on `tailscale0` (no subpath — upstream rejects path in `base-url`) |
 | Uptime Kuma | `modules/services/uptime-kuma.nix` | http://nixos.taile9f484.ts.net:3001 | Not proxied (no subpath support) |
-| World Monitor | `modules/services/worldmonitor.nix` | https://nixos.taile9f484.ts.net:3000 | docker compose; localhost `:3000`; Serve TLS; agenix env |
 | PostgreSQL | `modules/services/postgresql.nix` | `127.0.0.1:5432` | DB `n8n` only |
 | Docker | `modules/services/docker.nix` | — | `oci-containers` + nvidia-container-toolkit |
 | printing | `modules/services/printing.nix` | — | CUPS |
@@ -84,19 +83,7 @@
 - Layout: System (host + dual GPUs) then AI / automation / monitoring; full-width rows
 - System tiles use `customapi` against `gpu-stats` (`127.0.0.1:8091`)
 - Service tiles have `siteMonitor` latency (ms); Piper uses `/health`
-- Monitoring includes World Monitor (Serve `:3000`)
 - Widgets: datetime, Open-Meteo (Chicago / `America/Chicago`), resources + uptime, SearXNG search
-
-## World Monitor
-
-- Module: `modules/services/worldmonitor.nix`
-- Upstream docker compose under `/var/lib/worldmonitor/repo` (pinned `repoRev`)
-- Units: `worldmonitor-repo`, `worldmonitor`, `worldmonitor-seeders` (+ 30m timer)
-- Bind: `127.0.0.1:3000` (app), `127.0.0.1:8079` (redis-rest for host seeders)
-- Secrets: `secrets/worldmonitor-env.age` (`RELAY_SHARED_SECRET`, `REDIS_PASSWORD`, `REDIS_TOKEN`, `WM_PORT`)
-- Compose override forces localhost publish + injects `RELAY_SHARED_SECRET` into app/relay
-- Minimal install: no third-party API keys (public feeds); optional keys later
-- First start builds images (`TimeoutStartSec` up to 2h)
 
 ## GPU stats API
 
@@ -109,7 +96,6 @@
 
 - Unit: `tailscale-serve-apps.service` (oneshot, `tailscale serve --bg --https=…`)
 - `:443` → Homepage `http://127.0.0.1:8083`
-- `:3000` → World Monitor `http://127.0.0.1:3000`
 - `:5678` → n8n `http://127.0.0.1:5678` (n8n `N8N_LISTEN_ADDRESS=127.0.0.1`, `N8N_PROTOCOL=https`, `N8N_PROXY_HOPS=1`)
 - `:9443` → Portainer `https+insecure://127.0.0.1:9443` (no `--base-url`)
 - Uptime Kuma (`:3001`) and ntfy (`:8090`) stay direct on `tailscale0`

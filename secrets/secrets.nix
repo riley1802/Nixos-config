@@ -18,10 +18,6 @@ in
     rileyt
     nixos-host
   ];
-  "worldmonitor-env.age".publicKeys = [
-    rileyt
-    nixos-host
-  ];
   # Uncomment when enabling cloud Honcho:
   # "honcho-env.age".publicKeys = [ rileyt nixos-host ];
   # "honcho-server-env.age".publicKeys = [ rileyt nixos-host ];

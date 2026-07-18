@@ -45,7 +45,7 @@
         {
           Monitoring = {
             style = "row";
-            columns = 3;
+            columns = 2;
           };
         }
         {
@@ -224,14 +224,6 @@
       }
       {
         Monitoring = [
-          {
-            "World Monitor" = {
-              icon = "mdi-earth";
-              href = "https://nixos.taile9f484.ts.net:3000";
-              description = "Global intelligence dashboard";
-              siteMonitor = "http://127.0.0.1:3000";
-            };
-          }
           {
             "Uptime Kuma" = {
               icon = "uptime-kuma.png";

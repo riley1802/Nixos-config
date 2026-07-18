@@ -37,7 +37,6 @@
 | `modules/services/homepage-dashboard.nix` | Homepage (localhost `:8083`; HTTPS via Serve `:443`) |
 | `modules/services/gpu-stats.nix` | NVIDIA GPU JSON API (`127.0.0.1:8091`) for Homepage |
 | `modules/services/ntfy-sh.nix` | ntfy (port 8090 on `tailscale0`) |
-| `modules/services/worldmonitor.nix` | World Monitor (localhost `:3000`; HTTPS via Serve) |
 | `modules/services/tailscale-serve.nix` | Tailscale Serve HTTPS front doors |
 | `modules/users/rileyt.nix` | User account |
 

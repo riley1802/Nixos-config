@@ -21,7 +21,6 @@ Only options **set in this flake** are listed (not nixpkgs defaults). Secrets ar
 | Piper TTS | `modules/services/piper.nix` | Active | `127.0.0.1:8082` |
 | SearXNG | `modules/services/searxng.nix` | Active | `127.0.0.1:8888` |
 | Homepage | `modules/services/homepage-dashboard.nix` | Active | port `8083` (direct firewall closed); via Tailscale Serve HTTPS `:443` |
-| World Monitor | `modules/services/worldmonitor.nix` | Active | `127.0.0.1:3000` + Tailscale Serve HTTPS `:3000` |
 | GPU stats API | `modules/services/gpu-stats.nix` | Active | `127.0.0.1:8091` (Homepage System widgets) |
 | Tailscale | `modules/services/tailscale.nix` | Active | tailnet |
 | Printing (CUPS) | `modules/services/printing.nix` | Active | local |
@@ -312,27 +311,7 @@ switcher kept). Top **System** section shows host load/RAM/uptime plus both NVID
 GPUs (util, VRAM, temp) via `gpu-stats` on `127.0.0.1:8091`. Widgets: datetime,
 Open-Meteo (Chicago coords — adjust if needed), CPU/RAM/disk/uptime, SearXNG search.
 Every service tile uses `siteMonitor` for live HTTP latency (ms); Piper monitors
-`/health`. Monitoring section includes **World Monitor** (Serve `:3000`).
-
----
-
-### World Monitor
-
-**Module:** `modules/services/worldmonitor.nix`  
-**URL:** https://nixos.taile9f484.ts.net:3000/ (Tailscale Serve → `127.0.0.1:3000`)  
-**Upstream:** https://github.com/koala73/worldmonitor (docker compose self-host)
-
-| Piece | Detail |
-|-------|--------|
-| State / repo | `/var/lib/worldmonitor/repo` (pinned git rev; see module) |
-| Units | `worldmonitor-repo`, `worldmonitor`, `worldmonitor-seeders` (+ 30m timer) |
-| Secrets | `secrets/worldmonitor-env.age` → `.env` (`RELAY_SHARED_SECRET`, `REDIS_PASSWORD`, `REDIS_TOKEN`, `WM_PORT`) |
-| Bind | App `127.0.0.1:3000`; redis-rest `127.0.0.1:8079` (seeders) |
-| Firewall | closed (Serve only) |
-| API keys | none initially — public feeds only; optional keys later via agenix / override |
-
-First start runs `docker compose up --build` (can take a long time). Seeders run after
-the stack is up and every 30 minutes. Bump `repoRev` in the module to upgrade.
+`/health`.
 
 ---
 
@@ -728,9 +707,7 @@ Imported via `home.nix`. User: `rileyt` (`home/core/identity.nix`).
 |------|---------|
 | 22 | OpenSSH (`tailscale0` only) |
 | 443 | Tailscale Serve → Homepage (tailnet HTTPS) |
-| 3000 | World Monitor localhost + Tailscale Serve HTTPS |
 | 3001 | Uptime Kuma (`tailscale0` only) |
-| 8079 | World Monitor redis-rest (localhost, seeders) |
 | 5432 | PostgreSQL (localhost) |
 | 5678 | n8n localhost + Tailscale Serve HTTPS |
 | 8080 | llama.cpp |
