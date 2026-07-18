@@ -62,13 +62,13 @@ in
       "999"
       "--flash-attn"
       "on"
-      # 16k context; q4_0 KV cache cuts VRAM ~75% vs f16.
+      # 16k context; q8_0 KV cache is higher fidelity than q4_0.
       "--ctx-size"
       "16384"
       "--cache-type-k"
-      "q4_0"
+      "q8_0"
       "--cache-type-v"
-      "q4_0"
+      "q8_0"
       "--parallel"
       "1"
       "--kv-unified"

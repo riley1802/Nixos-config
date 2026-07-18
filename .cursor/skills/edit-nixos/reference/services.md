@@ -34,7 +34,7 @@
 
 ### GPU flags
 
-- `--n-gpu-layers 999`, `--flash-attn on`, `--ctx-size 16384`, `--cache-type-k/v q4_0`, `--parallel 1`, `--kv-unified`, `--sleep-idle-seconds 1800`
+- `--n-gpu-layers 999`, `--flash-attn on`, `--ctx-size 16384`, `--cache-type-k/v q8_0`, `--parallel 1`, `--kv-unified`, `--sleep-idle-seconds 1800`
 - Dual GPU: `--split-mode layer`, `--tensor-split 1,1`, `--main-gpu 0`
 
 ## whisper.cpp
