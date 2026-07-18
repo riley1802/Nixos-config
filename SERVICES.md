@@ -89,7 +89,7 @@ Only options **set in this flake** are listed (not nixpkgs defaults). Secrets ar
 ```
 --n-gpu-layers 999
 --flash-attn on
---ctx-size 65536
+--ctx-size 16384
 --cache-type-k q4_0
 --cache-type-v q4_0
 --parallel 1

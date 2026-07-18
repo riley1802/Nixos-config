@@ -55,6 +55,7 @@ This system runs local AI/search services bound to localhost.
 - CUDA build from `nixpkgs-unstable` (llama.cpp 9747+), required for Gemma 4
   Multi-Token Prediction (MTP).
 - Dual-GPU layer split across RTX 3050 and GTX 1660 Super.
+- Context window: 16k tokens (`--ctx-size 16384`).
 - Models are stored in `/var/lib/llama-cpp/models` and survive NixOS upgrades.
 - Models download automatically from Hugging Face on first use.
 

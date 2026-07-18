@@ -62,9 +62,9 @@ in
       "999"
       "--flash-attn"
       "on"
-      # Large context for long conversations; q4_0 KV cache cuts VRAM ~75% vs f16.
+      # 16k context; q4_0 KV cache cuts VRAM ~75% vs f16.
       "--ctx-size"
-      "65536"
+      "16384"
       "--cache-type-k"
       "q4_0"
       "--cache-type-v"
