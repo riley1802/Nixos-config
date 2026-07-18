@@ -1,4 +1,3 @@
-{ config, pkgs, ... }:
 {
   virtualisation.docker.enable = true;
   virtualisation.oci-containers.backend = "docker";
@@ -12,9 +11,7 @@
       "/var/run/docker.sock:/var/run/docker.sock"
       "portainer_data:/data"
     ];
-    cmd = [ "--base-url=/portainer" ];
+    # No --base-url: reached at https://nixos…:9443 via Tailscale Serve (root path).
     # Do not pass --restart here: oci-containers already uses --rm; systemd owns restarts.
   };
-
-  # No tailscale0 firewall rule here on purpose — Portainer is only reached via nginx (port 80).
 }

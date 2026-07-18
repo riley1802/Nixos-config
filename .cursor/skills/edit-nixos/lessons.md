@@ -67,5 +67,12 @@ Append entries when a build, rebuild, or runtime error is resolved. Format:
 - **Context:** n8n behind nginx at `/n8n/` with `N8N_PATH=/n8n/`.
 - **Error:** Homepage link to `/n8n/` showed a broken UI / 404; `/n8n/assets/…` and `/n8n/rest/…` returned HTML (`text/html`) instead of JS/JSON.
 - **Cause:** n8n 2.25.7 prefixes the editor HTML with `/n8n/` but still serves assets and REST at `/assets/` and `/rest/`.
-- **Fix:** Drop `N8N_PATH` and the nginx `/n8n/` location; expose n8n on `tailscale0:5678` (same pattern as ntfy / Uptime Kuma).
-- **Avoid:** Hosting n8n under a path prefix; prefer a dedicated port or subdomain.
+- **Fix:** Drop `N8N_PATH`; bind n8n to `127.0.0.1:5678` and expose HTTPS via Tailscale Serve on `:5678`.
+- **Avoid:** Hosting n8n under a path prefix; prefer Serve/dedicated HTTPS port or subdomain.
+
+### Tailscale Serve `set-config` cannot do HTTPS (2026-07-18)
+- **Context:** Wanted declarative HTTPS for Homepage/n8n/Portainer via `services.tailscale.serve`.
+- **Error:** `set-config` registers HTTP (not HTTPS) endpoints; CLI `--https` works.
+- **Cause:** Upstream config format / nixpkgs module cannot express TLS termination (`nixpkgs#530174`, `tailscale#18381`).
+- **Fix:** Oneshoot `tailscale serve --bg --https=…` in `modules/services/tailscale-serve.nix`; do not bind backends to `0.0.0.0` on the same port Serve uses.
+- **Avoid:** Assuming `services.tailscale.serve.services.*.endpoints."tcp:443"` terminates TLS.

@@ -4,7 +4,7 @@
     enable = true;
     listenPort = 8083;
     openFirewall = false;
-    # Accept Tailscale MagicDNS via nginx, plus local access on the bind port.
+    # Accept Tailscale Serve / MagicDNS, plus local access on the bind port.
     allowedHosts = "nixos.taile9f484.ts.net,localhost:8083,127.0.0.1:8083";
 
     # theme left unlocked so the built-in dark/light switcher stays available.
@@ -207,7 +207,7 @@
           {
             n8n = {
               icon = "n8n.png";
-              href = "http://nixos.taile9f484.ts.net:5678";
+              href = "https://nixos.taile9f484.ts.net:5678";
               description = "Workflow automation";
               siteMonitor = "http://127.0.0.1:5678/healthz";
             };
@@ -215,7 +215,7 @@
           {
             Portainer = {
               icon = "portainer.png";
-              href = "/portainer/";
+              href = "https://nixos.taile9f484.ts.net:9443";
               description = "Container management";
               siteMonitor = "https://127.0.0.1:9443";
             };
@@ -385,5 +385,5 @@
   };
 
   # Homepage has no bind-address option and listens on all interfaces, unlike the localhost-only
-  # AI services. Port 8083 stays closed; Tailscale clients reach it through nginx on port 80.
+  # AI services. Port 8083 stays closed; Tailscale clients reach it via Serve on :443.
 }

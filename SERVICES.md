@@ -19,7 +19,7 @@ Only options **set in this flake** are listed (not nixpkgs defaults). Secrets ar
 | whisper.cpp | `modules/services/whisper-cpp.nix` | Active | `127.0.0.1:8081` |
 | Piper TTS | `modules/services/piper.nix` | Active | `127.0.0.1:8082` |
 | SearXNG | `modules/services/searxng.nix` | Active | `127.0.0.1:8888` |
-| Homepage | `modules/services/homepage-dashboard.nix` | Active | port `8083` (direct firewall closed); via nginx on `tailscale0:80` |
+| Homepage | `modules/services/homepage-dashboard.nix` | Active | port `8083` (direct firewall closed); via Tailscale Serve HTTPS `:443` |
 | GPU stats API | `modules/services/gpu-stats.nix` | Active | `127.0.0.1:8091` (Homepage System widgets) |
 | Tailscale | `modules/services/tailscale.nix` | Active | tailnet |
 | Printing (CUPS) | `modules/services/printing.nix` | Active | local |
@@ -265,7 +265,7 @@ Optional POST body keys passed to piper: `speaker_id`, `length_scale`, `noise_sc
 ### Homepage
 
 **Module:** `modules/services/homepage-dashboard.nix`  
-**URL:** http://nixos.taile9f484.ts.net/ (nginx on `tailscale0:80`)
+**URL:** https://nixos.taile9f484.ts.net/ (Tailscale Serve → `:8083`)
 
 | Option | Value |
 |--------|-------|
@@ -275,8 +275,8 @@ Optional POST body keys passed to piper: `speaker_id`, `length_scale`, `noise_sc
 | `allowedHosts` | `"nixos.taile9f484.ts.net,localhost:8083,127.0.0.1:8083"` |
 
 Homepage has no bind-address option and listens on all interfaces. Direct access to
-port 8083 stays blocked; nginx proxies `/` to `127.0.0.1:8083` and is reachable
-only through `tailscale0` on port 80.
+port 8083 stays blocked; Tailscale Serve terminates HTTPS on `:443` and proxies to
+`127.0.0.1:8083`.
 
 Branding: title **Homeport**, cool slate palette with a geometric grid (no warm
 amber/night-light cast). Dark-by-default with a soft cool-gray light mode (theme
@@ -343,8 +343,8 @@ Placeholder only — no active options. Commented examples mention:
 | `networking.firewall.interfaces.tailscale0.allowedTCPPorts` | `[ 22 ]` |
 
 SSH is reachable on the Tailscale interface only, not LAN/WAN.
-Homepage is also tailnet-reachable, but through nginx's targeted
-`tailscale0:80` rule; Homepage's own port 8083 remains closed.
+Homepage is also tailnet-reachable via Tailscale Serve on `:443`;
+Homepage's own port 8083 remains closed in the firewall.
 
 ---
 
@@ -679,17 +679,17 @@ Imported via `home.nix`. User: `rileyt` (`home/core/identity.nix`).
 | Port | Service |
 |------|---------|
 | 22 | OpenSSH (`tailscale0` only) |
-| 80 | nginx → Homepage / Portainer (`tailscale0` only) |
+| 443 | Tailscale Serve → Homepage (tailnet HTTPS) |
 | 3001 | Uptime Kuma (`tailscale0` only) |
 | 5432 | PostgreSQL (localhost) |
-| 5678 | n8n (`tailscale0` only) |
+| 5678 | n8n localhost + Tailscale Serve HTTPS |
 | 8080 | llama.cpp |
 | 8081 | whisper.cpp |
 | 8082 | Piper TTS |
-| 8083 | Homepage (direct firewall closed; nginx upstream) |
+| 8083 | Homepage (direct firewall closed; Serve upstream) |
 | 8090 | ntfy (`tailscale0` only) |
 | 8091 | GPU stats JSON API (localhost) |
 | 8888 | SearXNG |
-| 9443 | Portainer HTTPS (localhost; nginx upstream) |
+| 9443 | Portainer localhost + Tailscale Serve HTTPS |
 
 Agent quick-refs: `.cursor/skills/edit-nixos/reference/services.md`, `reference/home-manager.md`.

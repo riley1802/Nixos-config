@@ -7,15 +7,15 @@
 | Piper TTS | `modules/services/piper.nix` | http://127.0.0.1:8082 | Runs as `rileyt`, voice dir persisted |
 | SearXNG | `modules/services/searxng.nix` | http://127.0.0.1:8888 | Secret via agenix |
 | Tailscale | `modules/services/tailscale.nix` | tailnet | Auth key via agenix |
-| printing | `modules/services/printing.nix` | — | CUPS |
-| nginx | `modules/services/nginx.nix` | http://nixos.taile9f484.ts.net/ (port 80 on `tailscale0`) | Path proxy front door |
-| Homepage | `modules/services/homepage-dashboard.nix` | via nginx `/` (upstream port 8083) | Direct firewall closed; remote access via nginx on `tailscale0:80` |
-| n8n | `modules/services/n8n.nix` | http://nixos.taile9f484.ts.net:5678 | Own port on `tailscale0` (no subpath — `N8N_PATH` broken in 2.x); Postgres + agenix password |
-| Portainer | `modules/services/docker.nix` | via nginx `/portainer/` (upstream `127.0.0.1:9443`) | `portainer/portainer-ce:2.39.4` |
+| Tailscale Serve | `modules/services/tailscale-serve.nix` | HTTPS on MagicDNS | CLI oneshot (not `services.tailscale.serve` — HTTPS broken in set-config) |
+| Homepage | `modules/services/homepage-dashboard.nix` | https://nixos.taile9f484.ts.net/ (upstream `:8083`) | Direct firewall closed; Serve on `:443` |
+| n8n | `modules/services/n8n.nix` | https://nixos.taile9f484.ts.net:5678 | Localhost bind; Serve TLS; Postgres + agenix password |
+| Portainer | `modules/services/docker.nix` | https://nixos.taile9f484.ts.net:9443 | Localhost `:9443`; Serve TLS (`https+insecure` backend) |
 | ntfy | `modules/services/ntfy-sh.nix` | http://nixos.taile9f484.ts.net:8090 | Own port on `tailscale0` (no subpath — upstream rejects path in `base-url`) |
 | Uptime Kuma | `modules/services/uptime-kuma.nix` | http://nixos.taile9f484.ts.net:3001 | Not proxied (no subpath support) |
 | PostgreSQL | `modules/services/postgresql.nix` | `127.0.0.1:5432` | DB `n8n` only |
 | Docker | `modules/services/docker.nix` | — | `oci-containers` + nvidia-container-toolkit |
+| printing | `modules/services/printing.nix` | — | CUPS |
 
 ## llama.cpp
 
@@ -77,7 +77,7 @@
 
 - Built-in `services.homepage-dashboard` module on port 8083
 - No bind-address option; listens on all interfaces, but direct firewall access stays closed
-- Reached from the tailnet through nginx on port 80
+- Reached from the tailnet through Tailscale Serve on port 443
 - Title: Homeport; `color = slate`; cool geometric grid CSS (no warm/amber cast)
 - Theme switcher kept (dark first-visit default via `customJS`); soft cool-gray light mode
 - Layout: System (host + dual GPUs) then AI / automation / monitoring; full-width rows
@@ -92,14 +92,17 @@
 - Endpoints: `/` (full), `/host`, `/gpu/0`, `/gpu/1`
 - Runs as `rileyt` with `PrivateDevices = false` so `nvidia-smi` works
 
-## nginx + dashboard stack
+## Tailscale Serve + dashboard stack
 
-- nginx listens on `0.0.0.0:80`, firewall open on `tailscale0` only
-- Path routing: `/` → Homepage `:8083`, `/portainer/` → Portainer HTTPS
-- Uptime Kuma (`:3001`), ntfy (`:8090`), and n8n (`:5678`) stay direct on `tailscale0`
+- Unit: `tailscale-serve-apps.service` (oneshot, `tailscale serve --bg --https=…`)
+- `:443` → Homepage `http://127.0.0.1:8083`
+- `:5678` → n8n `http://127.0.0.1:5678` (n8n `N8N_LISTEN_ADDRESS=127.0.0.1`, `N8N_PROTOCOL=https`, `N8N_PROXY_HOPS=1`)
+- `:9443` → Portainer `https+insecure://127.0.0.1:9443` (no `--base-url`)
+- Uptime Kuma (`:3001`) and ntfy (`:8090`) stay direct on `tailscale0`
 - Homepage `allowedHosts` includes `nixos.taile9f484.ts.net` and localhost `:8083`
 - n8n DB password: agenix → oneshot `n8n-postgres-password` → `ALTER USER n8n`
 - `rileyt` in `docker` group
+- Requires Serve enabled in Tailscale admin for this node
 
 ## Gaming (Steam)
 

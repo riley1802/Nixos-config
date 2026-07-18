@@ -39,9 +39,9 @@ This system runs local AI/search services bound to localhost.
 
 | Service | URL | Module |
 |---------|-----|--------|
-| Homepage (via nginx) | http://nixos.taile9f484.ts.net/ | `modules/services/homepage-dashboard.nix` + `nginx.nix` |
-| n8n | http://nixos.taile9f484.ts.net:5678 | `modules/services/n8n.nix` |
-| Portainer | http://nixos.taile9f484.ts.net/portainer/ | `modules/services/docker.nix` |
+| Homepage (via Tailscale Serve) | https://nixos.taile9f484.ts.net/ | `modules/services/homepage-dashboard.nix` + `tailscale-serve.nix` |
+| n8n (via Tailscale Serve) | https://nixos.taile9f484.ts.net:5678 | `modules/services/n8n.nix` + `tailscale-serve.nix` |
+| Portainer (via Tailscale Serve) | https://nixos.taile9f484.ts.net:9443 | `modules/services/docker.nix` + `tailscale-serve.nix` |
 | ntfy | http://nixos.taile9f484.ts.net:8090 | `modules/services/ntfy-sh.nix` |
 | Uptime Kuma | http://nixos.taile9f484.ts.net:3001 | `modules/services/uptime-kuma.nix` |
 | llama.cpp API | http://127.0.0.1:8080/v1 | `modules/services/llama-cpp.nix` |
@@ -94,14 +94,16 @@ in `modules/services/llama-cpp.nix`.
 - Connect remotely: `ssh rileyt@nixos` from another tailnet device.
 - **After revoking a key in Tailscale admin**, create a new key and run `agenix -e secrets/tailscale-auth-key.age` before rebuilding.
 
-### nginx reverse proxy + apps
+### Tailscale Serve + apps
 
-- Plain HTTP on port 80 (`tailscale0` only). Path routing to Homepage (`/`) and Portainer (`/portainer/`).
+- HTTPS via Tailscale Serve (`modules/services/tailscale-serve.nix`): Homepage `:443` → `:8083`, n8n `:5678` → localhost, Portainer `:9443` → localhost HTTPS.
 - Homepage ("Homeport"): cool slate geometric theme, dark default with soft cool light mode, System section (host + dual GPU util/VRAM), weather/time/search, and `siteMonitor` latency on every tile.
-- Uptime Kuma (`3001`), ntfy (`8090`), and n8n (`5678`) are **not** proxied — direct on `tailscale0` (ntfy rejects a path in `base-url`; n8n's `N8N_PATH` subpath is broken in 2.x).
+- Uptime Kuma (`3001`) and ntfy (`8090`) stay direct HTTP on `tailscale0` (ntfy rejects a path in `base-url`).
+- n8n listens on `127.0.0.1` only; Serve terminates TLS. Do not use `N8N_PATH` (broken in 2.x).
 - PostgreSQL 16 backs n8n; DB password via agenix (`secrets/n8n-db-password.age`).
 - Docker + nvidia-container-toolkit; Portainer image pinned to `portainer/portainer-ce:2.39.4`.
 - `rileyt` is in the `docker` group.
+- **Serve must be enabled** in the Tailscale admin console for this node.
 
 ## Firewall policy
 
@@ -110,11 +112,9 @@ Services do not open the public firewall unless explicitly intended:
 | Service | Firewall |
 |---------|----------|
 | SSH | `tailscale0` only (port 22) |
-| nginx | `tailscale0` only (port 80) |
 | Uptime Kuma | `tailscale0` only (port 3001) |
 | ntfy | `tailscale0` only (port 8090) |
-| n8n | `tailscale0` only (port 5678) |
-| llama.cpp, whisper.cpp, Piper, SearXNG, Portainer, Homepage, PostgreSQL | localhost only (or via nginx) |
+| llama.cpp, whisper.cpp, Piper, SearXNG, n8n, Portainer, Homepage, PostgreSQL | localhost only (Serve for HTTPS front doors) |
 | Tailscale | closed (`openFirewall = false`) |
 | Steam Remote Play | closed (`remotePlay.openFirewall = false`) |
 
@@ -170,7 +170,8 @@ nix fmt
 Check service status after applying:
 
 ```sh
-systemctl status nginx homepage-dashboard n8n postgresql ntfy-sh uptime-kuma docker
+systemctl status tailscale-serve-apps homepage-dashboard n8n postgresql ntfy-sh uptime-kuma docker
+tailscale serve status
 systemctl status llama-cpp whisper-cpp piper searx tailscaled
 curl http://127.0.0.1:8080/v1/models
 curl http://127.0.0.1:8081/v1/audio/transcriptions

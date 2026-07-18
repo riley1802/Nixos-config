@@ -41,7 +41,7 @@
     ../../modules/services/homepage-dashboard.nix
     ../../modules/services/gpu-stats.nix
     ../../modules/services/ntfy-sh.nix
-    ../../modules/services/nginx.nix
+    ../../modules/services/tailscale-serve.nix
     # ../../modules/services/honcho.nix # Honcho server stack — uncomment when ready
 
     ../../modules/users/rileyt.nix
