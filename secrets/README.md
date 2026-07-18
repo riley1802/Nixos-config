@@ -51,7 +51,13 @@ KUMA_PASSWORD=…
 NTFY_TOPIC=homeport-uptime
 ```
 
-Then rebuild so `uptime-kuma-sync.service` can login and upsert monitors.
+Then rebuild so `/run/agenix` picks up the new ciphertext (restarting the unit alone is not enough):
+
+```sh
+pkexec nixos-rebuild switch --flake /etc/nixos#nixos
+# or after a switch that already includes the unit:
+systemctl restart uptime-kuma-sync.service
+```
 
 ## Tailscale auth key
 

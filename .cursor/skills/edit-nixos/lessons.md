@@ -13,6 +13,20 @@ Append entries when a build, rebuild, or runtime error is resolved. Format:
 
 ---
 
+### Uptime Kuma 2.x requires `conditions` on monitor create (2026-07-18)
+- **Context:** `uptime-kuma-sync` creating monitors via `python3Packages.uptime-kuma-api` 1.2.1 against Uptime Kuma 2.4.0.
+- **Error:** `SQLITE_CONSTRAINT: NOT NULL constraint failed: monitor.conditions`.
+- **Cause:** Kuma 2.x added a NOT NULL `conditions` column (default `[]`); the Socket.IO payload from uptime-kuma-api omits it, so SQLite inserts NULL.
+- **Fix:** Before `_call('add'|'editMonitor')`, set `data["conditions"] = []` when missing/None.
+- **Avoid:** Assuming uptime-kuma-api field coverage matches current Kuma schema without testing create.
+
+### agenix secret edit needs activation refresh (2026-07-18)
+- **Context:** User ran `agenix -e uptime-kuma-sync.env.age` then only `systemctl restart uptime-kuma-sync`.
+- **Error:** Sync still saw old `REPLACE_ME` password.
+- **Cause:** agenix decrypts into `/run/agenix` at NixOS activation; restarting the unit reuses the previous decrypted file.
+- **Fix:** After editing a `*.age` used as `EnvironmentFile`, run `pkexec nixos-rebuild switch` (or re-decrypt into the current `/run/agenix.d/<n>/` path) before restarting the unit.
+- **Avoid:** Expecting `systemctl restart` alone to pick up a newly edited `.age` file.
+
 ### agenix EDITOR must write `$1` (2026-07-18)
 - **Context:** Creating `secrets/uptime-kuma-sync.env.age` non-interactively with `EDITOR="cp /tmp/file"`.
 - **Error:** Decrypted `/run/agenix/uptime-kuma-sync` was 0 bytes; sync failed with `missing required env var`.

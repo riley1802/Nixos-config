@@ -15,6 +15,19 @@ NTFY_SERVER = os.environ.get("NTFY_SERVER", "http://127.0.0.1:8090")
 TAG_COLOR = "#64748b"
 
 
+def patch_kuma_api_for_v2(api: UptimeKumaApi) -> None:
+    """uptime-kuma-api 1.2.x omits fields required by Uptime Kuma 2.x (e.g. conditions)."""
+    orig_call = api._call
+
+    def _call(event, data=None):
+        if event in ("add", "editMonitor") and isinstance(data, dict):
+            if data.get("conditions") is None:
+                data["conditions"] = []
+        return orig_call(event, data)
+
+    api._call = _call
+
+
 def require_env(name: str) -> str:
     value = os.environ.get(name, "").strip()
     if not value:
@@ -191,6 +204,8 @@ def main() -> None:
                 "Uptime Kuma login failed — set KUMA_USERNAME/KUMA_PASSWORD in "
                 "secrets/uptime-kuma-sync.env.age (admin must already exist in UI)"
             ) from e
+
+        patch_kuma_api_for_v2(api)
 
         tag_id = ensure_tag(api, tag_name)
         notification_id = ensure_notification(api, notification_name, topic)
