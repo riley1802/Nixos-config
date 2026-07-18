@@ -388,26 +388,46 @@
         background-size: 40px 40px;
       }
 
+      /* Service tiles: flat fills, no per-card outline — section border is the frame. */
       html.dark .service,
-      html.dark .bookmark {
+      html.dark .bookmark,
+      html.dark .service-card {
         border-radius: 2px !important;
-        box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.18);
+        border: none !important;
+        box-shadow: none !important;
         backdrop-filter: none;
       }
 
-      /* Bounding box around each section (leaf groups only — skip layout wrappers). */
+      html.dark .service-card {
+        background-color: rgba(51, 65, 85, 0.45) !important;
+        margin-bottom: 0 !important;
+        height: auto !important;
+        min-height: 3.25rem;
+      }
+
+      /* More space between clickable service tiles. */
+      .services-list {
+        gap: 1.25rem !important;
+        row-gap: 1.25rem !important;
+        column-gap: 1.25rem !important;
+        margin-top: 0.85rem !important;
+      }
+
+      /* Bounding box around the whole section (title + tiles), not each tile. */
       .services-group:not(:has(.services-group)),
       #information-widgets {
-        border-radius: 2px;
-        padding: 0.5rem 0.6rem 0.65rem !important;
-        margin: 0.15rem !important;
+        border-radius: 3px;
+        border: 1px solid rgba(148, 163, 184, 0.75) !important;
+        padding: 0.85rem 1rem 1.1rem !important;
+        margin: 0.55rem !important;
         box-sizing: border-box;
+        background-color: rgba(2, 6, 23, 0.55);
       }
 
       html.dark .services-group:not(:has(.services-group)),
       html.dark #information-widgets {
-        box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.35);
-        background-color: rgba(15, 23, 42, 0.45);
+        border-color: rgba(148, 163, 184, 0.75) !important;
+        background-color: rgba(2, 6, 23, 0.55);
       }
 
       /* Soft light — cool gray paper, never warm/orange, never pure white */
@@ -424,15 +444,22 @@
       }
 
       html.light .service,
-      html.light .bookmark {
+      html.light .bookmark,
+      html.light .service-card {
         border-radius: 2px !important;
-        box-shadow: inset 0 0 0 1px rgba(71, 85, 105, 0.2);
+        border: none !important;
+        box-shadow: none !important;
+      }
+
+      html.light .service-card {
+        background-color: rgba(255, 255, 255, 0.65) !important;
+        margin-bottom: 0 !important;
       }
 
       html.light .services-group:not(:has(.services-group)),
       html.light #information-widgets {
-        box-shadow: inset 0 0 0 1px rgba(71, 85, 105, 0.4);
-        background-color: rgba(255, 255, 255, 0.35);
+        border: 1px solid rgba(71, 85, 105, 0.5) !important;
+        background-color: rgba(255, 255, 255, 0.4);
       }
     '';
 
