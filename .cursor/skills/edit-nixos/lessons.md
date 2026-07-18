@@ -13,6 +13,27 @@ Append entries when a build, rebuild, or runtime error is resolved. Format:
 
 ---
 
+### libayatana-appindicator dlopen fails at runtime for Tauri tray apps (2026-07-18)
+- **Context:** Packaging `apps/homeport-tray` (Tauri v2, `tray-icon` feature) with `rustPlatform.buildRustPackage` + `wrapGAppsHook3`; `libayatana-appindicator` in `buildInputs`.
+- **Error:** `thread 'main' panicked … Failed to load ayatana-appindicator3 or appindicator3 dynamic library … cannot open shared object file`, crash-looped under `systemd --user`.
+- **Cause:** `libappindicator-sys` `dlopen()`s `libayatana-appindicator3.so.1` at runtime instead of linking it; `wrapGAppsHook3`'s generated wrapper doesn't add plain `buildInputs` libs to `LD_LIBRARY_PATH` for dlopen use cases.
+- **Fix:** In `preFixup`, append to the hook's own wrapper args: `gappsWrapperArgs+=(--prefix LD_LIBRARY_PATH : "${lib.makeLibraryPath [ libayatana-appindicator ]}")`.
+- **Avoid:** Assuming `buildInputs` alone is enough for Rust crates that `dlopen()` system libraries (tray/appindicator, some codecs) — check for panics naming a `.so` even after a clean build.
+
+### Tauri app needs Cargo.toml at `src` root for buildRustPackage (2026-07-18)
+- **Context:** `apps/homeport-tray/default.nix` with `src = ./src-tauri` and `frontendDist: "../dist"` (dist as a sibling of `src-tauri`).
+- **Error:** `error: could not find Cargo.toml in /build/source or any parent directory` (after trying `cargoRoot = "src-tauri"` with `src = ./.`), then `frontendDist … doesn't exist` (when `src = ./src-tauri` only).
+- **Cause:** `buildRustPackage`'s `cargoRoot` didn't relocate the build's working directory the way expected; and excluding the frontend dir from `src` broke Tauri's `frontendDist` resolution (relative to `tauri.conf.json`, i.e. inside `src-tauri/`).
+- **Fix:** Keep `Cargo.toml` at the derivation's `src` root (`src = ./src-tauri`) and move the placeholder frontend to `src-tauri/dist/`, with `frontendDist: "dist"` (no `../`).
+- **Avoid:** Splitting a Tauri project's frontend dir outside the `src-tauri/` Cargo root when packaging with plain `buildRustPackage` (no `cargoRoot` juggling needed if everything Tauri needs stays under one root).
+
+### Tauri tray icon PNGs must be RGBA (2026-07-18)
+- **Context:** `tauri::include_image!`/`generate_context!` embedding `icons/tray-normal.png` generated via `imagemagick convert -size 128x128 xc:'#38bdf8'`.
+- **Error:** `proc macro panicked … icon … is not RGBA`.
+- **Cause:** Plain `xc:` flat-color PNGs from ImageMagick default to RGB (no alpha channel); Tauri's tray/window icon loader requires RGBA.
+- **Fix:** Regenerate with an explicit alpha channel: `convert -size 128x128 xc:'#38bdf8' -alpha set PNG32:icon.png`.
+- **Avoid:** Assuming any PNG works for Tauri icons — verify RGBA (`identify -format %A icon.png` or just always force `-alpha set`).
+
 ### Uptime Kuma 2.x requires `conditions` on monitor create (2026-07-18)
 - **Context:** `uptime-kuma-sync` creating monitors via `python3Packages.uptime-kuma-api` 1.2.1 against Uptime Kuma 2.4.0.
 - **Error:** `SQLITE_CONSTRAINT: NOT NULL constraint failed: monitor.conditions`.

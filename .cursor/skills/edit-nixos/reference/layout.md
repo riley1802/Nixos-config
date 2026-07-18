@@ -57,6 +57,13 @@
 | `home/programs/spotify.nix` | Spotify |
 | `home/programs/discord.nix` | Discord |
 | `home/programs/cursor.nix` | Cursor editor and CLI |
+| `home/programs/homeport-tray.nix` | Homeport Desktop (Tauri tray app) + autostart systemd user service |
+
+## Standalone apps (`apps/`, flake `packages` output)
+
+| Path | Purpose |
+|------|---------|
+| `apps/homeport-tray/` | Tauri v2 Rust project; built via `apps/homeport-tray/default.nix`, exposed as `packages.x86_64-linux.homeport-tray` in `flake.nix` |
 
 ## Secrets (`secrets/`)
 

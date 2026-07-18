@@ -17,6 +17,10 @@
 /secrets/*.local.*
 /secrets/*.plain.*
 
+# Rust / Tauri build artifacts
+/apps/*/src-tauri/target/
+/apps/*/src-tauri/gen/
+
 # Editor and OS files
 .DS_Store
 *~

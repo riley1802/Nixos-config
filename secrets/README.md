@@ -59,6 +59,11 @@ pkexec nixos-rebuild switch --flake /etc/nixos#nixos
 systemctl restart uptime-kuma-sync.service
 ```
 
+This file's `owner` is `rileyt` (not the default `root`) because the `homeport-tray`
+user service (`home/programs/homeport-tray.nix`) also reads `NTFY_TOPIC` from it to
+subscribe to ntfy for native tray notifications. The root-run `uptime-kuma-sync.service`
+still reads it fine — root bypasses file permissions.
+
 ## Tailscale auth key
 
 1. Create a **reusable** auth key at [Tailscale admin → Keys](https://login.tailscale.com/admin/settings/keys)

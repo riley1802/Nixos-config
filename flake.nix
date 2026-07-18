@@ -58,6 +58,9 @@
     {
       formatter.x86_64-linux = nixpkgs.legacyPackages.x86_64-linux.nixpkgs-fmt;
 
+      packages.x86_64-linux.homeport-tray =
+        nixpkgs.legacyPackages.x86_64-linux.callPackage ./apps/homeport-tray { };
+
       nixosConfigurations.nixos = mkNixos {
         name = "nixos";
         system = "x86_64-linux";

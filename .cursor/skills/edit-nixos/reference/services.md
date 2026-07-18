@@ -105,6 +105,19 @@
 - `rileyt` in `docker` group
 - Requires Serve enabled in Tailscale admin for this node
 
+## Homeport Desktop (tray app)
+
+- Project: `apps/homeport-tray/` (Tauri v2, Rust); package: `apps/homeport-tray/default.nix`; flake output: `packages.x86_64-linux.homeport-tray`
+- Home Manager module: `home/programs/homeport-tray.nix` (imported from `home.nix`)
+- Main window loads `http://127.0.0.1:8083` directly (the existing Homepage dashboard) — no separate frontend, `frontendDist` is an unused placeholder (`apps/homeport-tray/src-tauri/dist/`)
+- Close button hides to tray instead of quitting; tray menu: Show Dashboard / Reload / Quit; left-click toggles window visibility
+- Tray status is driven **only** by subscribing to `http://127.0.0.1:8090/<topic>/json` (ntfy NDJSON stream) — no independent health polling; each message becomes a native notification (`tauri-plugin-notification`) and swaps the tray icon (normal/alert) based on whether the text contains "down"
+- `NTFY_TOPIC` comes from the existing `age.secrets.uptime-kuma-sync` file (`/run/agenix/uptime-kuma-sync`); that secret's `owner` was changed from default `root` to `rileyt` so this user-session service can read it (root-run `uptime-kuma-sync.service` still reads it fine — root bypasses file permissions)
+- Autostart: `systemd.user.services.homeport-tray`, `WantedBy = graphical-session.target`, launched with `--start-hidden`
+- Requires `gnomeExtensions.appindicator` (already installed in `modules/desktop/gnome-extensions.nix`) for the tray icon to render on GNOME Shell at all
+- Runtime deps (`buildInputs` in `apps/homeport-tray/default.nix`): `gtk3`, `webkitgtk_4_1`, `libsoup_3`, `libayatana-appindicator`, `openssl`, `dbus`, `glib`. `libayatana-appindicator` is `dlopen()`'d at runtime (not linked) — `preFixup` adds it to `LD_LIBRARY_PATH` via `gappsWrapperArgs`, or the tray icon panics on startup
+- Rebuild/test the package alone: `nix build .#homeport-tray`
+
 ## Gaming (Steam)
 
 - Steam enabled; Remote Play does **not** open firewall ports

@@ -8,6 +8,7 @@ lives under `home/`.
 ## Layout
 
 - `flake.nix` - flake inputs and `nixos` output.
+- `apps/` - standalone app projects packaged as flake outputs (e.g. `homeport-tray`, a Tauri desktop companion).
 - `hosts/nixos/` - `configuration.nix` and `hardware-configuration.nix`.
 - `configuration.nix` - re-exports `hosts/nixos/` for compatibility.
 - `home.nix` - Home Manager imports for the desktop.
@@ -101,6 +102,7 @@ in `modules/services/llama-cpp.nix`.
 - Uptime Kuma (`3001`) and ntfy (`8090`) stay direct HTTP on `tailscale0` (ntfy rejects a path in `base-url`).
 - Uptime Kuma monitors are declared in `modules/services/uptime-kuma.nix` and synced on boot via `uptime-kuma-sync.service` (Socket.IO API). Alerts go to ntfy. Credentials: `secrets/uptime-kuma-sync.env.age` (`KUMA_USERNAME`, `KUMA_PASSWORD`, `NTFY_TOPIC`) — create/edit with `agenix -e` after the Kuma admin account exists in the UI.
 - n8n listens on `127.0.0.1` only; Serve terminates TLS. Do not use `N8N_PATH` (broken in 2.x).
+- **Homeport Desktop** (`apps/homeport-tray/`, home-manager `home/programs/homeport-tray.nix`): a Tauri v2 tray app that shows the Homepage dashboard in its own window (loads `http://127.0.0.1:8083`), lives in the GNOME tray (via `gnomeExtensions.appindicator`), and relays the `homeport-uptime` ntfy topic as native desktop notifications + a tray icon color swap. Autostarts hidden via `systemd.user.services.homeport-tray`; reads `NTFY_TOPIC` from the existing `uptime-kuma-sync` secret (owner `rileyt`). Rebuild the package with `nix build .#homeport-tray`.
 - PostgreSQL 16 backs n8n; DB password via agenix (`secrets/n8n-db-password.age`).
 - Docker + nvidia-container-toolkit; Portainer image pinned to `portainer/portainer-ce:2.39.4`.
 - `rileyt` is in the `docker` group.
