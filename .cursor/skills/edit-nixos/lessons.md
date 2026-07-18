@@ -13,6 +13,13 @@ Append entries when a build, rebuild, or runtime error is resolved. Format:
 
 ---
 
+### WebKitGTK + NVIDIA + Wayland crashes on hide()/show() (2026-07-18)
+- **Context:** `apps/homeport-tray` (Tauri v2 tray app; close-to-tray hides the window, tray click / single-instance re-launch shows it again) on this machine's dual-NVIDIA GNOME/Wayland session.
+- **Error:** `Gdk-Message: Error 71 (Protocol error) dispatching to Wayland display.` — the whole process died every time a hidden window was shown again (systemd unit crash-looped; clicking the app icon while the autostarted instance was hidden did nothing because the instance it signaled immediately crashed).
+- **Cause:** Known upstream WebKitGTK DMABUF renderer / NVIDIA driver desync on Wayland (tauri-apps/tauri#10702, #9394) — the accelerated compositing surface gets into a bad state across a `hide()` → `show()` cycle. Not related to threading (adding `run_on_main_thread` for the GTK calls did not fix it).
+- **Fix:** Set `WEBKIT_DISABLE_DMABUF_RENDERER=1` and `__NV_DISABLE_EXPLICIT_SYNC=1` via `std::env::set_var` at the very top of `main()`, before `tauri::Builder::default()` runs. See https://v2.tauri.app/develop/debug/linux-graphics/.
+- **Avoid:** Assuming a Tauri window that gets hidden and re-shown (tray apps, "start minimized") is safe by default on NVIDIA + Wayland — apply the DMABUF/explicit-sync workaround proactively for any Tauri app targeting this machine, not just after hitting the crash.
+
 ### libayatana-appindicator dlopen fails at runtime for Tauri tray apps (2026-07-18)
 - **Context:** Packaging `apps/homeport-tray` (Tauri v2, `tray-icon` feature) with `rustPlatform.buildRustPackage` + `wrapGAppsHook3`; `libayatana-appindicator` in `buildInputs`.
 - **Error:** `thread 'main' panicked … Failed to load ayatana-appindicator3 or appindicator3 dynamic library … cannot open shared object file`, crash-looped under `systemd --user`.

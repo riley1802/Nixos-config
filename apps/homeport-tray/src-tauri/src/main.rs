@@ -18,6 +18,16 @@ const TRAY_ID: &str = "homeport-tray";
 const NTFY_BASE_URL: &str = "http://127.0.0.1:8090";
 
 fn main() {
+    // Workaround for WebKitGTK + NVIDIA on Wayland: the DMABUF renderer
+    // desyncs the wl_surface after a hide()/show() cycle (this app's tray
+    // behavior depends on exactly that), crashing with "Error 71 (Protocol
+    // error) dispatching to Wayland display". See
+    // https://v2.tauri.app/develop/debug/linux-graphics/ and
+    // https://github.com/tauri-apps/tauri/issues/10702. This machine has two
+    // NVIDIA GPUs (see modules/hardware/nvidia.nix), so it's always affected.
+    std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+    std::env::set_var("__NV_DISABLE_EXPLICIT_SYNC", "1");
+
     let start_hidden = std::env::args().any(|arg| arg == "--start-hidden");
 
     tauri::Builder::default()
@@ -52,11 +62,23 @@ fn main() {
         .expect("error while running homeport-tray");
 }
 
+/// GTK/WebKitGTK window operations must run on the main thread — the
+/// single-instance plugin's callback (and the ntfy watcher task) fire from
+/// other threads, and calling show()/set_focus() directly from there crashes
+/// with "Error 71 (Protocol error) dispatching to Wayland display".
+fn on_main_thread(app: &AppHandle, job: impl FnOnce(AppHandle) + Send + 'static) {
+    let receiver = app.clone();
+    let for_job = app.clone();
+    let _ = receiver.run_on_main_thread(move || job(for_job));
+}
+
 fn focus_dashboard(app: &AppHandle) {
-    if let Some(window) = app.get_webview_window(DASHBOARD_WINDOW_LABEL) {
-        let _ = window.show();
-        let _ = window.set_focus();
-    }
+    on_main_thread(app, |app| {
+        if let Some(window) = app.get_webview_window(DASHBOARD_WINDOW_LABEL) {
+            let _ = window.show();
+            let _ = window.set_focus();
+        }
+    });
 }
 
 fn build_tray(app: &tauri::App) -> tauri::Result<()> {
@@ -74,11 +96,11 @@ fn build_tray(app: &tauri::App) -> tauri::Result<()> {
         .tooltip("Homeport")
         .on_menu_event(|app, event| match event.id.as_ref() {
             "show" => focus_dashboard(app),
-            "reload" => {
+            "reload" => on_main_thread(app, |app| {
                 if let Some(window) = app.get_webview_window(DASHBOARD_WINDOW_LABEL) {
                     let _ = window.eval("location.reload()");
                 }
-            }
+            }),
             "quit" => app.exit(0),
             _ => {}
         })
@@ -89,16 +111,17 @@ fn build_tray(app: &tauri::App) -> tauri::Result<()> {
                 ..
             } = event
             {
-                let app = tray.app_handle();
-                if let Some(window) = app.get_webview_window(DASHBOARD_WINDOW_LABEL) {
-                    let visible = window.is_visible().unwrap_or(false);
-                    if visible {
-                        let _ = window.hide();
-                    } else {
-                        let _ = window.show();
-                        let _ = window.set_focus();
+                on_main_thread(tray.app_handle(), |app| {
+                    if let Some(window) = app.get_webview_window(DASHBOARD_WINDOW_LABEL) {
+                        let visible = window.is_visible().unwrap_or(false);
+                        if visible {
+                            let _ = window.hide();
+                        } else {
+                            let _ = window.show();
+                            let _ = window.set_focus();
+                        }
                     }
-                }
+                });
             }
         })
         .build(app)?;
@@ -135,7 +158,7 @@ fn spawn_ntfy_watcher(app: AppHandle) {
 
                     while let Some(newline_pos) = buffer.iter().position(|byte| *byte == b'\n') {
                         let line: Vec<u8> = buffer.drain(..=newline_pos).collect();
-                        handle_ntfy_line(&app, &line, &normal_icon, &alert_icon);
+                        handle_ntfy_line(&app, &line, normal_icon.clone(), alert_icon.clone());
                     }
                 }
             }
@@ -146,7 +169,7 @@ fn spawn_ntfy_watcher(app: AppHandle) {
     });
 }
 
-fn handle_ntfy_line(app: &AppHandle, line: &[u8], normal_icon: &Image, alert_icon: &Image) {
+fn handle_ntfy_line(app: &AppHandle, line: &[u8], normal_icon: Image<'static>, alert_icon: Image<'static>) {
     let Ok(text) = std::str::from_utf8(line) else {
         return;
     };
@@ -168,16 +191,25 @@ fn handle_ntfy_line(app: &AppHandle, line: &[u8], normal_icon: &Image, alert_ico
     let title = value
         .get("title")
         .and_then(|v| v.as_str())
-        .unwrap_or("Homeport alert");
-    let body = value.get("message").and_then(|v| v.as_str()).unwrap_or("");
-
-    let _ = app.notification().builder().title(title).body(body).show();
+        .unwrap_or("Homeport alert")
+        .to_string();
+    let body = value
+        .get("message")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
 
     let combined = format!("{title} {body}").to_lowercase();
     let is_down_alert = combined.contains("down");
+    let icon = if is_down_alert { alert_icon } else { normal_icon };
 
-    if let Some(tray) = app.tray_by_id(TRAY_ID) {
-        let icon = if is_down_alert { alert_icon } else { normal_icon };
-        let _ = tray.set_icon(Some(icon.clone()));
-    }
+    // Runs from the ntfy watcher's tokio task, not the GTK main thread —
+    // dispatch both the notification and the tray icon swap accordingly.
+    on_main_thread(app, move |app| {
+        let _ = app.notification().builder().title(&title).body(&body).show();
+
+        if let Some(tray) = app.tray_by_id(TRAY_ID) {
+            let _ = tray.set_icon(Some(icon));
+        }
+    });
 }
