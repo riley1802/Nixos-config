@@ -6,6 +6,7 @@ All secrets for this config are encrypted with [agenix](https://github.com/ryant
 |--------|------|---------|
 | Tailscale auth key | `tailscale-auth-key.age` | `modules/services/tailscale.nix` |
 | SearXNG secret key | `searxng-secret-key.age` | `modules/services/searxng.nix` |
+| n8n DB password | `n8n-db-password.age` | `modules/services/n8n.nix` |
 
 Public keys allowed to decrypt are listed in `secrets.nix`. **Never commit plaintext secrets.**
 

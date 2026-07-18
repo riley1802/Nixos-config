@@ -6,6 +6,7 @@ All machine secrets are managed with [agenix](https://github.com/ryantm/agenix).
 |--------|----------------|--------|
 | Tailscale auth key | `secrets/tailscale-auth-key.age` | `modules/services/tailscale.nix` |
 | SearXNG secret key | `secrets/searxng-secret-key.age` | `modules/services/searxng.nix` |
+| n8n DB password | `secrets/n8n-db-password.age` | `modules/services/n8n.nix` |
 
 ## Core modules
 

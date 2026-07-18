@@ -8,6 +8,14 @@
 | SearXNG | `modules/services/searxng.nix` | http://127.0.0.1:8888 | Secret via agenix |
 | Tailscale | `modules/services/tailscale.nix` | tailnet | Auth key via agenix |
 | printing | `modules/services/printing.nix` | — | CUPS |
+| nginx | `modules/services/nginx.nix` | http://nixos.taile9f484.ts.net/ (port 80 on `tailscale0`) | Path proxy front door |
+| Homepage | `modules/services/homepage-dashboard.nix` | via nginx `/` (upstream `127.0.0.1:8083`) | `openFirewall = false` |
+| n8n | `modules/services/n8n.nix` | via nginx `/n8n/` (upstream `127.0.0.1:5678`) | Postgres + agenix password |
+| Portainer | `modules/services/docker.nix` | via nginx `/portainer/` (upstream `127.0.0.1:9443`) | `portainer/portainer-ce:2.39.4` |
+| ntfy | `modules/services/ntfy-sh.nix` | http://nixos.taile9f484.ts.net:8090 | Own port on `tailscale0` (no subpath — upstream rejects path in `base-url`) |
+| Uptime Kuma | `modules/services/uptime-kuma.nix` | http://nixos.taile9f484.ts.net:3001 | Not proxied (no subpath support) |
+| PostgreSQL | `modules/services/postgresql.nix` | `127.0.0.1:5432` | DB `n8n` only |
+| Docker | `modules/services/docker.nix` | — | `oci-containers` + nvidia-container-toolkit |
 
 ## llama.cpp
 
@@ -64,6 +72,15 @@
 - Firewall: closed (`openFirewall = false`)
 - SSH: port 22 on `tailscale0` only (`modules/core/openssh.nix`)
 - Revoked keys must be replaced via `agenix -e` before rebuild
+
+## nginx + dashboard stack
+
+- nginx listens on `0.0.0.0:80`, firewall open on `tailscale0` only
+- Path routing: `/` → Homepage `:8083`, `/n8n/` → n8n, `/portainer/` → Portainer HTTPS
+- Uptime Kuma (`:3001`) and ntfy (`:8090`) stay direct on `tailscale0` (ntfy rejects path in `base-url`)
+- Homepage `allowedHosts` includes `nixos.taile9f484.ts.net` and localhost `:8083`
+- n8n DB password: agenix → oneshot `n8n-postgres-password` → `ALTER USER n8n`
+- `rileyt` in `docker` group
 
 ## Gaming (Steam)
 

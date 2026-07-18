@@ -39,6 +39,11 @@ This system runs local AI/search services bound to localhost.
 
 | Service | URL | Module |
 |---------|-----|--------|
+| Homepage (via nginx) | http://nixos.taile9f484.ts.net/ | `modules/services/homepage-dashboard.nix` + `nginx.nix` |
+| n8n | http://nixos.taile9f484.ts.net/n8n/ | `modules/services/n8n.nix` |
+| Portainer | http://nixos.taile9f484.ts.net/portainer/ | `modules/services/docker.nix` |
+| ntfy | http://nixos.taile9f484.ts.net:8090 | `modules/services/ntfy-sh.nix` |
+| Uptime Kuma | http://nixos.taile9f484.ts.net:3001 | `modules/services/uptime-kuma.nix` |
 | llama.cpp API | http://127.0.0.1:8080/v1 | `modules/services/llama-cpp.nix` |
 | whisper.cpp | http://127.0.0.1:8081/v1/audio/transcriptions | `modules/services/whisper-cpp.nix` |
 | Piper TTS | http://127.0.0.1:8082 | `modules/services/piper.nix` |
@@ -89,6 +94,14 @@ in `modules/services/llama-cpp.nix`.
 - Connect remotely: `ssh rileyt@nixos` from another tailnet device.
 - **After revoking a key in Tailscale admin**, create a new key and run `agenix -e secrets/tailscale-auth-key.age` before rebuilding.
 
+### nginx reverse proxy + apps
+
+- Plain HTTP on port 80 (`tailscale0` only). Path routing to Homepage (`/`), n8n (`/n8n/`), Portainer (`/portainer/`).
+- Uptime Kuma (`3001`) and ntfy (`8090`) are **not** proxied — direct on `tailscale0` (ntfy rejects a path in `base-url`).
+- PostgreSQL 16 backs n8n; DB password via agenix (`secrets/n8n-db-password.age`).
+- Docker + nvidia-container-toolkit; Portainer image pinned to `portainer/portainer-ce:2.39.4`.
+- `rileyt` is in the `docker` group.
+
 ## Firewall policy
 
 Services do not open the public firewall unless explicitly intended:
@@ -96,7 +109,10 @@ Services do not open the public firewall unless explicitly intended:
 | Service | Firewall |
 |---------|----------|
 | SSH | `tailscale0` only (port 22) |
-| llama.cpp, whisper.cpp, Piper, SearXNG | localhost only |
+| nginx | `tailscale0` only (port 80) |
+| Uptime Kuma | `tailscale0` only (port 3001) |
+| ntfy | `tailscale0` only (port 8090) |
+| llama.cpp, whisper.cpp, Piper, SearXNG, n8n, Portainer, Homepage, PostgreSQL | localhost only (or via nginx) |
 | Tailscale | closed (`openFirewall = false`) |
 | Steam Remote Play | closed (`remotePlay.openFirewall = false`) |
 
@@ -108,6 +124,7 @@ All secrets use [agenix](https://github.com/ryantm/agenix). Encrypted files in `
 |--------|------|
 | Tailscale auth key | `secrets/tailscale-auth-key.age` |
 | SearXNG secret key | `secrets/searxng-secret-key.age` |
+| n8n DB password | `secrets/n8n-db-password.age` |
 
 Edit secrets:
 
@@ -151,6 +168,7 @@ nix fmt
 Check service status after applying:
 
 ```sh
+systemctl status nginx homepage-dashboard n8n postgresql ntfy-sh uptime-kuma docker
 systemctl status llama-cpp whisper-cpp piper searx tailscaled
 curl http://127.0.0.1:8080/v1/models
 curl http://127.0.0.1:8081/v1/audio/transcriptions
