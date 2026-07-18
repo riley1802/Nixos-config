@@ -22,7 +22,13 @@
       target = "_blank";
       iconStyle = "theme";
 
-      # List form preserves visual order (attrsets can get reordered when serialized).
+      # Whiteboard grid (list form preserves visual order):
+      #   1 System (full width)
+      #   2 header widgets = at-a-glance (time, weather, resources, search)
+      #   3 Apps + Bookmarks (separate) | 4 Automation | 5 Monitoring
+      #   6 AI / Local | 7 Containers
+      # Bookmarks are service tiles (not bookmarks.yaml) so they can nest in the
+      # Workspace row beside Apps — Homepage cannot nest bookmark groups.
       layout = [
         {
           System = {
@@ -31,27 +37,41 @@
           };
         }
         {
-          "AI / Local Models" = {
+          Workspace = {
+            header = false;
             style = "row";
             columns = 4;
+            Apps = {
+              style = "row";
+              columns = 2;
+            };
+            Bookmarks = {
+              style = "row";
+              columns = 2;
+            };
+            Automation = {
+              style = "column";
+              columns = 1;
+            };
+            Monitoring = {
+              style = "column";
+              columns = 1;
+            };
           };
         }
         {
-          "Automation & Infra" = {
+          Bottom = {
+            header = false;
             style = "row";
             columns = 2;
-          };
-        }
-        {
-          Monitoring = {
-            style = "row";
-            columns = 2;
-          };
-        }
-        {
-          External = {
-            style = "row";
-            columns = 4;
+            "AI / Local" = {
+              style = "row";
+              columns = 3;
+            };
+            Containers = {
+              style = "row";
+              columns = 1;
+            };
           };
         }
       ];
@@ -167,122 +187,153 @@
         ];
       }
       {
-        "AI / Local Models" = [
+        # Middle row: Apps | Bookmarks | Automation | Monitoring
+        Workspace = [
           {
-            "llama.cpp" = {
-              icon = "si-ollama";
-              href = "http://127.0.0.1:8080";
-              description = "Local LLM inference";
-              siteMonitor = "http://127.0.0.1:8080/v1/models";
-            };
+            Apps = [
+              {
+                SearXNG = {
+                  icon = "si-searxng";
+                  href = "http://127.0.0.1:8888";
+                  description = "Metasearch";
+                  siteMonitor = "http://127.0.0.1:8888";
+                };
+              }
+              {
+                "Metrics API" = {
+                  icon = "mdi-chart-line";
+                  href = "http://127.0.0.1:8091";
+                  description = "Host · GPU JSON";
+                  siteMonitor = "http://127.0.0.1:8091";
+                };
+              }
+              {
+                Tailscale = {
+                  icon = "si-tailscale";
+                  href = "https://login.tailscale.com/admin/machines";
+                  description = "Tailnet admin";
+                };
+              }
+            ];
           }
           {
-            "whisper.cpp" = {
-              icon = "mdi-microphone";
-              href = "http://127.0.0.1:8081/v1/audio/transcriptions";
-              description = "Speech-to-text";
-              siteMonitor = "http://127.0.0.1:8081";
-            };
+            Bookmarks = [
+              {
+                GitHub = {
+                  icon = "si-github";
+                  href = "https://github.com";
+                  description = "github.com";
+                };
+              }
+              {
+                "NixOS Options" = {
+                  icon = "si-nixos";
+                  href = "https://search.nixos.org/options";
+                  description = "search.nixos.org";
+                };
+              }
+              {
+                "Home Manager Options" = {
+                  icon = "mdi-home-account";
+                  href = "https://home-manager-options.extranix.com";
+                  description = "HM option search";
+                };
+              }
+              {
+                "Homepage Docs" = {
+                  icon = "mdi-book-open-page-variant";
+                  href = "https://gethomepage.dev";
+                  description = "gethomepage.dev";
+                };
+              }
+            ];
           }
           {
-            "Piper TTS" = {
-              icon = "mdi-volume-high";
-              href = "http://127.0.0.1:8082";
-              description = "Text-to-speech";
-              siteMonitor = "http://127.0.0.1:8082/health";
-            };
+            Automation = [
+              {
+                n8n = {
+                  icon = "n8n.png";
+                  href = "https://nixos.taile9f484.ts.net:5678";
+                  description = "Workflow automation";
+                  siteMonitor = "http://127.0.0.1:5678/healthz";
+                };
+              }
+            ];
           }
           {
-            SearXNG = {
-              icon = "si-searxng";
-              href = "http://127.0.0.1:8888";
-              description = "Metasearch";
-              siteMonitor = "http://127.0.0.1:8888";
-            };
+            Monitoring = [
+              {
+                "Uptime Kuma" = {
+                  icon = "uptime-kuma.png";
+                  href = "http://127.0.0.1:3001";
+                  description = "Status dashboard";
+                  siteMonitor = "http://127.0.0.1:3001";
+                };
+              }
+              {
+                ntfy = {
+                  icon = "ntfy.png";
+                  href = "http://nixos.taile9f484.ts.net:8090";
+                  description = "Push notifications";
+                  siteMonitor = "http://127.0.0.1:8090";
+                };
+              }
+            ];
           }
         ];
       }
       {
-        "Automation & Infra" = [
+        # Bottom row: AI / Local | Containers
+        Bottom = [
           {
-            n8n = {
-              icon = "n8n.png";
-              href = "https://nixos.taile9f484.ts.net:5678";
-              description = "Workflow automation";
-              siteMonitor = "http://127.0.0.1:5678/healthz";
-            };
+            "AI / Local" = [
+              {
+                "llama.cpp" = {
+                  icon = "si-ollama";
+                  href = "http://127.0.0.1:8080";
+                  description = "Local LLM inference";
+                  siteMonitor = "http://127.0.0.1:8080/v1/models";
+                };
+              }
+              {
+                "whisper.cpp" = {
+                  icon = "mdi-microphone";
+                  href = "http://127.0.0.1:8081/v1/audio/transcriptions";
+                  description = "Speech-to-text";
+                  siteMonitor = "http://127.0.0.1:8081";
+                };
+              }
+              {
+                "Piper TTS" = {
+                  icon = "mdi-volume-high";
+                  href = "http://127.0.0.1:8082";
+                  description = "Text-to-speech";
+                  siteMonitor = "http://127.0.0.1:8082/health";
+                };
+              }
+            ];
           }
           {
-            Portainer = {
-              icon = "portainer.png";
-              href = "https://nixos.taile9f484.ts.net:9443";
-              description = "Container management";
-              siteMonitor = "https://127.0.0.1:9443";
-            };
-          }
-        ];
-      }
-      {
-        Monitoring = [
-          {
-            "Uptime Kuma" = {
-              icon = "uptime-kuma.png";
-              href = "http://127.0.0.1:3001";
-              description = "Status dashboard";
-              siteMonitor = "http://127.0.0.1:3001";
-            };
-          }
-          {
-            ntfy = {
-              icon = "ntfy.png";
-              href = "http://nixos.taile9f484.ts.net:8090";
-              description = "Push notifications";
-              siteMonitor = "http://127.0.0.1:8090";
-            };
+            Containers = [
+              {
+                Portainer = {
+                  icon = "portainer.png";
+                  href = "https://nixos.taile9f484.ts.net:9443";
+                  description = "Container management";
+                  siteMonitor = "https://127.0.0.1:9443";
+                };
+              }
+            ];
           }
         ];
       }
     ];
 
-    bookmarks = [
-      {
-        External = [
-          {
-            GitHub = [
-              {
-                abbr = "GH";
-                href = "https://github.com";
-              }
-            ];
-          }
-          {
-            "NixOS Options Search" = [
-              {
-                abbr = "NO";
-                href = "https://search.nixos.org/options";
-              }
-            ];
-          }
-          {
-            "Home Manager Options" = [
-              {
-                abbr = "HM";
-                href = "https://home-manager-options.extranix.com";
-              }
-            ];
-          }
-          {
-            "Homepage Docs" = [
-              {
-                abbr = "HD";
-                href = "https://gethomepage.dev";
-              }
-            ];
-          }
-        ];
-      }
-    ];
+    # External links live under Workspace → Bookmarks (services) so the middle
+    # row can keep Apps and Bookmarks as separate cells. bookmarks.yaml unused.
+    bookmarks = [ ];
 
+    # At-a-glance bar (section 2): time, weather, host resources, search.
     widgets = [
       {
         datetime = {

@@ -13,6 +13,13 @@ Append entries when a build, rebuild, or runtime error is resolved. Format:
 
 ---
 
+### Homepage bookmark groups do not nest under service groups (2026-07-18)
+- **Context:** Reshaping Homeport (`homepage-dashboard.nix`) to a whiteboard grid with Apps + Bookmarks side-by-side in a nested Workspace row.
+- **Error:** Nested `bookmarks.yaml` under `Workspace → Bookmarks` either failed to render or only exposed the first link; `/api/bookmarks` returned a malformed object instead of a group of links.
+- **Cause:** Homepage supports nested *service* groups, but bookmark groups are effectively top-level only — deep nesting is not parsed like services.
+- **Fix:** Represent the Bookmarks cell as a nested *service* group (href tiles) under Workspace so layout columns work; leave `bookmarks = [ ]`.
+- **Avoid:** Nesting `bookmarks.yaml` groups under service parents when you need a multi-column Homepage layout — use service tiles or keep bookmarks top-level.
+
 ### WebKitGTK + NVIDIA + Wayland crashes on hide()/show() (2026-07-18)
 - **Context:** `apps/homeport-tray` (Tauri v2 tray app; close-to-tray hides the window, tray click / single-instance re-launch shows it again) on this machine's dual-NVIDIA GNOME/Wayland session.
 - **Error:** `Gdk-Message: Error 71 (Protocol error) dispatching to Wayland display.` — the whole process died every time a hidden window was shown again (systemd unit crash-looped; clicking the app icon while the autostarted instance was hidden did nothing because the instance it signaled immediately crashed).
