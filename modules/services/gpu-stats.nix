@@ -10,12 +10,17 @@ let
       #!/usr/bin/env python3
       import json
       import subprocess
+      import threading
+      import time
       from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
       from pathlib import Path
 
       HOST = "127.0.0.1"
       PORT = 8091
       NVIDIA_SMI = "${nvidiaBin}/bin/nvidia-smi"
+      NETWORK_INTERFACE = "enp132s0"
+      network_lock = threading.Lock()
+      network_previous = None
 
 
       def read_loadavg() -> dict:
@@ -42,6 +47,32 @@ let
               "mem_total_mib": round(total / 1024, 1),
               "mem_available_mib": round(available / 1024, 1),
               "mem_used_pct": round(100 * (1 - (available / total)), 1) if total else 0,
+          }
+
+
+      def read_network() -> dict:
+          global network_previous
+          stats = Path("/sys/class/net") / NETWORK_INTERFACE / "statistics"
+          rx_bytes = int((stats / "rx_bytes").read_text())
+          tx_bytes = int((stats / "tx_bytes").read_text())
+          now = time.monotonic()
+
+          with network_lock:
+              previous = network_previous
+              network_previous = (now, rx_bytes, tx_bytes)
+
+          if previous is None:
+              rx_mbps = 0.0
+              tx_mbps = 0.0
+          else:
+              previous_time, previous_rx, previous_tx = previous
+              elapsed = max(now - previous_time, 0.001)
+              rx_mbps = max(rx_bytes - previous_rx, 0) * 8 / elapsed / 1_000_000
+              tx_mbps = max(tx_bytes - previous_tx, 0) * 8 / elapsed / 1_000_000
+
+          return {
+              "rx_mbps": round(rx_mbps, 2),
+              "tx_mbps": round(tx_mbps, 2),
           }
 
 
@@ -105,6 +136,13 @@ let
 
           def do_GET(self) -> None:
               path = self.path.split("?", 1)[0].rstrip("/") or "/"
+              if path == "/network":
+                  try:
+                      self._send(200, read_network())
+                  except Exception as exc:  # noqa: BLE001 — surface to client for Homepage
+                      self._send(500, {"error": str(exc)})
+                  return
+
               try:
                   data = snapshot()
               except Exception as exc:  # noqa: BLE001 — surface to client for Homepage

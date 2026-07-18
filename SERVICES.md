@@ -309,9 +309,11 @@ port 8083 stays blocked; Tailscale Serve terminates HTTPS on `:443` and proxies 
 
 Branding: title **Homeport**, cool slate palette with a geometric grid (no warm
 amber/night-light cast). Dark-by-default with a soft cool-gray light mode (theme
-switcher kept). Top **System** section shows host load/RAM/uptime plus both NVIDIA
-GPUs (util, VRAM, temp) via `gpu-stats` on `127.0.0.1:8091`. Widgets: datetime,
-Open-Meteo (Chicago coords — adjust if needed), CPU/RAM/disk/uptime, SearXNG search.
+switcher kept). The balanced single-row top bar is optimized for fullscreen
+2560×1440 and shows host load/RAM/uptime, live primary-Ethernet throughput, and
+both NVIDIA GPUs (util, VRAM, temp) via `gpu-stats` on `127.0.0.1:8091`. Other
+widgets: datetime, Open-Meteo (Chicago coords — adjust if needed), and
+CPU/RAM/disk/uptime.
 Every service tile uses `siteMonitor` for live HTTP latency (ms); Piper monitors
 `/health`.
 

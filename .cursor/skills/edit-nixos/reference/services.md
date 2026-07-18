@@ -80,17 +80,17 @@
 - Reached from the tailnet through Tailscale Serve on port 443
 - Title: Homeport; `color = slate`; cool geometric grid CSS (no warm/amber cast)
 - Theme switcher kept (dark first-visit default via `customJS`); soft cool-gray light mode
-- Layout (whiteboard grid): System row → header widgets (at-a-glance) → Workspace row (Apps + Bookmarks | Automation | Monitoring) → Bottom row (AI / Local | Containers). Bookmarks are service tiles (not `bookmarks.yaml`) so they can nest beside Apps.
+- Layout (whiteboard grid): balanced single-row header optimized for fullscreen 2560×1440 (at-a-glance widgets plus the relocated System group) → Workspace row (Apps + Bookmarks | Automation | Monitoring) → Bottom row (AI / Local | Containers). Bookmarks are service tiles (not `bookmarks.yaml`) so they can nest beside Apps.
 - Section chrome: `customCSS` draws a bounding box around each leaf `.services-group` and `#information-widgets`
 - System tiles use `customapi` against `gpu-stats` (`127.0.0.1:8091`)
 - Service tiles have `siteMonitor` latency (ms); Piper uses `/health`
-- Widgets (section 2): datetime, Open-Meteo (Chicago / `America/Chicago`), resources + uptime, SearXNG search
+- Widgets (section 2): datetime, Open-Meteo (Chicago / `America/Chicago`), resources + uptime, host, primary-Ethernet throughput, and both GPUs
 
 ## GPU stats API
 
 - Module: `modules/services/gpu-stats.nix`
 - Bind: `127.0.0.1:8091` (localhost only, firewall closed)
-- Endpoints: `/` (full), `/host`, `/gpu/0`, `/gpu/1`
+- Endpoints: `/` (full), `/host`, `/network` (live `enp132s0` throughput), `/gpu/0`, `/gpu/1`
 - Runs as `rileyt` with `PrivateDevices = false` so `nvidia-smi` works
 
 ## Tailscale Serve + dashboard stack

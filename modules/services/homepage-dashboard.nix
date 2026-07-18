@@ -115,6 +115,31 @@
             };
           }
           {
+            Network = {
+              icon = "mdi-swap-vertical-bold";
+              description = "Ethernet · live throughput";
+              widget = {
+                type = "customapi";
+                url = "http://127.0.0.1:8091/network";
+                refreshInterval = 5000;
+                mappings = [
+                  {
+                    field = "rx_mbps";
+                    label = "Down";
+                    format = "float";
+                    suffix = " Mbps";
+                  }
+                  {
+                    field = "tx_mbps";
+                    label = "Up";
+                    format = "float";
+                    suffix = " Mbps";
+                  }
+                ];
+              };
+            };
+          }
+          {
             "RTX 3050" = {
               icon = "mdi-expansion-card";
               description = "GPU 0 · util · VRAM · temp";
@@ -333,7 +358,9 @@
     # row can keep Apps and Bookmarks as separate cells. bookmarks.yaml unused.
     bookmarks = [ ];
 
-    # At-a-glance bar (section 2): time, weather, host resources, search.
+    # At-a-glance bar (section 2): time, weather, host resources. The System
+    # services group (Host + network + both GPU tiles) is relocated here at runtime by
+    # customJS, into the slot the search widget used to occupy.
     widgets = [
       {
         datetime = {
@@ -361,19 +388,14 @@
         };
       }
       {
+        # expanded=true renders the extra detail row (load avg / mem used-total /
+        # disk free) into the DOM so customCSS/customJS below can toggle it on click.
         resources = {
           cpu = true;
           memory = true;
           disk = "/";
           uptime = true;
-        };
-      }
-      {
-        search = {
-          provider = "custom";
-          url = "http://127.0.0.1:8888/search?q=";
-          target = "_blank";
-          focus = false;
+          expanded = true;
         };
       }
     ];
@@ -464,6 +486,138 @@
         border: 1px solid rgba(71, 85, 105, 0.5) !important;
         background-color: rgba(255, 255, 255, 0.4);
       }
+
+      /* Click-to-expand resources box (CPU/RAM/disk/uptime): the detail row
+         (load avg, mem used/total, disk free) is hidden until toggled by customJS. */
+      .widget-container:has(.information-widget-resource) {
+        cursor: pointer;
+      }
+
+      .information-widget-resource .expanded > div:nth-child(2) {
+        display: none;
+      }
+
+      .widget-container.resources-expanded .information-widget-resource .expanded > div:nth-child(2) {
+        display: flex;
+      }
+
+      /* System group relocated into the info-widgets row (where "search" used to
+         sit): remove section chrome so its cards align with the native widgets. */
+      #information-widgets-right .services-group {
+        width: auto;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+
+      #information-widgets-right .services-group > button {
+        display: none;
+      }
+
+      #information-widgets-right .services-group .services-list {
+        display: flex !important;
+        flex-direction: row;
+        gap: 0.5rem !important;
+        margin-top: 0 !important;
+      }
+
+      /* Fullscreen 1440p target: one compact, balanced row. Fixed widths keep
+         native widgets readable; the four System cards evenly share the rest. */
+      @media (min-width: 1600px) {
+        #widgets-wrap {
+          display: grid !important;
+          grid-template-columns: 520px minmax(0, 1fr) !important;
+          gap: 16px !important;
+          align-items: stretch !important;
+        }
+
+        #widgets-wrap > .widget-container {
+          width: auto !important;
+          min-width: 0 !important;
+          height: 100% !important;
+          margin: 0 !important;
+          flex: none !important;
+        }
+
+        #information-widgets-right {
+          display: grid !important;
+          grid-template-columns: 240px 210px minmax(0, 1fr) !important;
+          gap: 12px !important;
+          align-items: stretch !important;
+          min-width: 0 !important;
+          height: 100% !important;
+          margin: 0 !important;
+          flex: none !important;
+        }
+
+        #information-widgets-right > .widget-container {
+          width: auto !important;
+          min-width: 0 !important;
+          height: 100% !important;
+          margin: 0 !important;
+          flex: none !important;
+        }
+
+        #information-widgets-right > .services-group {
+          width: auto !important;
+          min-width: 0 !important;
+          height: 100% !important;
+          flex: none !important;
+        }
+
+        #information-widgets-right .services-group .services-list {
+          display: grid !important;
+          grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+          gap: 12px !important;
+          height: 100% !important;
+          margin: 0 !important;
+        }
+
+        #information-widgets-right .services-group .service-card {
+          width: auto !important;
+          min-width: 0 !important;
+          height: 100% !important;
+          margin: 0 !important;
+        }
+
+        #information-widgets-right .service-description {
+          display: none !important;
+        }
+
+        #information-widgets-right .service-title {
+          min-height: 42px !important;
+          align-items: center !important;
+          border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+        }
+
+        #information-widgets-right .service-icon {
+          width: 2.5rem !important;
+        }
+
+        #information-widgets-right .service-icon > div {
+          width: 24px !important;
+          height: 24px !important;
+        }
+
+        #information-widgets-right .service-name {
+          padding: 0.5rem 0.25rem !important;
+        }
+
+        #information-widgets-right .service-container {
+          height: calc(100% - 42px) !important;
+        }
+
+        #information-widgets-right .service-block {
+          background: transparent !important;
+          border-radius: 0 !important;
+          border-left: 1px solid rgba(148, 163, 184, 0.16);
+          margin: 0 !important;
+          padding: 0.5rem 0.3rem !important;
+        }
+
+        #information-widgets-right .service-block:first-child {
+          border-left: 0 !important;
+        }
+      }
     '';
 
     # First visit defaults to dark; afterwards the theme switcher / localStorage wins.
@@ -483,6 +637,35 @@
             url.searchParams.set("v", String(Date.now()));
             link.href = url.toString();
           });
+        } catch (_) {}
+        // Click the resources box (CPU/RAM/disk/uptime) to expand/collapse detail row.
+        // Delegated on document so it keeps working across React re-renders/refreshes.
+        try {
+          document.addEventListener("click", (event) => {
+            const box = event.target.closest(".widget-container");
+            if (box && box.querySelector(".information-widget-resource")) {
+              box.classList.toggle("resources-expanded");
+            }
+          });
+        } catch (_) {}
+        // Relocate the "System" services group (Host + network + both GPU tiles) into the
+        // top info-widgets row, in the slot the search widget used to occupy.
+        // Re-run via MutationObserver in case of re-renders; a dataset flag on
+        // the (now-relocated) node keeps this idempotent.
+        try {
+          const moveSystemGroup = () => {
+            const heading = Array.from(document.querySelectorAll(".service-group-name")).find(
+              (candidate) => candidate.textContent.trim() === "System",
+            );
+            if (!heading) return;
+            const group = heading.closest(".services-group");
+            const target = document.querySelector("#information-widgets-right") || document.querySelector("#widgets-wrap");
+            if (!group || !target || group.dataset.movedToWidgets) return;
+            group.dataset.movedToWidgets = "1";
+            target.appendChild(group);
+          };
+          moveSystemGroup();
+          new MutationObserver(moveSystemGroup).observe(document.body, { childList: true, subtree: true });
         } catch (_) {}
       })();
     '';
