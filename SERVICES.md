@@ -51,6 +51,7 @@ Only options **set in this flake** are listed (not nixpkgs defaults). Secrets ar
 | Spotify | `home/programs/spotify.nix` | User | package |
 | Discord | `home/programs/discord.nix` | User | package |
 | Cursor (IDE + CLI) | `home/programs/cursor.nix` | User | `code-cursor`, `cursor-cli` |
+| Claude Code | `home/programs/claude-code.nix` | User | `pkgsUnstable.claude-code` |
 | Pointer cursor | `home/desktop/cursor.nix` | User | Bibata-Modern-Ice |
 | GNOME interface | `home/desktop/gnome/interface.nix` | User | dconf |
 | GNOME extensions enable | `home/desktop/gnome/extensions.nix` | User | dconf UUIDs |
@@ -661,6 +662,14 @@ Imported via `home.nix`. User: `rileyt` (`home/core/identity.nix`).
 |-----------------|
 | `cursor-cli` |
 | `code-cursor` |
+
+### Claude Code
+
+**Module:** `home/programs/claude-code.nix`
+
+| Option | Value |
+|--------|-------|
+| `home.packages` | `[ pkgsUnstable.claude-code ]` |
 
 ### Pointer cursor theme
 

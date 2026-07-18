@@ -21,6 +21,10 @@ lives under `home/`.
 - `home/` - Home Manager modules: one file per program, dconf domain, or core setting.
 - `.cursor/` - Cursor agent skills and rules (NixOS workflow + [agent-rules-books](https://github.com/ciembor/agent-rules-books)).
 
+User CLI tools include Cursor (`home/programs/cursor.nix`) and Claude Code
+(`home/programs/claude-code.nix`, `pkgsUnstable.claude-code`). After login, run
+`claude` and complete Anthropic auth when prompted.
+
 ## Cursor agent setup
 
 | Path | Purpose |

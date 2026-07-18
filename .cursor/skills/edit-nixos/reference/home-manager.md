@@ -20,6 +20,7 @@
 | `home/programs/spotify.nix` | Spotify |
 | `home/programs/discord.nix` | Discord |
 | `home/programs/cursor.nix` | Cursor editor and CLI |
+| `home/programs/claude-code.nix` | Claude Code (`pkgsUnstable.claude-code`) |
 
 ## Conventions
 

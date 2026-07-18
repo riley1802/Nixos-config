@@ -9,3 +9,4 @@
 - CI: `.github/workflows/check.yml` — fmt check, flake check, eval toplevel
 - Overlays: none
 - `specialArgs`: `pkgsUnstable`, `inputs`
+- Home Manager `extraSpecialArgs`: `pkgsUnstable`, `inputs` (so HM modules can use unstable packages)

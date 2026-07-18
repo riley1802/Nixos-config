@@ -50,6 +50,7 @@
               home-manager.useUserPackages = true;
               home-manager.extraSpecialArgs = {
                 inherit inputs;
+                pkgsUnstable = mkPkgsUnstable system;
               };
               home-manager.users.rileyt = import homeFile;
             })

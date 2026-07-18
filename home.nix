@@ -14,5 +14,6 @@
     ./home/programs/spotify.nix
     ./home/programs/discord.nix
     ./home/programs/cursor.nix
+    ./home/programs/claude-code.nix
   ];
 }
