@@ -16,10 +16,12 @@ Only options **set in this flake** are listed (not nixpkgs defaults). Secrets ar
 | Service | Module | Status | Bind / notes |
 |---------|--------|--------|--------------|
 | llama.cpp | `modules/services/llama-cpp.nix` | Active | `127.0.0.1:8080` |
+| n8n | `modules/services/n8n.nix` | Active | `127.0.0.1:5678` + Tailscale Serve HTTPS |
 | whisper.cpp | `modules/services/whisper-cpp.nix` | Active | `127.0.0.1:8081` |
 | Piper TTS | `modules/services/piper.nix` | Active | `127.0.0.1:8082` |
 | SearXNG | `modules/services/searxng.nix` | Active | `127.0.0.1:8888` |
 | Homepage | `modules/services/homepage-dashboard.nix` | Active | port `8083` (direct firewall closed); via Tailscale Serve HTTPS `:443` |
+| World Monitor | `modules/services/worldmonitor.nix` | Active | `127.0.0.1:3000` + Tailscale Serve HTTPS `:3000` |
 | GPU stats API | `modules/services/gpu-stats.nix` | Active | `127.0.0.1:8091` (Homepage System widgets) |
 | Tailscale | `modules/services/tailscale.nix` | Active | tailnet |
 | Printing (CUPS) | `modules/services/printing.nix` | Active | local |
@@ -112,6 +114,32 @@ Only options **set in this flake** are listed (not nixpkgs defaults). Secrets ar
 |---------|-------|
 | `systemd.tmpfiles.rules` | `d /var/lib/llama-cpp/models 0755 rileyt users -` |
 | `environment.systemPackages` | CUDA-enabled `llama-cpp` |
+
+---
+
+### n8n
+
+**Module:** `modules/services/n8n.nix`  
+**URL:** https://nixos.taile9f484.ts.net:5678/ (via Tailscale Serve, see `tailscale-serve.nix`)
+
+#### `services.n8n.environment`
+
+| Option | Value |
+|--------|-------|
+| `N8N_HOST` / `WEBHOOK_URL` | `nixos.taile9f484.ts.net` (Tailscale Serve terminates TLS) |
+| `N8N_LISTEN_ADDRESS` | `"127.0.0.1"` |
+| `N8N_PORT` | `"5678"` |
+| `DB_TYPE` | `postgresdb` (local PostgreSQL, role `n8n`, password from agenix `n8n-db-password`) |
+
+#### Local llama.cpp AI credential (`n8n-llama-cpp-credential.service`)
+
+A oneshot unit runs after `n8n.service` and upserts (via `n8n import:credentials`) a fixed-id
+`openAiApi` credential named **"llama.cpp (local)"** pointing at llama.cpp's OpenAI-compatible API
+(`http://127.0.0.1:8080/v1`, see `llama-cpp.nix`). This lets the **OpenAI Chat Model** / **AI Agent**
+nodes use local models (`gemma-4-e4b-q8`, `nemotron-nano-12b-v2-q4`, `gemma-4-12b-q4-mtp`) with zero
+manual credential setup. It reads the personal project id from the `n8n` Postgres DB, so on a
+brand-new instance (no owner account yet) it skips gracefully — rerun
+`systemctl start n8n-llama-cpp-credential` once the first-run setup wizard is done.
 
 ---
 
@@ -284,7 +312,27 @@ switcher kept). Top **System** section shows host load/RAM/uptime plus both NVID
 GPUs (util, VRAM, temp) via `gpu-stats` on `127.0.0.1:8091`. Widgets: datetime,
 Open-Meteo (Chicago coords — adjust if needed), CPU/RAM/disk/uptime, SearXNG search.
 Every service tile uses `siteMonitor` for live HTTP latency (ms); Piper monitors
-`/health`.
+`/health`. Monitoring section includes **World Monitor** (Serve `:3000`).
+
+---
+
+### World Monitor
+
+**Module:** `modules/services/worldmonitor.nix`  
+**URL:** https://nixos.taile9f484.ts.net:3000/ (Tailscale Serve → `127.0.0.1:3000`)  
+**Upstream:** https://github.com/koala73/worldmonitor (docker compose self-host)
+
+| Piece | Detail |
+|-------|--------|
+| State / repo | `/var/lib/worldmonitor/repo` (pinned git rev; see module) |
+| Units | `worldmonitor-repo`, `worldmonitor`, `worldmonitor-seeders` (+ 30m timer) |
+| Secrets | `secrets/worldmonitor-env.age` → `.env` (`RELAY_SHARED_SECRET`, `REDIS_PASSWORD`, `REDIS_TOKEN`, `WM_PORT`) |
+| Bind | App `127.0.0.1:3000`; redis-rest `127.0.0.1:8079` (seeders) |
+| Firewall | closed (Serve only) |
+| API keys | none initially — public feeds only; optional keys later via agenix / override |
+
+First start runs `docker compose up --build` (can take a long time). Seeders run after
+the stack is up and every 30 minutes. Bump `repoRev` in the module to upgrade.
 
 ---
 
@@ -680,7 +728,9 @@ Imported via `home.nix`. User: `rileyt` (`home/core/identity.nix`).
 |------|---------|
 | 22 | OpenSSH (`tailscale0` only) |
 | 443 | Tailscale Serve → Homepage (tailnet HTTPS) |
+| 3000 | World Monitor localhost + Tailscale Serve HTTPS |
 | 3001 | Uptime Kuma (`tailscale0` only) |
+| 8079 | World Monitor redis-rest (localhost, seeders) |
 | 5432 | PostgreSQL (localhost) |
 | 5678 | n8n localhost + Tailscale Serve HTTPS |
 | 8080 | llama.cpp |

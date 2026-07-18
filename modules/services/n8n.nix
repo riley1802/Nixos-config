@@ -51,4 +51,65 @@
     after = [ "n8n-postgres-password.service" ];
     requires = [ "n8n-postgres-password.service" ];
   };
+
+  # Provision a "llama.cpp (local)" credential (type openAiApi) pointing at the local
+  # llama.cpp OpenAI-compatible API (see llama-cpp.nix), so the OpenAI Chat Model /
+  # AI Agent nodes can use local models without manual credential setup.
+  # Idempotent upsert by fixed id via `n8n import:credentials`; runs after n8n so the
+  # owner account/personal project already exist. On a brand-new instance (no owner
+  # account yet), it skips gracefully — rerun `systemctl start n8n-llama-cpp-credential`
+  # after finishing the first-run setup wizard.
+  systemd.services.n8n-llama-cpp-credential = {
+    description = "Provision n8n credential for local llama.cpp OpenAI-compatible API";
+    after = [ "n8n.service" ];
+    wants = [ "n8n.service" ];
+    wantedBy = [ "multi-user.target" ];
+    serviceConfig = {
+      Type = "oneshot";
+      DynamicUser = true;
+      User = "n8n";
+      StateDirectory = "n8n";
+      RuntimeDirectory = "n8n-llama-cpp-credential";
+      Environment = [
+        "HOME=/var/lib/n8n"
+        "N8N_USER_FOLDER=/var/lib/n8n"
+        "DB_TYPE=postgresdb"
+        "DB_POSTGRESDB_HOST=127.0.0.1"
+        "DB_POSTGRESDB_DATABASE=n8n"
+        "DB_POSTGRESDB_USER=n8n"
+        "DB_POSTGRESDB_PASSWORD_FILE=%d/db_postgresdb_password_file"
+      ];
+      LoadCredential = "db_postgresdb_password_file:${config.age.secrets.n8n-db-password.path}";
+      ExecStart = pkgs.writeShellScript "n8n-llama-cpp-credential" ''
+        set -euo pipefail
+        export PGPASSWORD="$(cat "$CREDENTIALS_DIRECTORY/db_postgresdb_password_file")"
+
+        project_id=$(${config.services.postgresql.package}/bin/psql -h 127.0.0.1 -U n8n -d n8n -tAc \
+          "select id from project where type = 'personal' order by \"createdAt\" limit 1")
+        project_id=$(echo "$project_id" | tr -d '[:space:]')
+
+        if [ -z "$project_id" ]; then
+          echo "n8n-llama-cpp-credential: no personal project yet (owner account not created) — skipping"
+          exit 0
+        fi
+
+        cred_file="$RUNTIME_DIRECTORY/llama-cpp-credential.json"
+        cat > "$cred_file" <<EOF
+        [
+          {
+            "id": "llama-cpp-local-openai",
+            "name": "llama.cpp (local)",
+            "type": "openAiApi",
+            "data": {
+              "apiKey": "sk-local-no-auth-required",
+              "url": "http://127.0.0.1:8080/v1"
+            }
+          }
+        ]
+        EOF
+
+        ${pkgs.n8n}/bin/n8n import:credentials --input="$cred_file" --projectId="$project_id"
+      '';
+    };
+  };
 }

@@ -11,7 +11,7 @@ Host `nixos`, user `rileyt`. Full rules: [bestpracticesnixos.md](../bestpractice
 
 - **Modular**: one concern per file; import lists only in `configuration.nix`, `hosts/nixos/configuration.nix`, `home.nix`.
 - **Secrets**: agenix only — never plaintext in `.nix`, git, or chat.
-- **Validate before switch**: `nix fmt` → `nix flake check` → toplevel build → config audit.
+- **Validate before switch**: `nix fmt .` → `nix flake check` → toplevel build → config audit (never bare `nix fmt`).
 - **Minimal diff**: match existing style; change only what the task requires.
 - **Research first** for new services, unfamiliar options, or input upgrades — ask before editing.
 

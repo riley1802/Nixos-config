@@ -27,7 +27,7 @@ When this file and `@edit-nixos` overlap, the skill has the detailed workflow; t
 | Modular | One concern per file. Top-level entrypoints are import lists only. |
 | Minimal diff | Change only what the task requires. Match existing style. |
 | Safe by default | Localhost-first services, closed firewall, no secrets in the store. |
-| Validate before switch | `nix fmt` → `nix flake check` → build toplevel → config audit → then rebuild. |
+| Validate before switch | `nix fmt .` → `nix flake check` → build toplevel → config audit → then rebuild. Never bare `nix fmt` (hangs). |
 
 Start simple. This is a **single-host** setup — `hosts/nixos/` organizes the one machine, not a multi-machine fleet.
 
@@ -360,7 +360,7 @@ For custom services, consider `DynamicUser`, `ProtectSystem`, `PrivateTmp`, and 
 ### Safe sequence for this config
 
 ```sh
-nix fmt .
+nix fmt .                    # not bare `nix fmt` — see lessons.md
 nix flake check
 nix build .#nixosConfigurations.nixos.config.system.build.toplevel --no-link
 # Run config audit — see section 12
@@ -405,7 +405,7 @@ Never run these unless the user explicitly asks:
 ### Local validation (required before switch)
 
 ```sh
-nix fmt .
+nix fmt .                    # pass `.` or changed paths; bare `nix fmt` hangs
 nix flake check
 nix build .#nixosConfigurations.nixos.config.system.build.toplevel --no-link
 ```

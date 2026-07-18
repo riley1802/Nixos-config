@@ -106,7 +106,7 @@ journalctl -u <service> -b --no-pager
 | `nix flake check --show-trace` | Validate flake outputs with stack trace |
 | `nix build .#nixosConfigurations.nixos.config.system.build.toplevel --no-link` | Full local system build |
 | `nix eval .#nixosConfigurations.nixos.config.system.build.toplevel.drvPath` | Lighter eval (what CI runs) |
-| `nix fmt .` | Fix formatting before commit |
+| `nix fmt .` | Fix formatting before commit (pass `.` or paths — bare `nix fmt` hangs) |
 | `nixos-rebuild build --flake /etc/nixos#nixos` | Build without activating |
 | `nixos-rebuild test --flake /etc/nixos#nixos` | Activate without new boot entry |
 | `pkexec nixos-rebuild switch --flake /etc/nixos#nixos` | Apply config (user allows `pkexec` for sudo-equivalent commands) |

@@ -147,7 +147,7 @@ nix flake check
 nix build .#nixosConfigurations.nixos.config.system.build.toplevel --no-link
 ```
 
-Fix failures before switch (and log new lessons). Optionally run `nix fmt`.
+Fix failures before switch (and log new lessons). Optionally run `nix fmt .` (never bare `nix fmt` — hangs; see lessons.md).
 
 Follow [bestpracticesnixos.md](../../bestpracticesnixos.md) for flake, module, security, and validation rules.
 
