@@ -277,9 +277,11 @@ Homepage has no bind-address option and listens on all interfaces. Direct access
 port 8083 stays blocked; nginx proxies `/` to `127.0.0.1:8083` and is reachable
 only through `tailscale0` on port 80.
 
-The dashboard includes llama.cpp, whisper.cpp, Piper TTS, and SearXNG tiles.
-Piper uses `/health` for its site monitor. It also has a short External bookmarks
-group and a resources widget for CPU, memory, and the root disk.
+Branding: title **Homeport**, amber palette, dark-by-default with a soft parchment
+light mode (theme switcher kept). Layout is full-width, information-dense rows with
+every section visible. Widgets: datetime, Open-Meteo weather (Chicago coords —
+adjust in module if needed), CPU/RAM/disk/uptime, and SearXNG search. Every service
+tile uses `siteMonitor` for live HTTP latency (ms); Piper monitors `/health`.
 
 ---
 
