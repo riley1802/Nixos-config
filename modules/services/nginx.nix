@@ -22,7 +22,8 @@
       };
 
       locations."/portainer/" = {
-        proxyPass = "https://127.0.0.1:9443/portainer/";
+        # Strip /portainer/ before proxying; Portainer's --base-url handles generated links.
+        proxyPass = "https://127.0.0.1:9443/";
         proxyWebsockets = true;
         extraConfig = ''
           proxy_ssl_verify off;

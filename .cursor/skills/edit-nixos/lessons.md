@@ -48,6 +48,13 @@ Append entries when a build, rebuild, or runtime error is resolved. Format:
 - **Fix:** Omit Docker `--restart` in `extraOptions`; rely on the generated systemd service.
 - **Avoid:** Copying bare `docker run --restart=…` flags into `oci-containers.extraOptions`.
 
+### Portainer subpath proxy must strip prefix (2026-07-18)
+- **Context:** Portainer used `--base-url=/portainer` behind nginx at `/portainer/`.
+- **Error:** `/portainer/` returned HTTP 404 while Portainer's root returned 200.
+- **Cause:** nginx forwarded `/portainer/` to the backend; Portainer requires the reverse proxy to strip the configured base URL.
+- **Fix:** Use `proxyPass = "https://127.0.0.1:9443/";` inside `locations."/portainer/"`.
+- **Avoid:** Including `/portainer/` in both the nginx upstream URL and Portainer's `--base-url`.
+
 ### psql `:'var'` not expanded in `-c` (2026-07-18)
 
 - **Context:** `n8n-postgres-password` oneshot set the DB password via `psql --set=pass=... -c "ALTER USER n8n PASSWORD :'pass'"`.
