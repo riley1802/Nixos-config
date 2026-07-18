@@ -45,14 +45,11 @@
               ];
             }
             home-manager.nixosModules.home-manager
-            ({ config, ... }: {
+            ({ ... }: {
               home-manager.useGlobalPkgs = true;
               home-manager.useUserPackages = true;
-              # Thread the real agenix-resolved path through instead of letting
-              # home-manager modules hardcode "/run/agenix/<name>" strings.
               home-manager.extraSpecialArgs = {
                 inherit inputs;
-                uptimeKumaSyncEnvFile = config.age.secrets.uptime-kuma-sync.path;
               };
               home-manager.users.rileyt = import homeFile;
             })
@@ -62,9 +59,6 @@
     in
     {
       formatter.x86_64-linux = nixpkgs.legacyPackages.x86_64-linux.nixpkgs-fmt;
-
-      packages.x86_64-linux.homeport-tray =
-        nixpkgs.legacyPackages.x86_64-linux.callPackage ./apps/homeport-tray { };
 
       nixosConfigurations.nixos = mkNixos {
         name = "nixos";

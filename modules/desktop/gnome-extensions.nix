@@ -5,7 +5,6 @@
     gnome-tweaks
     gnome-extension-manager
 
-    gnomeExtensions.appindicator
     gnomeExtensions.dash-to-dock
     gnomeExtensions.blur-my-shell
     gnomeExtensions.vitals

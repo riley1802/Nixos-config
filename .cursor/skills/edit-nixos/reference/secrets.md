@@ -9,8 +9,6 @@ All machine secrets are managed with [agenix](https://github.com/ryantm/agenix).
 | n8n DB password | `secrets/n8n-db-password.age` | `modules/services/n8n.nix` |
 | Uptime Kuma sync env | `secrets/uptime-kuma-sync.env.age` | `modules/services/uptime-kuma.nix` |
 
-`uptime-kuma-sync`'s `age.secrets` stanza sets `owner = "rileyt"` (not the default `root`) — it's read both by the root-run `uptime-kuma-sync.service` (root bypasses file permissions) and by the `rileyt` user-session `homeport-tray.service` (`home/programs/homeport-tray.nix`), which only needs `NTFY_TOPIC` from it.
-
 ## Core modules
 
 | Path | Purpose |

@@ -106,24 +106,6 @@
 - `rileyt` in `docker` group
 - Requires Serve enabled in Tailscale admin for this node
 
-## Homeport Desktop (tray app)
-
-- Project: `apps/homeport-tray/` (Tauri v2, Rust); package: `apps/homeport-tray/default.nix`; flake output: `packages.x86_64-linux.homeport-tray`
-- Home Manager module: `home/programs/homeport-tray.nix` (imported from `home.nix`)
-- Main window loads `http://127.0.0.1:8083` directly (the existing Homepage dashboard) — no separate frontend, `frontendDist` is an unused placeholder (`apps/homeport-tray/src-tauri/dist/`)
-- Close button hides to tray instead of quitting; tray menu: Show Dashboard / Reload / Quit; left-click toggles the window
-- "Hide" never calls `window.hide()` — it calls `window.destroy()`, and "show" rebuilds the window from scratch via `WebviewWindowBuilder` if it doesn't exist (`show_dashboard`/`hide_dashboard` in `main.rs`). The app stays alive with zero windows open via `RunEvent::ExitRequested` + `api.prevent_exit()` when `code.is_none()` (only the tray "Quit" → `app.exit(0)` actually exits)
-- Reload uses a cache-busting navigation (`/?<timestamp>`) so Homepage `customCSS`/layout changes show up in WebKitGTK; after dashboard chrome edits also `systemctl --user restart homeport-tray`
-- Tray status is driven **only** by subscribing to `http://127.0.0.1:8090/<topic>/json` (ntfy NDJSON stream) — no independent health polling; each message becomes a native notification (`tauri-plugin-notification`) and swaps the tray icon (normal/alert) based on whether the text contains "down"
-- `NTFY_TOPIC` comes from the existing `age.secrets.uptime-kuma-sync` file; that secret's `owner` was changed from default `root` to `rileyt` so this user-session service can read it (root-run `uptime-kuma-sync.service` still reads it fine — root bypasses file permissions). The path itself is threaded from `flake.nix`'s home-manager block (`uptimeKumaSyncEnvFile = config.age.secrets.uptime-kuma-sync.path`) into `extraSpecialArgs`, not hand-typed as a `"/run/agenix/…"` string in the home-manager module
-- All window show/hide/destroy calls (single-instance re-launch, tray click, close-to-tray) are dispatched via `app.run_on_main_thread(...)` — GTK/WebKitGTK calls from other threads (single-instance's D-Bus listener, the ntfy tokio task) crash with a Wayland protocol error
-- `main()` sets `WEBKIT_DISABLE_DMABUF_RENDERER=1` and `__NV_DISABLE_EXPLICIT_SYNC=1` before building the app — required on this machine's dual-NVIDIA + Wayland session; combined with the destroy/rebuild pattern above (rather than hide()/show() on a reused window) to avoid the WebKitGTK+NVIDIA Wayland surface desync that otherwise crashes the process or leaves clicks unresponsive (see `lessons.md`)
-- `DASHBOARD_URL`/`DASHBOARD_TITLE`/`DASHBOARD_WIDTH`/`DASHBOARD_HEIGHT` consts in `main.rs` must mirror the `"main"` window entry in `tauri.conf.json` — they're used to rebuild the window when it's recreated after being destroyed
-- Autostart: `systemd.user.services.homeport-tray`, `WantedBy = graphical-session.target`, launched with `--start-hidden` (the initial config-created window is destroyed immediately on startup instead of hidden, so every subsequent show goes through the same rebuild path)
-- Requires `gnomeExtensions.appindicator` (already installed in `modules/desktop/gnome-extensions.nix`) for the tray icon to render on GNOME Shell at all
-- Runtime deps (`buildInputs` in `apps/homeport-tray/default.nix`): `gtk3`, `webkitgtk_4_1`, `libsoup_3`, `libayatana-appindicator`, `openssl`, `dbus`, `glib`. `libayatana-appindicator` is `dlopen()`'d at runtime (not linked) — `preFixup` adds it to `LD_LIBRARY_PATH` via `gappsWrapperArgs`, or the tray icon panics on startup
-- Rebuild/test the package alone: `nix build .#homeport-tray`
-
 ## Gaming (Steam)
 
 - Steam enabled; Remote Play does **not** open firewall ports

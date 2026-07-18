@@ -413,8 +413,7 @@
         margin-top: 0.85rem !important;
       }
 
-      /* Bounding box around the whole section (title + tiles), not each tile.
-         Avoid :has() — WebKitGTK in the Tauri tray can lag Chromium on that. */
+      /* Bounding box around the whole section (title + tiles), not each tile. */
       .services-group.subgroup,
       #layout-groups > .services-group.p-1,
       #information-widgets {
@@ -468,7 +467,6 @@
     '';
 
     # First visit defaults to dark; afterwards the theme switcher / localStorage wins.
-    # Also bust WebKitGTK's sticky cache of /api/config/custom.css (Tauri tray).
     customJS = ''
       (() => {
         try {

@@ -132,12 +132,8 @@ let
   pythonEnv = pkgs.python3.withPackages (ps: [ ps.uptime-kuma-api ]);
 in
 {
-  # owner rileyt (not root) so the homeport-tray user service can read NTFY_TOPIC
-  # from this file too; root-run uptime-kuma-sync.service still reads it fine
-  # since root bypasses file permissions.
   age.secrets.uptime-kuma-sync = {
     file = ../../secrets/uptime-kuma-sync.env.age;
-    owner = "rileyt";
     mode = "0400";
   };
 

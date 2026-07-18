@@ -558,7 +558,6 @@ Service-owned secrets are declared in their own modules (SearXNG, Tailscale).
 |------------------------------|
 | `gnome-tweaks` |
 | `gnome-extension-manager` |
-| `gnomeExtensions.appindicator` |
 | `gnomeExtensions.dash-to-dock` |
 | `gnomeExtensions.blur-my-shell` |
 | `gnomeExtensions.vitals` |
@@ -693,7 +692,6 @@ Imported via `home.nix`. User: `rileyt` (`home/core/identity.nix`).
 
 | Extension package |
 |-------------------|
-| `gnomeExtensions.appindicator` |
 | `gnomeExtensions.dash-to-dock` |
 | `gnomeExtensions.blur-my-shell` |
 | `gnomeExtensions.vitals` |
