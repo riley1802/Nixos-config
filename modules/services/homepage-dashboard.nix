@@ -413,8 +413,10 @@
         margin-top: 0.85rem !important;
       }
 
-      /* Bounding box around the whole section (title + tiles), not each tile. */
-      .services-group:not(:has(.services-group)),
+      /* Bounding box around the whole section (title + tiles), not each tile.
+         Avoid :has() — WebKitGTK in the Tauri tray can lag Chromium on that. */
+      .services-group.subgroup,
+      #layout-groups > .services-group.p-1,
       #information-widgets {
         border-radius: 3px;
         border: 1px solid rgba(148, 163, 184, 0.75) !important;
@@ -424,7 +426,8 @@
         background-color: rgba(2, 6, 23, 0.55);
       }
 
-      html.dark .services-group:not(:has(.services-group)),
+      html.dark .services-group.subgroup,
+      html.dark #layout-groups > .services-group.p-1,
       html.dark #information-widgets {
         border-color: rgba(148, 163, 184, 0.75) !important;
         background-color: rgba(2, 6, 23, 0.55);
@@ -456,7 +459,8 @@
         margin-bottom: 0 !important;
       }
 
-      html.light .services-group:not(:has(.services-group)),
+      html.light .services-group.subgroup,
+      html.light #layout-groups > .services-group.p-1,
       html.light #information-widgets {
         border: 1px solid rgba(71, 85, 105, 0.5) !important;
         background-color: rgba(255, 255, 255, 0.4);
@@ -464,6 +468,7 @@
     '';
 
     # First visit defaults to dark; afterwards the theme switcher / localStorage wins.
+    # Also bust WebKitGTK's sticky cache of /api/config/custom.css (Tauri tray).
     customJS = ''
       (() => {
         try {
@@ -473,6 +478,13 @@
             document.documentElement.classList.remove("light");
             document.documentElement.style.colorScheme = "dark";
           }
+        } catch (_) {}
+        try {
+          document.querySelectorAll('link[href*="custom.css"]').forEach((link) => {
+            const url = new URL(link.href, window.location.origin);
+            url.searchParams.set("v", String(Date.now()));
+            link.href = url.toString();
+          });
         } catch (_) {}
       })();
     '';

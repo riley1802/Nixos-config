@@ -13,6 +13,13 @@ Append entries when a build, rebuild, or runtime error is resolved. Format:
 
 ---
 
+### Tauri Homeport webview caches Homepage CSS across rebuilds (2026-07-18)
+- **Context:** Updated `homepage-dashboard` `customCSS` / layout; browser at `:8083` showed the new chrome, but the Homeport tray window still looked unchanged.
+- **Error:** Stale dashboard UI in `homeport-tray` after `nixos-rebuild switch` + `homepage-dashboard` restart.
+- **Cause:** The tray WebView keeps a live document (and WebKitGTK caches `/api/config/custom.css` by ETag). Hiding/showing the window does not reload; tray **Reload** used `location.reload()`, which can reuse cached CSS.
+- **Fix:** Restart `systemctl --user restart homeport-tray` after dashboard chrome changes; tray Reload now `location.replace(origin + '/?' + Date.now())`; `customJS` rewrites the `custom.css` link with a cache-buster query.
+- **Avoid:** Assuming a Homepage rebuild is enough for the Tauri window — reload or restart the tray app when changing `customCSS` / services layout.
+
 ### Homepage bookmark groups do not nest under service groups (2026-07-18)
 - **Context:** Reshaping Homeport (`homepage-dashboard.nix`) to a whiteboard grid with Apps + Bookmarks side-by-side in a nested Workspace row.
 - **Error:** Nested `bookmarks.yaml` under `Workspace → Bookmarks` either failed to render or only exposed the first link; `/api/bookmarks` returned a malformed object instead of a group of links.

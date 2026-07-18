@@ -98,7 +98,11 @@ fn build_tray(app: &tauri::App) -> tauri::Result<()> {
             "show" => focus_dashboard(app),
             "reload" => on_main_thread(app, |app| {
                 if let Some(window) = app.get_webview_window(DASHBOARD_WINDOW_LABEL) {
-                    let _ = window.eval("location.reload()");
+                    // Soft reload keeps WebKitGTK's cached custom.css; navigate
+                    // with a cache-buster so Homeport config/CSS changes show up.
+                    let _ = window.eval(
+                        "location.replace(location.origin + '/?' + Date.now())",
+                    );
                 }
             }),
             "quit" => app.exit(0),
