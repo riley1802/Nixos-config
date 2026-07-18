@@ -97,7 +97,7 @@ in `modules/services/llama-cpp.nix`.
 ### nginx reverse proxy + apps
 
 - Plain HTTP on port 80 (`tailscale0` only). Path routing to Homepage (`/`), n8n (`/n8n/`), Portainer (`/portainer/`).
-- Homepage ("Homeport"): amber theme, dark default with soft light mode, weather/time/search widgets, and `siteMonitor` latency on every tile.
+- Homepage ("Homeport"): cool slate geometric theme, dark default with soft cool light mode, System section (host + dual GPU util/VRAM), weather/time/search, and `siteMonitor` latency on every tile.
 - Uptime Kuma (`3001`) and ntfy (`8090`) are **not** proxied — direct on `tailscale0` (ntfy rejects a path in `base-url`).
 - PostgreSQL 16 backs n8n; DB password via agenix (`secrets/n8n-db-password.age`).
 - Docker + nvidia-container-toolkit; Portainer image pinned to `portainer/portainer-ce:2.39.4`.

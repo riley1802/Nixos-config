@@ -8,11 +8,11 @@
     allowedHosts = "nixos.taile9f484.ts.net,localhost:8083,127.0.0.1:8083";
 
     # theme left unlocked so the built-in dark/light switcher stays available.
-    # Dark is forced as the first-visit default via customJS; light is softened in customCSS.
+    # Dark is forced as the first-visit default via customJS; light is cooled in customCSS.
     settings = {
       title = "Homeport";
       description = "Local launchpad — services, weather, and live latency";
-      color = "amber"; # warm copper/saffron — uncommon vs blue/teal/purple defaults
+      color = "slate"; # cool geometric slate — not warm/amber night-light
       headerStyle = "boxedWidgets";
       hideVersion = true;
       disableCollapse = true;
@@ -22,17 +22,14 @@
       target = "_blank";
       iconStyle = "theme";
 
-      # Soft dusk atmosphere via remote image + heavy filters (tasteful, not busy).
-      background = {
-        image = "https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?auto=format&fit=crop&w=2560&q=80";
-        blur = "md";
-        saturate = 50;
-        brightness = 40;
-        opacity = 30;
-      };
-
       # List form preserves visual order (attrsets can get reordered when serialized).
       layout = [
+        {
+          System = {
+            style = "row";
+            columns = 3;
+          };
+        }
         {
           "AI / Local Models" = {
             style = "row";
@@ -61,6 +58,114 @@
     };
 
     services = [
+      {
+        System = [
+          {
+            Host = {
+              icon = "mdi-server";
+              description = "Load · RAM · uptime";
+              widget = {
+                type = "customapi";
+                url = "http://127.0.0.1:8091/host";
+                refreshInterval = 5000;
+                mappings = [
+                  {
+                    field = "load1";
+                    label = "Load";
+                    format = "float";
+                  }
+                  {
+                    field = "mem_used_pct";
+                    label = "RAM";
+                    format = "percent";
+                  }
+                  {
+                    field = "mem_available_mib";
+                    label = "Free";
+                    format = "float";
+                    suffix = " MiB";
+                  }
+                  {
+                    field = "uptime_seconds";
+                    label = "Up";
+                    format = "duration";
+                  }
+                ];
+              };
+            };
+          }
+          {
+            "RTX 3050" = {
+              icon = "mdi-expansion-card";
+              description = "GPU 0 · util · VRAM · temp";
+              widget = {
+                type = "customapi";
+                url = "http://127.0.0.1:8091/gpu/0";
+                refreshInterval = 5000;
+                mappings = [
+                  {
+                    field = "util";
+                    label = "GPU";
+                    format = "percent";
+                  }
+                  {
+                    field = "mem_pct";
+                    label = "VRAM";
+                    format = "percent";
+                  }
+                  {
+                    field = "mem_used_mib";
+                    label = "Used";
+                    format = "float";
+                    suffix = " MiB";
+                  }
+                  {
+                    field = "temp_c";
+                    label = "Temp";
+                    format = "float";
+                    suffix = "°C";
+                  }
+                ];
+              };
+            };
+          }
+          {
+            "GTX 1660 Super" = {
+              icon = "mdi-expansion-card-variant";
+              description = "GPU 1 · util · VRAM · temp";
+              widget = {
+                type = "customapi";
+                url = "http://127.0.0.1:8091/gpu/1";
+                refreshInterval = 5000;
+                mappings = [
+                  {
+                    field = "util";
+                    label = "GPU";
+                    format = "percent";
+                  }
+                  {
+                    field = "mem_pct";
+                    label = "VRAM";
+                    format = "percent";
+                  }
+                  {
+                    field = "mem_used_mib";
+                    label = "Used";
+                    format = "float";
+                    suffix = " MiB";
+                  }
+                  {
+                    field = "temp_c";
+                    label = "Temp";
+                    format = "float";
+                    suffix = "°C";
+                  }
+                ];
+              };
+            };
+          }
+        ];
+      }
       {
         "AI / Local Models" = [
           {
@@ -222,30 +327,45 @@
       }
     ];
 
-    # Soft light mode: warm parchment + slight dim so night flips don't blind.
-    # Dark mode: subtle amber edge glow on cards for density without clutter.
+    # Cool geometric chrome: slate grid, sharp cards, cool soft light (no warm cast).
     customCSS = ''
-      /* Soft light — warm paper, never pure white */
+      html.dark body {
+        background-color: #0b1220 !important;
+        background-image:
+          linear-gradient(rgba(148, 163, 184, 0.07) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(148, 163, 184, 0.07) 1px, transparent 1px);
+        background-size: 40px 40px;
+      }
+
+      html.dark .service,
+      html.dark .bookmark {
+        border-radius: 2px !important;
+        box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.18);
+        backdrop-filter: none;
+      }
+
+      html.dark .service-group,
+      html.dark .bookmark-group {
+        border-radius: 2px;
+      }
+
+      /* Soft light — cool gray paper, never warm/orange, never pure white */
       html.light body {
-        background-color: #e4ddd0 !important;
+        background-color: #d7dce5 !important;
+        background-image:
+          linear-gradient(rgba(71, 85, 105, 0.08) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(71, 85, 105, 0.08) 1px, transparent 1px);
+        background-size: 40px 40px;
       }
 
       html.light {
-        filter: brightness(0.93) contrast(0.97);
+        filter: brightness(0.95) contrast(0.98) saturate(0.92);
       }
 
-      html.light .service-group,
-      html.light .bookmark-group {
-        backdrop-filter: blur(6px);
-      }
-
-      /* Dark — quiet amber rim so dense tiles stay readable */
-      html.dark .service {
-        box-shadow: inset 0 0 0 1px rgba(251, 191, 36, 0.08);
-      }
-
-      html.dark body {
-        background-color: #0c0a09;
+      html.light .service,
+      html.light .bookmark {
+        border-radius: 2px !important;
+        box-shadow: inset 0 0 0 1px rgba(71, 85, 105, 0.2);
       }
     '';
 

@@ -78,13 +78,19 @@
 - Built-in `services.homepage-dashboard` module on port 8083
 - No bind-address option; listens on all interfaces, but direct firewall access stays closed
 - Reached from the tailnet through nginx on port 80
-- Title: Homeport; `color = amber`; theme switcher kept (dark first-visit default via `customJS`)
-- Soft light mode via `customCSS` (warm parchment + slight dim — not pure white)
-- Background: muted night-sky Unsplash with blur/opacity filters
-- Layout: full-width rows, equal-height cards, sections never collapsed
-- Tiles all have `siteMonitor` latency (ms); Piper uses `/health`
+- Title: Homeport; `color = slate`; cool geometric grid CSS (no warm/amber cast)
+- Theme switcher kept (dark first-visit default via `customJS`); soft cool-gray light mode
+- Layout: System (host + dual GPUs) then AI / automation / monitoring; full-width rows
+- System tiles use `customapi` against `gpu-stats` (`127.0.0.1:8091`)
+- Service tiles have `siteMonitor` latency (ms); Piper uses `/health`
 - Widgets: datetime, Open-Meteo (Chicago / `America/Chicago`), resources + uptime, SearXNG search
-- External bookmarks: GitHub, NixOS options, Home Manager options, Homepage docs
+
+## GPU stats API
+
+- Module: `modules/services/gpu-stats.nix`
+- Bind: `127.0.0.1:8091` (localhost only, firewall closed)
+- Endpoints: `/` (full), `/host`, `/gpu/0`, `/gpu/1`
+- Runs as `rileyt` with `PrivateDevices = false` so `nvidia-smi` works
 
 ## nginx + dashboard stack
 

@@ -35,6 +35,7 @@
 | `modules/services/docker.nix` | Docker + Portainer |
 | `modules/services/uptime-kuma.nix` | Uptime Kuma (port 3001) |
 | `modules/services/homepage-dashboard.nix` | Homepage (via nginx `/`) |
+| `modules/services/gpu-stats.nix` | NVIDIA GPU JSON API (`127.0.0.1:8091`) for Homepage |
 | `modules/services/ntfy-sh.nix` | ntfy (via nginx `/ntfy/`) |
 | `modules/services/nginx.nix` | nginx reverse proxy (port 80) |
 | `modules/users/rileyt.nix` | User account |

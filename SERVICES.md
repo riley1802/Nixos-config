@@ -20,6 +20,7 @@ Only options **set in this flake** are listed (not nixpkgs defaults). Secrets ar
 | Piper TTS | `modules/services/piper.nix` | Active | `127.0.0.1:8082` |
 | SearXNG | `modules/services/searxng.nix` | Active | `127.0.0.1:8888` |
 | Homepage | `modules/services/homepage-dashboard.nix` | Active | port `8083` (direct firewall closed); via nginx on `tailscale0:80` |
+| GPU stats API | `modules/services/gpu-stats.nix` | Active | `127.0.0.1:8091` (Homepage System widgets) |
 | Tailscale | `modules/services/tailscale.nix` | Active | tailnet |
 | Printing (CUPS) | `modules/services/printing.nix` | Active | local |
 | OpenSSH | `modules/core/openssh.nix` | Active | TCP 22 on `tailscale0` only |
@@ -277,11 +278,13 @@ Homepage has no bind-address option and listens on all interfaces. Direct access
 port 8083 stays blocked; nginx proxies `/` to `127.0.0.1:8083` and is reachable
 only through `tailscale0` on port 80.
 
-Branding: title **Homeport**, amber palette, dark-by-default with a soft parchment
-light mode (theme switcher kept). Layout is full-width, information-dense rows with
-every section visible. Widgets: datetime, Open-Meteo weather (Chicago coords —
-adjust in module if needed), CPU/RAM/disk/uptime, and SearXNG search. Every service
-tile uses `siteMonitor` for live HTTP latency (ms); Piper monitors `/health`.
+Branding: title **Homeport**, cool slate palette with a geometric grid (no warm
+amber/night-light cast). Dark-by-default with a soft cool-gray light mode (theme
+switcher kept). Top **System** section shows host load/RAM/uptime plus both NVIDIA
+GPUs (util, VRAM, temp) via `gpu-stats` on `127.0.0.1:8091`. Widgets: datetime,
+Open-Meteo (Chicago coords — adjust if needed), CPU/RAM/disk/uptime, SearXNG search.
+Every service tile uses `siteMonitor` for live HTTP latency (ms); Piper monitors
+`/health`.
 
 ---
 
@@ -681,6 +684,7 @@ Imported via `home.nix`. User: `rileyt` (`home/core/identity.nix`).
 | 8081 | whisper.cpp |
 | 8082 | Piper TTS |
 | 8083 | Homepage (direct firewall closed; nginx upstream) |
+| 8091 | GPU stats JSON API (localhost) |
 | 8888 | SearXNG |
 
 Agent quick-refs: `.cursor/skills/edit-nixos/reference/services.md`, `reference/home-manager.md`.
