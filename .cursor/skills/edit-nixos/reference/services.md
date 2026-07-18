@@ -9,7 +9,7 @@
 | Tailscale | `modules/services/tailscale.nix` | tailnet | Auth key via agenix |
 | printing | `modules/services/printing.nix` | — | CUPS |
 | nginx | `modules/services/nginx.nix` | http://nixos.taile9f484.ts.net/ (port 80 on `tailscale0`) | Path proxy front door |
-| Homepage | `modules/services/homepage-dashboard.nix` | via nginx `/` (upstream `127.0.0.1:8083`) | `openFirewall = false` |
+| Homepage | `modules/services/homepage-dashboard.nix` | via nginx `/` (upstream port 8083) | Direct firewall closed; remote access via nginx on `tailscale0:80` |
 | n8n | `modules/services/n8n.nix` | via nginx `/n8n/` (upstream `127.0.0.1:5678`) | Postgres + agenix password |
 | Portainer | `modules/services/docker.nix` | via nginx `/portainer/` (upstream `127.0.0.1:9443`) | `portainer/portainer-ce:2.39.4` |
 | ntfy | `modules/services/ntfy-sh.nix` | http://nixos.taile9f484.ts.net:8090 | Own port on `tailscale0` (no subpath — upstream rejects path in `base-url`) |
@@ -72,6 +72,15 @@
 - Firewall: closed (`openFirewall = false`)
 - SSH: port 22 on `tailscale0` only (`modules/core/openssh.nix`)
 - Revoked keys must be replaced via `agenix -e` before rebuild
+
+## Homepage
+
+- Built-in `services.homepage-dashboard` module on port 8083
+- No bind-address option; listens on all interfaces, but direct firewall access stays closed
+- Reached from the tailnet through nginx on port 80
+- Tiles: llama.cpp, whisper.cpp, Piper TTS (`/health` monitor), SearXNG, and dashboard-stack services
+- External bookmarks: GitHub, NixOS options, Home Manager options, Homepage docs
+- Resources widget: CPU, memory, and root disk
 
 ## nginx + dashboard stack
 
