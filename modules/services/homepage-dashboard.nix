@@ -395,9 +395,19 @@
         backdrop-filter: none;
       }
 
-      html.dark .service-group,
-      html.dark .bookmark-group {
+      /* Bounding box around each section (leaf groups only — skip layout wrappers). */
+      .services-group:not(:has(.services-group)),
+      #information-widgets {
         border-radius: 2px;
+        padding: 0.5rem 0.6rem 0.65rem !important;
+        margin: 0.15rem !important;
+        box-sizing: border-box;
+      }
+
+      html.dark .services-group:not(:has(.services-group)),
+      html.dark #information-widgets {
+        box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.35);
+        background-color: rgba(15, 23, 42, 0.45);
       }
 
       /* Soft light — cool gray paper, never warm/orange, never pure white */
@@ -417,6 +427,12 @@
       html.light .bookmark {
         border-radius: 2px !important;
         box-shadow: inset 0 0 0 1px rgba(71, 85, 105, 0.2);
+      }
+
+      html.light .services-group:not(:has(.services-group)),
+      html.light #information-widgets {
+        box-shadow: inset 0 0 0 1px rgba(71, 85, 105, 0.4);
+        background-color: rgba(255, 255, 255, 0.35);
       }
     '';
 

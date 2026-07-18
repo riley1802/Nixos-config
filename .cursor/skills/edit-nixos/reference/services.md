@@ -81,6 +81,7 @@
 - Title: Homeport; `color = slate`; cool geometric grid CSS (no warm/amber cast)
 - Theme switcher kept (dark first-visit default via `customJS`); soft cool-gray light mode
 - Layout (whiteboard grid): System row → header widgets (at-a-glance) → Workspace row (Apps + Bookmarks | Automation | Monitoring) → Bottom row (AI / Local | Containers). Bookmarks are service tiles (not `bookmarks.yaml`) so they can nest beside Apps.
+- Section chrome: `customCSS` draws a bounding box around each leaf `.services-group` and `#information-widgets`
 - System tiles use `customapi` against `gpu-stats` (`127.0.0.1:8091`)
 - Service tiles have `siteMonitor` latency (ms); Piper uses `/health`
 - Widgets (section 2): datetime, Open-Meteo (Chicago / `America/Chicago`), resources + uptime, SearXNG search
