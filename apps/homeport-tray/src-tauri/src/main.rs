@@ -9,13 +9,19 @@ use tauri::{
     image::Image,
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    AppHandle, Manager, WindowEvent,
+    AppHandle, Manager, RunEvent, WebviewUrl, WebviewWindowBuilder, WindowEvent,
 };
 use tauri_plugin_notification::NotificationExt;
 
 const DASHBOARD_WINDOW_LABEL: &str = "main";
 const TRAY_ID: &str = "homeport-tray";
 const NTFY_BASE_URL: &str = "http://127.0.0.1:8090";
+// Must mirror the "main" window entry in tauri.conf.json — used to
+// recreate the window from scratch (see `show_dashboard` below).
+const DASHBOARD_URL: &str = "http://127.0.0.1:8083";
+const DASHBOARD_TITLE: &str = "Homeport";
+const DASHBOARD_WIDTH: f64 = 1280.0;
+const DASHBOARD_HEIGHT: f64 = 800.0;
 
 fn main() {
     // Workaround for WebKitGTK + NVIDIA on Wayland: the DMABUF renderer
@@ -32,25 +38,30 @@ fn main() {
 
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
-            focus_dashboard(app);
+            show_dashboard(app);
         }))
         .plugin(tauri_plugin_notification::init())
         .setup(move |app| {
             let app_handle = app.handle().clone();
 
             if let Some(window) = app.get_webview_window(DASHBOARD_WINDOW_LABEL) {
-                if start_hidden {
-                    let _ = window.hide();
-                }
-
-                let hide_target = window.clone();
+                let destroy_target = window.clone();
                 window.on_window_event(move |event| {
                     if let WindowEvent::CloseRequested { api, .. } = event {
-                        // Close = minimize to tray, never quit outright.
+                        // Close = minimize to tray, never quit outright. The
+                        // window is destroyed (not hidden) — see hide_dashboard.
                         api.prevent_close();
-                        let _ = hide_target.hide();
+                        let _ = destroy_target.destroy();
                     }
                 });
+
+                // The config creates this window visible; tear it down right
+                // away for --start-hidden instead of hide()'ing it, so the
+                // very first show later goes through the same fresh-build
+                // path as every other show (no hide()/show() cycle at all).
+                if start_hidden {
+                    let _ = window.destroy();
+                }
             }
 
             build_tray(app)?;
@@ -58,8 +69,17 @@ fn main() {
 
             Ok(())
         })
-        .run(tauri::generate_context!())
-        .expect("error while running homeport-tray");
+        .build(tauri::generate_context!())
+        .expect("error while building homeport-tray")
+        .run(|_app_handle, event| {
+            // Keep running in the tray with zero windows open; only exit on
+            // an explicit programmatic AppHandle::exit (tray "Quit").
+            if let RunEvent::ExitRequested { api, code, .. } = event {
+                if code.is_none() {
+                    api.prevent_exit();
+                }
+            }
+        });
 }
 
 /// GTK/WebKitGTK window operations must run on the main thread — the
@@ -72,11 +92,47 @@ fn on_main_thread(app: &AppHandle, job: impl FnOnce(AppHandle) + Send + 'static)
     let _ = receiver.run_on_main_thread(move || job(for_job));
 }
 
-fn focus_dashboard(app: &AppHandle) {
+/// Shows the dashboard window, building it fresh if it was previously
+/// destroyed (see `hide_dashboard`). Rebuilding from scratch — rather than
+/// hide()/show() on a reused window — avoids the WebKitGTK + NVIDIA Wayland
+/// DMABUF surface desync described at the top of this file.
+fn show_dashboard(app: &AppHandle) {
     on_main_thread(app, |app| {
         if let Some(window) = app.get_webview_window(DASHBOARD_WINDOW_LABEL) {
             let _ = window.show();
             let _ = window.set_focus();
+            return;
+        }
+
+        let Ok(window) = WebviewWindowBuilder::new(
+            &app,
+            DASHBOARD_WINDOW_LABEL,
+            WebviewUrl::External(DASHBOARD_URL.parse().expect("valid dashboard URL")),
+        )
+        .title(DASHBOARD_TITLE)
+        .inner_size(DASHBOARD_WIDTH, DASHBOARD_HEIGHT)
+        .build() else {
+            eprintln!("homeport-tray: failed to rebuild dashboard window");
+            return;
+        };
+
+        let _ = window.set_focus();
+
+        let destroy_target = window.clone();
+        window.on_window_event(move |event| {
+            if let WindowEvent::CloseRequested { api, .. } = event {
+                api.prevent_close();
+                let _ = destroy_target.destroy();
+            }
+        });
+    });
+}
+
+/// Destroys (not hides) the dashboard window — see `show_dashboard`.
+fn hide_dashboard(app: &AppHandle) {
+    on_main_thread(app, |app| {
+        if let Some(window) = app.get_webview_window(DASHBOARD_WINDOW_LABEL) {
+            let _ = window.destroy();
         }
     });
 }
@@ -95,7 +151,7 @@ fn build_tray(app: &tauri::App) -> tauri::Result<()> {
         .show_menu_on_left_click(false)
         .tooltip("Homeport")
         .on_menu_event(|app, event| match event.id.as_ref() {
-            "show" => focus_dashboard(app),
+            "show" => show_dashboard(app),
             "reload" => on_main_thread(app, |app| {
                 if let Some(window) = app.get_webview_window(DASHBOARD_WINDOW_LABEL) {
                     // Soft reload keeps WebKitGTK's cached custom.css; navigate
@@ -115,17 +171,12 @@ fn build_tray(app: &tauri::App) -> tauri::Result<()> {
                 ..
             } = event
             {
-                on_main_thread(tray.app_handle(), |app| {
-                    if let Some(window) = app.get_webview_window(DASHBOARD_WINDOW_LABEL) {
-                        let visible = window.is_visible().unwrap_or(false);
-                        if visible {
-                            let _ = window.hide();
-                        } else {
-                            let _ = window.show();
-                            let _ = window.set_focus();
-                        }
-                    }
-                });
+                let app = tray.app_handle();
+                if app.get_webview_window(DASHBOARD_WINDOW_LABEL).is_some() {
+                    hide_dashboard(app);
+                } else {
+                    show_dashboard(app);
+                }
             }
         })
         .build(app)?;
