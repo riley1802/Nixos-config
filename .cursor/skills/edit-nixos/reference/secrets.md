@@ -26,9 +26,3 @@ All machine secrets are managed with [agenix](https://github.com/ryantm/agenix).
   cannot rekey for itself; rekey on the desktop and push
 - Recipients per host: `rileyt` (user), `nixos-host`, `legion-host` — see `secrets/secrets.nix`
 - See [secrets/README.md](../../../secrets/README.md) for edit instructions
-
-## Known gap (as of 2026-07-18)
-
-The four `.age` files list `legion-host` in `secrets.nix` but were encrypted
-before that key was added — legion cannot decrypt them until `agenix -r` is
-run on the `nixos` desktop and the rekeyed files are pushed/pulled.
