@@ -2,8 +2,14 @@
 
 Personal NixOS flake for all machines (GNOME/Cinnamon, NVIDIA, local AI).
 
-The repo is checked out at `/etc/nixos` on every machine. System configuration
-lives under `hosts/` and `modules/`. User configuration lives under `home/`.
+**GitHub is the source of truth:** [`riley1802/Nixos-config`](https://github.com/riley1802/Nixos-config)
+(`main`). Every machine checks out this repo at `/etc/nixos` and stays in sync
+so the desktop and laptop stay seamless. Agent preferences and multi-host
+decisions live in
+[`.cursor/skills/edit-nixos/reference/preferences.md`](.cursor/skills/edit-nixos/reference/preferences.md).
+
+System configuration lives under `hosts/` and `modules/`. User configuration
+lives under `home/`.
 
 ## Hosts
 
@@ -11,6 +17,9 @@ One repo, every machine. `nixos-rebuild` finds `/etc/nixos/flake.nix` on its
 own and picks the output matching the machine's hostname, so on any host:
 
     sudo nixos-rebuild switch
+
+Keep `/etc/nixos` on GitHub `main` before treating a change as done. On the
+other machine: `git pull` then rebuild.
 
 - `nixos` — desktop workstation (GNOME, dual NVIDIA, Uptime Kuma monitor sync).
 - `legion` — Lenovo Legion 5 Pro laptop (Cinnamon, AMD/NVIDIA Optimus).

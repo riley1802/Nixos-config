@@ -5,12 +5,17 @@ alwaysApply: true
 
 # NixOS Config (this repo)
 
-Host `nixos`, user `rileyt`. Full rules: [bestpracticesnixos.md](../bestpracticesnixos.md). Config changes: invoke **@edit-nixos**.
+Hosts `nixos` (desktop) + `legion` (laptop), user `rileyt`. Full rules:
+[bestpracticesnixos.md](../bestpracticesnixos.md). Standing preferences (GitHub
+source of truth, seamless multi-host): [preferences.md](../skills/edit-nixos/reference/preferences.md).
+Config changes: invoke **@edit-nixos**.
 
 ## Non-negotiables
 
-- **Modular**: one concern per file; import lists only in `configuration.nix`, `hosts/nixos/configuration.nix`, `home.nix`.
-- **Secrets**: agenix only — never plaintext in `.nix`, git, or chat.
+- **GitHub is the source of truth** — `main` on `riley1802/Nixos-config`; both machines checkout `/etc/nixos` from it. Unpushed local trees are not authoritative for the other host.
+- **Seamless desktop + laptop** — share stack via `hosts/common.nix` / `home/common.nix`; host-only deltas via `hosts/<name>/` and `host.*` facts.
+- **Modular**: one concern per file; import lists only in host/home entrypoints.
+- **Secrets**: agenix only — never plaintext in `.nix`, git, or chat. New host keys require `agenix -r` on a machine that can already decrypt, then push.
 - **Validate before switch**: `nix fmt .` → `nix flake check` → toplevel build → config audit (never bare `nix fmt`).
 - **Minimal diff**: match existing style; change only what the task requires.
 - **Research first** for new services, unfamiliar options, or input upgrades — ask before editing.
@@ -22,7 +27,8 @@ User **rileyt** approves agents using **`pkexec`** for any command that would ot
 ## Git
 
 - Auto-commit after validated changes.
-- **Always ask before push to `main`.**
+- Ask before push to `main`, unless Riley already directed push / GitHub sync / source-of-truth for this work.
+- After pushing fleet-relevant changes, note the other host should pull + rebuild.
 - Never force-push `main`, skip hooks, or run rollback/GC without explicit request.
 
 ## Book rules

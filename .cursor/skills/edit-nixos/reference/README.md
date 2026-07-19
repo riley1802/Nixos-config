@@ -4,6 +4,7 @@ Living docs for `/etc/nixos`. **Update these files on every config change** — 
 
 | File | Update when |
 |------|-------------|
+| [preferences.md](preferences.md) | Standing user decisions (GitHub SoT, multi-host, desktop/laptop) |
 | [flake.md](flake.md) | Inputs, outputs, specialArgs, overlays |
 | [machine.md](machine.md) | Host, user, hardware, GPUs, paths |
 | [layout.md](layout.md) | Imports in `configuration.nix` or `home.nix` |

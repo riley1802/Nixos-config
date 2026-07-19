@@ -7,6 +7,7 @@ Curated rules for maintaining `/etc/nixos`. Synthesized from the [NixOS Wiki](ht
 | Doc | Role |
 |-----|------|
 | **This file** | Summary of philosophy, layout, security, validation, and git policy |
+| [preferences.md](skills/edit-nixos/reference/preferences.md) | Standing user decisions: GitHub source of truth, seamless desktop+laptop |
 | [@edit-nixos](skills/edit-nixos/SKILL.md) | Full agent workflow: discovery checklist, implementation, audit, handoff |
 | [reference/](skills/edit-nixos/reference/) | Living index of current config state (update on every config change) |
 | [lessons.md](skills/edit-nixos/lessons.md) | Resolved errors — log as soon as cause and fix are known |
@@ -22,14 +23,15 @@ When this file and `@edit-nixos` overlap, the skill has the detailed workflow; t
 
 | Principle | Rule |
 |-----------|------|
-| Declarative | If it is not in git, it is not real. Track `/etc/nixos` in a flake repo. |
+| Declarative | If it is not in git **and on GitHub `main`**, it is not finished. Local `/etc/nixos` is a checkout of the remote. |
+| Fleet-first | Desktop (`nixos`) and laptop (`legion`) share one flake. Prefer shared modules; host-only deltas via `hosts/<name>/` and `host.*` facts. |
 | Reproducible | Same `flake.lock` → same system. Pin inputs; commit the lockfile. |
 | Modular | One concern per file. Top-level entrypoints are import lists only. |
 | Minimal diff | Change only what the task requires. Match existing style. |
 | Safe by default | Localhost-first services, closed firewall, no secrets in the store. |
 | Validate before switch | `nix fmt .` → `nix flake check` → build toplevel → config audit → then rebuild. Never bare `nix fmt` (hangs). |
 
-Start simple. This is a **single-host** setup — `hosts/nixos/` organizes the one machine, not a multi-machine fleet.
+**GitHub is the source of truth** (`github.com/riley1802/Nixos-config`, branch `main`). Both machines keep `/etc/nixos` in sync with that remote so desktop and laptop stay seamless. Standing preferences: [preferences.md](skills/edit-nixos/reference/preferences.md).
 
 ---
 
@@ -74,49 +76,51 @@ Example handoff:
 
 ```
 /etc/nixos/
-├── flake.nix                    # inputs, mkNixos helper, specialArgs
+├── flake.nix                    # inputs, mkNixos helper, one output per host
 ├── flake.lock                   # committed — always
-├── configuration.nix            # delegates to hosts/nixos/
-├── home.nix                     # Home Manager import list only
+├── home.nix                     # HM entry: desktop (nixos)
+├── home-legion.nix              # HM entry: laptop (legion)
 ├── hosts/
-│   └── nixos/
-│       ├── configuration.nix    # host import list (modules + hardware)
-│       └── hardware-configuration.nix  # generated; rarely hand-edited
+│   ├── common.nix               # shared system profile (all hosts)
+│   ├── nixos/                   # desktop
+│   └── legion/                  # laptop
 ├── modules/
-│   ├── core/                    # boot, locale, hostname, networkmanager, nix, agenix, openssh
-│   ├── desktop/                 # gdm, gnome, extensions, audio (one concern per file)
-│   ├── hardware/                # graphics userspace, nvidia driver
-│   ├── programs/                # one file per program or directory layout
-│   ├── services/                # one file per service
+│   ├── core/                    # boot, locale, host-facts, networkmanager, nix, agenix, openssh
+│   ├── desktop/                 # gdm/gnome (desktop), cinnamon (laptop), audio
+│   ├── hardware/                # graphics, nvidia, nvidia-prime
+│   ├── programs/
+│   ├── services/                # one file per service (shared stack)
 │   └── users/
 ├── home/
+│   ├── common.nix               # shared HM modules
 │   ├── core/
 │   ├── desktop/
 │   └── programs/
 └── secrets/
-    ├── secrets.nix              # agenix public keys
-    └── *.age                    # encrypted secrets (committed)
+    ├── secrets.nix              # agenix public keys (rileyt + each host)
+    └── *.age                    # encrypted secrets (committed; rekey for every host)
 ```
 
-The flake's `mkNixos` helper wires agenix, Home Manager, and `specialArgs` (`pkgsUnstable`, `inputs`); the host config file is `./hosts/nixos/configuration.nix`.
+The flake's `mkNixos` helper wires agenix, Home Manager, and `specialArgs` (`pkgsUnstable`, `inputs`) per host.
 
 ### Layout rules
 
 - **One concern = one file** — a service, program, dconf domain, or single NixOS option group. No bundled "system defaults" catch-alls.
 - **One service = one file** under `modules/services/<name>.nix`.
-- Add new system modules with **one import line** in `hosts/nixos/configuration.nix` (not business logic in that file).
-- **`configuration.nix`** (repo root) and **`home.nix`** are import lists only — no logic.
+- Shared services/programs go in `hosts/common.nix`; host-only imports (hardware, desktop DE) go in `hosts/<name>/configuration.nix`.
+- **`hosts/*/configuration.nix`**, **`home.nix`**, and **`home-legion.nix`** are import lists only — no logic.
 - Colocate packages with the module that needs them (`environment.systemPackages` in the relevant module, not a giant global list).
-- Split Home Manager the same way: `home/programs/`, `home/desktop/`, etc.
-- Do not edit `hosts/nixos/hardware-configuration.nix` unless hardware changed or the user explicitly asks.
+- Split Home Manager the same way: `home/programs/`, `home/desktop/`, etc.; share via `home/common.nix`.
+- Do not edit `hosts/*/hardware-configuration.nix` unless hardware changed or the user explicitly asks.
 - Modules that need unstable packages or flake inputs must declare them in the function head: `{ pkgsUnstable, inputs, ... }:`.
 - Paths from `modules/services/` to secrets use relative paths (e.g. `../../secrets/foo.age`).
+- New host → add `nixosConfigurations.<name>`, host key in `secrets/secrets.nix`, run `agenix -r` on an existing machine, push rekeyed `.age` files.
 
-### Future evolution (not planned now)
+### When adding another machine
 
 | Pattern | When | Idea |
 |---------|------|------|
-| Additional `hosts/<name>/` | Second machine someday | Reuse `mkNixos` with a new host entry |
+| Additional `hosts/<name>/` | New machine | Reuse `mkNixos` + `hosts/common.nix`; set `host.*` facts; rekey secrets |
 | Feature modules with `enable` | Reuse across hosts | `options.myfeature.enable` + `lib.mkIf` |
 | Auto-import (`import-tree`, haumea) | 40+ modules | Drop new `.nix` files without editing import lists |
 
@@ -462,10 +466,13 @@ Fix stale or mismatched entries before committing. Full workflow details in [@ed
 
 ## 13. Git workflow (this repo)
 
+GitHub `main` is the **source of truth** for both desktop and laptop. Details: [preferences.md](skills/edit-nixos/reference/preferences.md).
+
 | Action | Policy |
 |--------|--------|
 | Commit | **Automatic** after validated changes |
-| Push to `main` | **Always ask user first** |
+| Push to `main` | Ask first, unless Riley already directed push / GitHub sync / source-of-truth for this work |
+| After push | Remind to `git pull` + rebuild on the other host when the change is fleet-relevant |
 | Commit message | Imperative, 1–2 sentences, focus on why |
 | `flake.lock` | Commit with intentional input updates |
 | Secrets | Never commit plaintext (`.env`, `*.key`, `secrets/*.plain.*` — see `.gitignore`) |
@@ -492,18 +499,19 @@ Fix stale or mismatched entries before committing. Full workflow details in [@ed
 
 ---
 
-## 15. Alignment with this machine
+## 15. Alignment with this fleet
 
 These practices are tuned for riley's setup:
 
-- Flake host: `nixos`, user: `rileyt`
+- Hosts: `nixos` (desktop, GNOME) + `legion` (laptop, Cinnamon / PRIME offload); user `rileyt`
+- Preferences & multi-host decisions: [preferences.md](skills/edit-nixos/reference/preferences.md)
+- Machine facts: [reference/machine.md](skills/edit-nixos/reference/machine.md)
 - Stable `nixos-26.05` + `pkgsUnstable` for CUDA llama.cpp
-- GNOME desktop, dual NVIDIA GPUs — details in [reference/machine.md](skills/edit-nixos/reference/machine.md)
-- Local AI: llama.cpp (8080) + SearXNG (8888), localhost-only — details in [reference/services.md](skills/edit-nixos/reference/services.md)
-- Home Manager as NixOS module with `useGlobalPkgs` / `useUserPackages`
-- agenix for all secrets; OpenSSH over Tailscale only (see reference)
+- Shared local AI / dashboard stack on every host — [reference/services.md](skills/edit-nixos/reference/services.md)
+- Home Manager as NixOS module with `useGlobalPkgs` / `useUserPackages`; shared via `home/common.nix`
+- agenix for all secrets (every host must decrypt); OpenSSH over Tailscale only
 
-When a general best practice conflicts with an explicit user preference in `@edit-nixos` or user rules, **ask** — user preference wins.
+When a general best practice conflicts with [preferences.md](skills/edit-nixos/reference/preferences.md) or `@edit-nixos`, **preferences win**.
 
 ---
 

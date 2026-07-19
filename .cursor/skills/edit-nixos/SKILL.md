@@ -10,9 +10,13 @@ description: >-
 
 # Edit NixOS Config
 
-Personal flake for host `nixos`, user `rileyt`, repo at `/etc/nixos`.
+Personal flake for hosts `nixos` (desktop) and `legion` (laptop), user `rileyt`,
+repo at `/etc/nixos` on every machine. **GitHub (`main`) is the source of truth** —
+see [reference/preferences.md](reference/preferences.md).
 
-**Before any similar change:** read [lessons.md](lessons.md), [bestpracticesnixos.md](../../bestpracticesnixos.md), [troubleshooting.md](troubleshooting.md), and relevant files in [reference/](reference/README.md).
+**Before any similar change:** read [reference/preferences.md](reference/preferences.md),
+[lessons.md](lessons.md), [bestpracticesnixos.md](../../bestpracticesnixos.md),
+[troubleshooting.md](troubleshooting.md), and relevant files in [reference/](reference/README.md).
 
 ## Before editing anything
 
@@ -40,7 +44,7 @@ Discovery:
 - [ ] reference/ updated?
 - [ ] secrets/ + agenix updated?
 - [ ] config audit pass?
-- [ ] Push after commit?
+- [ ] Push after commit? (GitHub is SoT — ask unless already directed)
 ```
 
 ## Repo layout (strict)
@@ -195,7 +199,10 @@ EOF
 )"
 ```
 
-3. **Always ask before `git push` to `main`.** Never push unless the user confirms.
+3. **Push policy (GitHub is the source of truth):** ask before `git push` to `main`
+   unless the user already directed push / "commit to GitHub" / source-of-truth sync
+   for this work. After pushing multi-host changes, note that the other machine
+   should `git pull` then rebuild. See [reference/preferences.md](reference/preferences.md).
 4. Never update git config. Never amend unless user rules allow it.
 
 ## Handoff to user
@@ -207,7 +214,7 @@ After work, report:
 - Config audit results (stale items found and fixed)
 - Whether rebuild ran or command to run
 - Commit hash (if committed)
-- Whether push is pending (ask if they want it)
+- Whether pushed (or push pending); if pushed and the other host needs the change, say so
 
 ## Examples
 
