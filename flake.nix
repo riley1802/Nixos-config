@@ -66,5 +66,11 @@
         system = "x86_64-linux";
         homeFile = ./home.nix;
       };
+
+      nixosConfigurations.legion = mkNixos {
+        name = "legion";
+        system = "x86_64-linux";
+        homeFile = ./home.nix;
+      };
     };
 }
