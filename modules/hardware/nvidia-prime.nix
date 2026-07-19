@@ -3,6 +3,11 @@
 # Hybrid AMD iGPU + NVIDIA dGPU (Optimus) for the Legion 5 Pro 16ARH7H.
 # Offload mode: render on the iGPU by default, run apps on the dGPU with
 # `nvidia-offload <cmd>` (or prime-run env vars).
+#
+# REQUIRES the BIOS "GPU Working Mode" set to Hybrid. In Discrete/dGPU-only
+# mode the MUX wires the internal panel (eDP-1) to the NVIDIA card, the iGPU
+# has no connected outputs, and X11 (LightDM/Cinnamon) renders to an invisible
+# dummy framebuffer — black screen at boot.
 {
   services.xserver.videoDrivers = [ "nvidia" ];
 

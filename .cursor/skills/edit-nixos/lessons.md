@@ -160,3 +160,11 @@ Append entries when a build, rebuild, or runtime error is resolved. Format:
 - **Cause:** Upstream config format / nixpkgs module cannot express TLS termination (`nixpkgs#530174`, `tailscale#18381`).
 - **Fix:** Oneshoot `tailscale serve --bg --https=…` in `modules/services/tailscale-serve.nix`; do not bind backends to `0.0.0.0` on the same port Serve uses.
 - **Avoid:** Assuming `services.tailscale.serve.services.*.endpoints."tcp:443"` terminates TLS.
+
+### PRIME offload black-screens when the laptop MUX is in Discrete mode (2026-07-18)
+
+- **Context:** New `legion` host (Legion 5 Pro 16ARH7H, AMD 680M + RTX 3070 Ti) with Cinnamon/LightDM (X11) and `hardware.nvidia.prime.offload` (generation 6).
+- **Error:** Boot flashed black → boot text → stayed black. LightDM/X started fine per journal; Xorg log: `AMDGPU(0): Unable to find connected outputs - setting 1024x768 initial framebuffer`; kernel: `amdgpu: Cannot find any crtc or sizes`.
+- **Cause:** BIOS "GPU Working Mode" was Discrete/dGPU — the MUX wires the internal panel (eDP-1) to the NVIDIA card, so the iGPU that offload mode makes primary has zero connected outputs; the greeter rendered into an invisible dummy framebuffer. The previous GDM/Wayland generation masked this because mutter drove the NVIDIA card directly.
+- **Fix:** Set BIOS GPU Working Mode to Hybrid so eDP-1 attaches to the iGPU and the offload config works as designed. (Alternative: NVIDIA-primary config with offload + finegrained power management removed.)
+- **Avoid:** Deploying PRIME offload on a MUXed laptop without confirming which GPU owns eDP-1 first — check `/sys/class/drm/card*-eDP-*/status` and which card it hangs off before choosing offload vs sync/primary.

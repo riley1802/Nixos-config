@@ -1,17 +1,22 @@
 # NixOS Config
 
-Personal NixOS flake for host `nixos` — x86_64 desktop workstation (GNOME, NVIDIA, local AI).
+Personal NixOS flake for all machines (GNOME/Cinnamon, NVIDIA, local AI).
 
-System configuration lives under `hosts/` and `modules/`. User configuration
-lives under `home/`.
+The repo is checked out at `/etc/nixos` on every machine. System configuration
+lives under `hosts/` and `modules/`. User configuration lives under `home/`.
 
 ## Hosts
 
-One repo, every machine. `sudo nixos-rebuild switch --flake .` automatically
-picks the flake output matching the machine's hostname:
+One repo, every machine. `nixos-rebuild` finds `/etc/nixos/flake.nix` on its
+own and picks the output matching the machine's hostname, so on any host:
+
+    sudo nixos-rebuild switch
 
 - `nixos` — desktop workstation (GNOME, dual NVIDIA, Uptime Kuma monitor sync).
 - `legion` — Lenovo Legion 5 Pro laptop (Cinnamon, AMD/NVIDIA Optimus).
+  BIOS "GPU Working Mode" must be **Hybrid**: in Discrete mode the panel is
+  muxed to the NVIDIA card and the PRIME-offload X session boots to a black
+  screen.
 
 Both import `hosts/common.nix` (full shared service stack). Per-host
 differences live in `modules/core/host-facts.nix` options (`host.tailnetName`,
@@ -19,10 +24,11 @@ differences live in `modules/core/host-facts.nix` options (`host.tailnetName`,
 
 ## Layout
 
-- `flake.nix` - flake inputs and `nixos` output.
-- `hosts/nixos/` - `configuration.nix` and `hardware-configuration.nix`.
-- `configuration.nix` - re-exports `hosts/nixos/` for compatibility.
-- `home.nix` - Home Manager imports for the desktop.
+- `flake.nix` - flake inputs, one `nixosConfigurations` output per host.
+- `hosts/common.nix` - shared system profile imported by every host.
+- `hosts/<name>/` - per-host `configuration.nix` and `hardware-configuration.nix`.
+- `home.nix` / `home-legion.nix` - Home Manager entry points per host.
+- `home/common.nix` - Home Manager modules shared by every host.
 - `modules/core/` - boot, locale, hostname, NetworkManager, Nix settings, agenix, OpenSSH.
 - `modules/desktop/` - GDM, GNOME, extensions, audio.
 - `modules/hardware/` - graphics userspace and NVIDIA driver.
@@ -165,23 +171,24 @@ Create or rotate a Tailscale key at [Tailscale admin → Keys](https://login.tai
 
 ## Usage
 
-Apply the desktop configuration:
+Apply this machine's configuration (host picked by hostname):
 
 ```sh
-sudo nixos-rebuild switch --flake .#nixos
+sudo nixos-rebuild switch
 ```
 
-Build the desktop system without switching:
+Build a system without switching (either host, from any machine):
 
 ```sh
 nix build .#nixosConfigurations.nixos.config.system.build.toplevel
+nix build .#nixosConfigurations.legion.config.system.build.toplevel
 ```
 
 Update locked inputs:
 
 ```sh
 nix flake update
-sudo nixos-rebuild switch --flake .#nixos
+sudo nixos-rebuild switch
 ```
 
 Format Nix files:
