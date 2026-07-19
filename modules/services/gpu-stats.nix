@@ -18,9 +18,17 @@ let
       HOST = "127.0.0.1"
       PORT = 8091
       NVIDIA_SMI = "${nvidiaBin}/bin/nvidia-smi"
-      NETWORK_INTERFACE = "enp132s0"
       network_lock = threading.Lock()
       network_previous = None
+
+
+      def default_interface() -> str:
+          # First interface with a default route (destination 00000000).
+          for line in Path("/proc/net/route").read_text().splitlines()[1:]:
+              fields = line.split()
+              if len(fields) >= 2 and fields[1] == "00000000":
+                  return fields[0]
+          raise RuntimeError("no default route interface found")
 
 
       def read_loadavg() -> dict:
@@ -52,7 +60,7 @@ let
 
       def read_network() -> dict:
           global network_previous
-          stats = Path("/sys/class/net") / NETWORK_INTERFACE / "statistics"
+          stats = Path("/sys/class/net") / default_interface() / "statistics"
           rx_bytes = int((stats / "rx_bytes").read_text())
           tx_bytes = int((stats / "tx_bytes").read_text())
           now = time.monotonic()

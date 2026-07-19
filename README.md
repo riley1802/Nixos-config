@@ -5,6 +5,18 @@ Personal NixOS flake for host `nixos` — x86_64 desktop workstation (GNOME, NVI
 System configuration lives under `hosts/` and `modules/`. User configuration
 lives under `home/`.
 
+## Hosts
+
+One repo, every machine. `sudo nixos-rebuild switch --flake .` automatically
+picks the flake output matching the machine's hostname:
+
+- `nixos` — desktop workstation (GNOME, dual NVIDIA, Uptime Kuma monitor sync).
+- `legion` — Lenovo Legion 5 Pro laptop (Cinnamon, AMD/NVIDIA Optimus).
+
+Both import `hosts/common.nix` (full shared service stack). Per-host
+differences live in `modules/core/host-facts.nix` options (`host.tailnetName`,
+`host.gpus`, `host.uptimeKumaSync`) set in each `hosts/<name>/configuration.nix`.
+
 ## Layout
 
 - `flake.nix` - flake inputs and `nixos` output.

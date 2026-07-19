@@ -1,11 +1,53 @@
-{ config, ... }:
+{ config, lib, ... }:
+let
+  tailnet = config.host.tailnetName;
+
+  # One tile per NVIDIA GPU on this host, fed by the gpu-stats API.
+  gpuTiles = lib.imap0
+    (index: label: {
+      "${label}" = {
+        icon = if index == 0 then "mdi-expansion-card" else "mdi-expansion-card-variant";
+        description = "GPU ${toString index} · util · VRAM · temp";
+        widget = {
+          type = "customapi";
+          url = "http://127.0.0.1:8091/gpu/${toString index}";
+          refreshInterval = 5000;
+          mappings = [
+            {
+              field = "util";
+              label = "GPU";
+              format = "percent";
+            }
+            {
+              field = "mem_pct";
+              label = "VRAM";
+              format = "percent";
+            }
+            {
+              field = "mem_used_mib";
+              label = "Used";
+              format = "float";
+              suffix = " MiB";
+            }
+            {
+              field = "temp_c";
+              label = "Temp";
+              format = "float";
+              suffix = "°C";
+            }
+          ];
+        };
+      };
+    })
+    config.host.gpus;
+in
 {
   services.homepage-dashboard = {
     enable = true;
     listenPort = 8083;
     openFirewall = false;
     # Accept Tailscale Serve / MagicDNS, plus local access on the bind port.
-    allowedHosts = "nixos.taile9f484.ts.net,localhost:8083,127.0.0.1:8083";
+    allowedHosts = "${tailnet},localhost:8083,127.0.0.1:8083";
 
     # theme left unlocked so the built-in dark/light switcher stays available.
     # Dark is forced as the first-visit default via customJS; light is cooled in customCSS.
@@ -139,77 +181,7 @@
               };
             };
           }
-          {
-            "RTX 3050" = {
-              icon = "mdi-expansion-card";
-              description = "GPU 0 · util · VRAM · temp";
-              widget = {
-                type = "customapi";
-                url = "http://127.0.0.1:8091/gpu/0";
-                refreshInterval = 5000;
-                mappings = [
-                  {
-                    field = "util";
-                    label = "GPU";
-                    format = "percent";
-                  }
-                  {
-                    field = "mem_pct";
-                    label = "VRAM";
-                    format = "percent";
-                  }
-                  {
-                    field = "mem_used_mib";
-                    label = "Used";
-                    format = "float";
-                    suffix = " MiB";
-                  }
-                  {
-                    field = "temp_c";
-                    label = "Temp";
-                    format = "float";
-                    suffix = "°C";
-                  }
-                ];
-              };
-            };
-          }
-          {
-            "GTX 1660 Super" = {
-              icon = "mdi-expansion-card-variant";
-              description = "GPU 1 · util · VRAM · temp";
-              widget = {
-                type = "customapi";
-                url = "http://127.0.0.1:8091/gpu/1";
-                refreshInterval = 5000;
-                mappings = [
-                  {
-                    field = "util";
-                    label = "GPU";
-                    format = "percent";
-                  }
-                  {
-                    field = "mem_pct";
-                    label = "VRAM";
-                    format = "percent";
-                  }
-                  {
-                    field = "mem_used_mib";
-                    label = "Used";
-                    format = "float";
-                    suffix = " MiB";
-                  }
-                  {
-                    field = "temp_c";
-                    label = "Temp";
-                    format = "float";
-                    suffix = "°C";
-                  }
-                ];
-              };
-            };
-          }
-        ];
+        ] ++ gpuTiles;
       }
       {
         # Middle row: Apps | Bookmarks | Automation | Monitoring
@@ -278,7 +250,7 @@
               {
                 n8n = {
                   icon = "n8n.png";
-                  href = "https://nixos.taile9f484.ts.net:5678";
+                  href = "https://${tailnet}:5678";
                   description = "Workflow automation";
                   siteMonitor = "http://127.0.0.1:5678/healthz";
                 };
@@ -298,7 +270,7 @@
               {
                 ntfy = {
                   icon = "ntfy.png";
-                  href = "http://nixos.taile9f484.ts.net:8090";
+                  href = "http://${tailnet}:8090";
                   description = "Push notifications";
                   siteMonitor = "http://127.0.0.1:8090";
                 };
@@ -315,7 +287,7 @@
               {
                 "llama.cpp" = {
                   icon = "si-ollama";
-                  href = "https://nixos.taile9f484.ts.net:8080";
+                  href = "https://${tailnet}:8080";
                   description = "Local LLM inference";
                   siteMonitor = "http://127.0.0.1:8080/v1/models";
                 };
@@ -323,7 +295,7 @@
               {
                 "whisper.cpp" = {
                   icon = "mdi-microphone";
-                  href = "https://nixos.taile9f484.ts.net:8081";
+                  href = "https://${tailnet}:8081";
                   description = "Speech-to-text";
                   siteMonitor = "http://127.0.0.1:8081";
                 };
@@ -331,7 +303,7 @@
               {
                 "Piper TTS" = {
                   icon = "mdi-volume-high";
-                  href = "https://nixos.taile9f484.ts.net:8082/health";
+                  href = "https://${tailnet}:8082/health";
                   description = "Text-to-speech";
                   siteMonitor = "http://127.0.0.1:8082/health";
                 };
@@ -343,7 +315,7 @@
               {
                 Portainer = {
                   icon = "portainer.png";
-                  href = "https://nixos.taile9f484.ts.net:9443";
+                  href = "https://${tailnet}:9443";
                   description = "Container management";
                   siteMonitor = "https://127.0.0.1:9443";
                 };

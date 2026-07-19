@@ -1,9 +1,10 @@
-{ lib, pkgsUnstable, ... }:
+{ config, lib, pkgsUnstable, ... }:
 
 let
   llamaCppCuda = pkgsUnstable.llama-cpp.override {
     cudaSupport = true;
   };
+  gpuCount = builtins.length config.host.gpus;
 in
 {
   systemd.tmpfiles.rules = [
@@ -76,14 +77,16 @@ in
       "--parallel"
       "1"
       "--kv-unified"
+      "--sleep-idle-seconds"
+      "1800"
+    ] ++ lib.optionals (gpuCount > 1) [
+      # Split layers across all GPUs (desktop only).
       "--split-mode"
       "layer"
       "--tensor-split"
-      "1,1"
+      (lib.concatStringsSep "," (map (_: "1") config.host.gpus))
       "--main-gpu"
       "0"
-      "--sleep-idle-seconds"
-      "1800"
     ];
   };
 

@@ -10,12 +10,12 @@
     environment = {
       # Localhost only — Tailscale Serve terminates TLS on :5678 (see tailscale-serve.nix).
       # N8N_PATH subpath hosting is broken in n8n 2.x; do not put n8n behind a path prefix.
-      N8N_HOST = "nixos.taile9f484.ts.net";
+      N8N_HOST = config.host.tailnetName;
       N8N_PORT = "5678";
       N8N_PROTOCOL = "https";
       N8N_LISTEN_ADDRESS = "127.0.0.1";
       N8N_PROXY_HOPS = "1";
-      WEBHOOK_URL = "https://nixos.taile9f484.ts.net:5678/";
+      WEBHOOK_URL = "https://${config.host.tailnetName}:5678/";
       DB_TYPE = "postgresdb";
       DB_POSTGRESDB_HOST = "127.0.0.1";
       DB_POSTGRESDB_DATABASE = "n8n";

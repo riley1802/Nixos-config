@@ -1,8 +1,10 @@
 { config
+, lib
 , pkgs
 , ...
 }:
 let
+  tailnet = config.host.tailnetName;
   tagName = "nix-managed";
   notificationName = "ntfy-homeport";
 
@@ -24,7 +26,7 @@ let
     {
       name = "Homepage (tailnet)";
       type = "http";
-      url = "https://nixos.taile9f484.ts.net/";
+      url = "https://${tailnet}/";
       group = "Monitoring";
     }
     {
@@ -60,7 +62,7 @@ let
     {
       name = "n8n (tailnet)";
       type = "http";
-      url = "https://nixos.taile9f484.ts.net:5678";
+      url = "https://${tailnet}:5678";
       group = "Automation & Infra";
     }
     {
@@ -73,7 +75,7 @@ let
     {
       name = "Portainer (tailnet)";
       type = "http";
-      url = "https://nixos.taile9f484.ts.net:9443";
+      url = "https://${tailnet}:9443";
       group = "Automation & Infra";
     }
     {
@@ -91,7 +93,7 @@ let
     {
       name = "ntfy (tailnet)";
       type = "http";
-      url = "http://nixos.taile9f484.ts.net:8090";
+      url = "http://${tailnet}:8090";
       group = "Monitoring";
     }
     {
@@ -103,7 +105,7 @@ let
     {
       name = "Uptime Kuma (tailnet)";
       type = "http";
-      url = "http://nixos.taile9f484.ts.net:3001";
+      url = "http://${tailnet}:3001";
       group = "Monitoring";
     }
     {
@@ -132,9 +134,11 @@ let
   pythonEnv = pkgs.python3.withPackages (ps: [ ps.uptime-kuma-api ]);
 in
 {
-  age.secrets.uptime-kuma-sync = {
-    file = ../../secrets/uptime-kuma-sync.env.age;
-    mode = "0400";
+  age.secrets = lib.mkIf config.host.uptimeKumaSync {
+    uptime-kuma-sync = {
+      file = ../../secrets/uptime-kuma-sync.env.age;
+      mode = "0400";
+    };
   };
 
   services.uptime-kuma = {
@@ -148,7 +152,7 @@ in
   # Declarative monitor sync (Socket.IO via uptime-kuma-api).
   # Requires admin account already created in the Kuma UI and credentials in
   # secrets/uptime-kuma-sync.env.age (KUMA_USERNAME, KUMA_PASSWORD, NTFY_TOPIC).
-  systemd.services.uptime-kuma-sync = {
+  systemd.services.uptime-kuma-sync = lib.mkIf config.host.uptimeKumaSync {
     description = "Sync Nix-declared monitors into Uptime Kuma";
     after = [
       "uptime-kuma.service"

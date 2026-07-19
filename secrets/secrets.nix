@@ -25,6 +25,7 @@ in
   "uptime-kuma-sync.env.age".publicKeys = [
     rileyt
     nixos-host
+    legion-host
   ];
   # Uncomment when enabling cloud Honcho:
   # "honcho-env.age".publicKeys = [ rileyt nixos-host ];
