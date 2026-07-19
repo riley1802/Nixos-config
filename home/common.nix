@@ -8,6 +8,7 @@
     ./core/state-version.nix
     ./core/home-manager.nix
     ./desktop/cursor.nix
+    ./programs/git.nix
     ./programs/utilities.nix
     ./programs/google-chrome.nix
     ./programs/spotify.nix

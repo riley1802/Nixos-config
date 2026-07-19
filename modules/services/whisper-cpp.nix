@@ -33,7 +33,8 @@ in
       Restart = "on-failure";
       RestartSec = "5s";
       Environment = [
-        "PATH=${lib.makeBinPath [ pkgs.ffmpeg pkgs.whisper-cpp ]}"
+        # coreutils + gnugrep: the model-download script needs dirname/realpath/grep.
+        "PATH=${lib.makeBinPath [ pkgs.ffmpeg pkgs.whisper-cpp pkgs.coreutils pkgs.gnugrep ]}"
       ];
     };
   };

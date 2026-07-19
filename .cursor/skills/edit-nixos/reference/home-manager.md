@@ -1,7 +1,7 @@
 # Home Manager
 
 - User: `rileyt`
-- Entry: `home.nix`
+- Entries: `home.nix` (nixos desktop), `home-legion.nix` (legion laptop); both import `home/common.nix`
 - Uses global pkgs from flake (`useGlobalPkgs = true`)
 
 ## Modules
@@ -15,6 +15,7 @@
 | `home/desktop/gnome/interface.nix` | GNOME interface dconf |
 | `home/desktop/gnome/extensions.nix` | GNOME shell extensions dconf |
 | `home/desktop/gnome/dash-to-dock.nix` | Dash to Dock dconf |
+| `home/programs/git.nix` | Git identity (user.name / user.email) |
 | `home/programs/utilities.nix` | CLI utilities |
 | `home/programs/google-chrome.nix` | Google Chrome |
 | `home/programs/spotify.nix` | Spotify |

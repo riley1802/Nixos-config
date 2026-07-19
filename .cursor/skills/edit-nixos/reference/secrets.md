@@ -21,4 +21,14 @@ All machine secrets are managed with [agenix](https://github.com/ryantm/agenix).
 - **Never** put secret values in `.nix` files or plaintext in git
 - **Always** use `agenix -e` to create or edit secrets
 - After adding public keys to `secrets/secrets.nix`, run `agenix -r`
+- `agenix -r` must run on a machine holding an identity that can already
+  decrypt (rileyt's user key or an existing host key) — a brand-new host
+  cannot rekey for itself; rekey on the desktop and push
+- Recipients per host: `rileyt` (user), `nixos-host`, `legion-host` — see `secrets/secrets.nix`
 - See [secrets/README.md](../../../secrets/README.md) for edit instructions
+
+## Known gap (as of 2026-07-18)
+
+The four `.age` files list `legion-host` in `secrets.nix` but were encrypted
+before that key was added — legion cannot decrypt them until `agenix -r` is
+run on the `nixos` desktop and the rekeyed files are pushed/pulled.

@@ -22,6 +22,13 @@ Both import `hosts/common.nix` (full shared service stack). Per-host
 differences live in `modules/core/host-facts.nix` options (`host.tailnetName`,
 `host.gpus`, `host.uptimeKumaSync`) set in each `hosts/<name>/configuration.nix`.
 
+### Bringing up a new host
+
+After adding the host's public key to `secrets/secrets.nix`, run `agenix -r`
+**on an existing machine** (the new host cannot decrypt yet) and push the
+rekeyed `.age` files — otherwise every secret-dependent service (Tailscale
+auto-login, SearXNG, n8n) fails on the new host.
+
 ## Layout
 
 - `flake.nix` - flake inputs, one `nixosConfigurations` output per host.

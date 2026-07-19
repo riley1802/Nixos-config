@@ -168,3 +168,19 @@ Append entries when a build, rebuild, or runtime error is resolved. Format:
 - **Cause:** BIOS "GPU Working Mode" was Discrete/dGPU — the MUX wires the internal panel (eDP-1) to the NVIDIA card, so the iGPU that offload mode makes primary has zero connected outputs; the greeter rendered into an invisible dummy framebuffer. The previous GDM/Wayland generation masked this because mutter drove the NVIDIA card directly.
 - **Fix:** Set BIOS GPU Working Mode to Hybrid so eDP-1 attaches to the iGPU and the offload config works as designed. (Alternative: NVIDIA-primary config with offload + finegrained power management removed.)
 - **Avoid:** Deploying PRIME offload on a MUXed laptop without confirming which GPU owns eDP-1 first — check `/sys/class/drm/card*-eDP-*/status` and which card it hangs off before choosing offload vs sync/primary.
+
+### whisper.cpp model download crash-loops on a fresh host (2026-07-18)
+
+- **Context:** First boot of the shared service stack on `legion`; `/var/lib/whisper-cpp/models` empty, so `ExecStartPre` ran `whisper-cpp-download-ggml-model`.
+- **Error:** `dirname: command not found`, `grep: command not found`, then `Invalid model: base` — restart loop (98 restarts).
+- **Cause:** The unit pins `Environment=PATH=` to only ffmpeg + whisper-cpp; the download script needs coreutils (`dirname`, `realpath`) and gnugrep. The desktop never hit it because its model file already existed, so the download path never executed.
+- **Fix:** Add `pkgs.coreutils` and `pkgs.gnugrep` to the unit's `makeBinPath` list.
+- **Avoid:** When pinning a systemd unit's PATH, include the deps of *every* code path (first-run downloads, migrations), not just steady-state ones — test on a host with empty state dirs.
+
+### New host key in secrets.nix is useless until `agenix -r` runs elsewhere (2026-07-18)
+
+- **Context:** `legion-host` public key added to `secrets/secrets.nix` when the laptop host was created; laptop then failed activation.
+- **Error:** `[agenix] WARNING … not present`, `chmod/mv: cannot stat '….tmp'` for every secret at activation; tailscaled-autoconnect, searx-init, n8n-postgres-password all failed — legion's host key cannot decrypt any `.age` file (files still list only 2 recipients).
+- **Cause:** Editing `secrets.nix` only declares intent; the `.age` files must be re-encrypted with `agenix -r`, which needs an identity that can already decrypt them. The new laptop has neither rileyt's user key nor the desktop host key, so it can't rekey for itself.
+- **Fix:** Run `agenix -r` in the repo on the `nixos` desktop (or any machine with a valid identity), commit the rekeyed `.age` files, pull on the new host, rebuild.
+- **Avoid:** Treating a `secrets.nix` recipient edit as complete without `agenix -r` from a machine that can decrypt; verify with `age -d -i /etc/ssh/ssh_host_ed25519_key <file>` on the new host.
