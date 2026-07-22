@@ -79,13 +79,9 @@
 - Built-in `services.homepage-dashboard` module on port 8083
 - No bind-address option; listens on all interfaces, but direct firewall access stays closed
 - Reached from the tailnet through Tailscale Serve on port 443
-- Title: Homeport; `color = slate`; cool geometric grid CSS (no warm/amber cast)
-- Theme switcher kept (dark first-visit default via `customJS`); soft cool-gray light mode
-- Layout (whiteboard grid): balanced single-row header optimized for fullscreen 2560×1440 (at-a-glance widgets plus the relocated System group) → Workspace row (Apps + Bookmarks | Automation | Monitoring) → Bottom row (AI / Local | Containers). Bookmarks are service tiles (not `bookmarks.yaml`) so they can nest beside Apps.
-- Section chrome: `customCSS` draws a bounding box around each leaf `.services-group` and `#information-widgets`
-- System tiles use `customapi` against `gpu-stats` (`127.0.0.1:8091`)
-- Service tiles have `siteMonitor` latency (ms); Piper uses `/health`
-- Widgets (section 2): datetime, Open-Meteo (Chicago / `America/Chicago`), resources + uptime, host, primary-Ethernet throughput, and both GPUs
+- Dark 4-column layout: header widgets (resources, DuckDuckGo, datetime, Chicago weather), service groups (System & Monitoring, Network & Infra, AI / Local, Productivity), footer bookmarks
+- GPU/Host/Network tiles via `gpu-stats` customapi (`127.0.0.1:8091`); `statusStyle = "dot"` + `siteMonitor` (no API widgets for Portainer/Kuma)
+- Tailnet `href`s from `config.host.tailnetName`; GPU labels from `config.host.gpus`
 
 ## GPU stats API
 

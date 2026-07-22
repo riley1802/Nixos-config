@@ -1,6 +1,6 @@
 # NixOS Config
 
-Personal NixOS flake for all machines (GNOME/Cinnamon, NVIDIA, local AI).
+Personal NixOS flake for all machines (Cinnamon, NVIDIA, local AI).
 
 **GitHub is the source of truth:** [`riley1802/Nixos-config`](https://github.com/riley1802/Nixos-config)
 (`main`). Every machine checks out this repo at `/etc/nixos` and stays in sync
@@ -21,15 +21,16 @@ own and picks the output matching the machine's hostname, so on any host:
 Keep `/etc/nixos` on GitHub `main` before treating a change as done. On the
 other machine: `git pull` then rebuild.
 
-- `nixos` — desktop workstation (GNOME, dual NVIDIA, Uptime Kuma monitor sync).
-- `legion` — Lenovo Legion 5 Pro laptop (Cinnamon, AMD/NVIDIA Optimus).
+- `nixos` — desktop workstation (Cinnamon + LightDM, dual NVIDIA, Uptime Kuma monitor sync).
+- `legion` — Lenovo Legion 5 Pro laptop (Cinnamon + LightDM, AMD/NVIDIA Optimus).
   BIOS "GPU Working Mode" must be **Hybrid**: in Discrete mode the panel is
   muxed to the NVIDIA card and the PRIME-offload X session boots to a black
   screen.
 
-Both import `hosts/common.nix` (full shared service stack). Per-host
-differences live in `modules/core/host-facts.nix` options (`host.tailnetName`,
-`host.gpus`, `host.uptimeKumaSync`) set in each `hosts/<name>/configuration.nix`.
+Both import `hosts/common.nix` (Cinnamon desktop + full shared service stack).
+Per-host differences live in `modules/core/host-facts.nix` options
+(`host.tailnetName`, `host.gpus`, `host.uptimeKumaSync`) set in each
+`hosts/<name>/configuration.nix`.
 
 ### Bringing up a new host
 
@@ -43,10 +44,10 @@ auto-login, SearXNG, n8n) fails on the new host.
 - `flake.nix` - flake inputs, one `nixosConfigurations` output per host.
 - `hosts/common.nix` - shared system profile imported by every host.
 - `hosts/<name>/` - per-host `configuration.nix` and `hardware-configuration.nix`.
-- `home.nix` / `home-legion.nix` - Home Manager entry points per host.
+- `home.nix` - Home Manager entry point (every host).
 - `home/common.nix` - Home Manager modules shared by every host.
 - `modules/core/` - boot, locale, hostname, NetworkManager, Nix settings, agenix, OpenSSH.
-- `modules/desktop/` - GDM, GNOME, extensions, audio.
+- `modules/desktop/` - Cinnamon + LightDM, audio.
 - `modules/hardware/` - graphics userspace and NVIDIA driver.
 - `modules/programs/` - one file per program or concern (Firefox, Steam, CLI tools).
 - `modules/services/` - system services.
@@ -140,7 +141,7 @@ in `modules/services/llama-cpp.nix`.
 ### Tailscale Serve + apps
 
 - HTTPS via Tailscale Serve (`modules/services/tailscale-serve.nix`): Homepage `:443` → `:8083`, n8n `:5678` → localhost, Portainer `:9443` → localhost HTTPS, llama.cpp `:8080`, whisper.cpp `:8081`, Piper `:8082` → localhost.
-- Homepage ("Homeport"): cool slate geometric theme, dark default with soft cool light mode. Its balanced single-row top bar is optimized for fullscreen 2560×1440 and contains resources, time/weather, host, primary-Ethernet throughput, and dual GPUs. Apps + Bookmarks sit beside Automation/Monitoring, then AI / Local beside Containers. `siteMonitor` latency appears on service tiles.
+- Homepage: dark 4-column dashboard (`modules/services/homepage-dashboard.nix`) — header widgets (resources, DuckDuckGo search, datetime, Chicago weather), service columns (System & Monitoring, Network & Infra, AI / Local, Productivity), and footer bookmarks; status dots via `siteMonitor`.
 - Uptime Kuma (`3001`) and ntfy (`8090`) stay direct HTTP on `tailscale0` (ntfy rejects a path in `base-url`).
 - Uptime Kuma monitors are declared in `modules/services/uptime-kuma.nix` and synced on boot via `uptime-kuma-sync.service` (Socket.IO API). Alerts go to ntfy. Credentials: `secrets/uptime-kuma-sync.env.age` (`KUMA_USERNAME`, `KUMA_PASSWORD`, `NTFY_TOPIC`) — create/edit with `agenix -e` after the Kuma admin account exists in the UI.
 - n8n listens on `127.0.0.1` only; Serve terminates TLS. Do not use `N8N_PATH` (broken in 2.x).

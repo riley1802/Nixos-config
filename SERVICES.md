@@ -1,6 +1,7 @@
 # NixOS services & programs inventory
 
-Host `nixos`, user `rileyt`. Sourced from `hosts/nixos/configuration.nix` and `home.nix`.
+Hosts `nixos` + `legion`, user `rileyt`. Shared stack from `hosts/common.nix` and
+`home.nix`; host-only hardware from `hosts/<name>/configuration.nix`.
 
 Only options **set in this flake** are listed (not nixpkgs defaults). Secrets are named but never shown in plaintext.
 
@@ -30,9 +31,9 @@ Only options **set in this flake** are listed (not nixpkgs defaults). Secrets ar
 | NetworkManager | `modules/core/networkmanager.nix` | Active | — |
 | PipeWire | `modules/desktop/audio.nix` | Active | — |
 | rtkit | `modules/desktop/audio.nix` | Active | realtime audio |
-| GDM | `modules/desktop/gdm.nix` | Active | display manager |
-| GNOME | `modules/desktop/gnome.nix` | Active | desktop + X server |
-| NVIDIA / X video | `modules/hardware/nvidia.nix` | Active | proprietary driver |
+| LightDM | `modules/desktop/cinnamon.nix` | Active | display manager (X11) |
+| Cinnamon | `modules/desktop/cinnamon.nix` | Active | desktop + X server |
+| NVIDIA / X video | `modules/hardware/nvidia.nix` | Active | proprietary driver (desktop host) |
 | Honcho | `modules/services/honcho.nix` | Disabled | import commented out |
 
 ## Quick index — programs
@@ -43,8 +44,7 @@ Only options **set in this flake** are listed (not nixpkgs defaults). Secrets ar
 | Steam library dirs | `modules/programs/games-dirs.nix` | System | `/games`, `/games/steam-library` |
 | Firefox | `modules/programs/firefox.nix` | System | `programs.firefox` |
 | CLI tools (system) | `modules/programs/packages.nix` | System | wget, git, curl, gh |
-| GNOME Tweaks / extensions | `modules/desktop/gnome-extensions.nix` | System | packages + excludes |
-| dconf | `modules/desktop/gnome.nix` | System | `programs.dconf.enable` |
+| dconf | `modules/desktop/cinnamon.nix` | System | `programs.dconf.enable` |
 | Home Manager | `home/core/home-manager.nix` | User | `programs.home-manager` |
 | Utilities (user) | `home/programs/utilities.nix` | User | htop, ripgrep, fd, unzip |
 | Google Chrome | `home/programs/google-chrome.nix` | User | package |
@@ -53,9 +53,6 @@ Only options **set in this flake** are listed (not nixpkgs defaults). Secrets ar
 | Cursor (IDE + CLI) | `home/programs/cursor.nix` | User | `code-cursor`, `cursor-cli` |
 | Claude Code | `home/programs/claude-code.nix` | User | `pkgsUnstable.claude-code` |
 | Pointer cursor | `home/desktop/cursor.nix` | User | Bibata-Modern-Ice |
-| GNOME interface | `home/desktop/gnome/interface.nix` | User | dconf |
-| GNOME extensions enable | `home/desktop/gnome/extensions.nix` | User | dconf UUIDs |
-| Dash to Dock | `home/desktop/gnome/dash-to-dock.nix` | User | dconf |
 
 ---
 
@@ -308,15 +305,18 @@ Homepage has no bind-address option and listens on all interfaces. Direct access
 port 8083 stays blocked; Tailscale Serve terminates HTTPS on `:443` and proxies to
 `127.0.0.1:8083`.
 
-Branding: title **Homeport**, cool slate palette with a geometric grid (no warm
-amber/night-light cast). Dark-by-default with a soft cool-gray light mode (theme
-switcher kept). The balanced single-row top bar is optimized for fullscreen
-2560×1440 and shows host load/RAM/uptime, live primary-Ethernet throughput, and
-both NVIDIA GPUs (util, VRAM, temp) via `gpu-stats` on `127.0.0.1:8091`. Other
-widgets: datetime, Open-Meteo (Chicago coords — adjust if needed), and
-CPU/RAM/disk/uptime.
-Every service tile uses `siteMonitor` for live HTTP latency (ms); Piper monitors
-`/health`.
+Curated dark 4-column layout in Nix (`settings`, `services`, `widgets`, `bookmarks`):
+
+| Area | Contents |
+|------|----------|
+| Header widgets | resources (CPU/RAM/disk/uptime), DuckDuckGo search, datetime, Open-Meteo (Chicago) |
+| System & Monitoring | Host + Network + per-GPU tiles (`gpu-stats` customapi) + Uptime Kuma |
+| Network & Infra | Tailscale admin, Portainer, ntfy |
+| AI / Local | llama.cpp, whisper.cpp, Piper |
+| Productivity | n8n, SearXNG |
+| Bookmarks | Developer (GitHub, NixOS/HM options), Social (Reddit, LinkedIn), Entertainment (YouTube, Homepage docs) |
+
+`statusStyle = "dot"` with `siteMonitor` on local services (no Portainer/Uptime Kuma API widgets). Tailnet `href`s use `config.host.tailnetName`; monitors/widgets use `127.0.0.1`.
 
 ---
 
@@ -445,29 +445,18 @@ Homepage's own port 8083 remains closed in the firewall.
 
 ---
 
-### GDM
+### Cinnamon + LightDM (X11)
 
-**Module:** `modules/desktop/gdm.nix`
-
-| Option | Value |
-|--------|-------|
-| `services.displayManager.gdm.enable` | `true` |
-
----
-
-### GNOME + X server
-
-**Module:** `modules/desktop/gnome.nix`
+**Module:** `modules/desktop/cinnamon.nix` (via `hosts/common.nix` on every host)
 
 | Option | Value |
 |--------|-------|
 | `services.xserver.enable` | `true` |
 | `services.xserver.xkb.layout` | `"us"` |
 | `services.xserver.xkb.variant` | `""` |
-| `services.desktopManager.gnome.enable` | `true` |
+| `services.xserver.desktopManager.cinnamon.enable` | `true` |
+| `services.xserver.displayManager.lightdm.enable` | `true` |
 | `programs.dconf.enable` | `true` |
-
-GNOME extension packages and excludes: see [GNOME desktop packages & excludes](#gnome-desktop-packages--excludes).
 
 ---
 
@@ -553,32 +542,9 @@ Service-owned secrets are declared in their own modules (SearXNG, Tailscale).
 | `curl` |
 | `gh` |
 
-### GNOME desktop packages & excludes
-
-**Module:** `modules/desktop/gnome-extensions.nix`
-
-| `environment.systemPackages` |
-|------------------------------|
-| `gnome-tweaks` |
-| `gnome-extension-manager` |
-| `gnomeExtensions.dash-to-dock` |
-| `gnomeExtensions.blur-my-shell` |
-| `gnomeExtensions.vitals` |
-| `gnomeExtensions.gsconnect` |
-| `gnomeExtensions.just-perfection` |
-| `gnomeExtensions.user-themes` |
-| `gnomeExtensions.caffeine` |
-
-| `environment.gnome.excludePackages` |
-|-------------------------------------|
-| `gnome-maps` |
-| `gnome-contacts` |
-| `gnome-weather` |
-| `gnome-cloud` |
-
 ### dconf (system)
 
-**Module:** `modules/desktop/gnome.nix`
+**Module:** `modules/desktop/cinnamon.nix`
 
 | Option | Value |
 |--------|-------|
@@ -682,48 +648,6 @@ Imported via `home.nix`. User: `rileyt` (`home/core/identity.nix`).
 | `home.pointerCursor.package` | `pkgs.bibata-cursors` |
 | `home.pointerCursor.name` | `"Bibata-Modern-Ice"` |
 | `home.pointerCursor.size` | `24` |
-
-### GNOME interface (dconf)
-
-**Module:** `home/desktop/gnome/interface.nix`
-
-| `dconf.settings."org/gnome/desktop/interface"` | Value |
-|-----------------------------------------------|-------|
-| `color-scheme` | `"prefer-dark"` |
-| `clock-show-weekday` | `true` |
-| `cursor-theme` | `"Bibata-Modern-Ice"` |
-| `cursor-size` | `24` |
-| `show-battery-percentage` | `true` |
-
-### GNOME shell extensions enabled (dconf)
-
-**Module:** `home/desktop/gnome/extensions.nix`
-
-`dconf.settings."org/gnome/shell".enabled-extensions` = UUIDs from these packages:
-
-| Extension package |
-|-------------------|
-| `gnomeExtensions.dash-to-dock` |
-| `gnomeExtensions.blur-my-shell` |
-| `gnomeExtensions.vitals` |
-| `gnomeExtensions.gsconnect` |
-| `gnomeExtensions.just-perfection` |
-| `gnomeExtensions.user-themes` |
-| `gnomeExtensions.caffeine` |
-
-### Dash to Dock (dconf)
-
-**Module:** `home/desktop/gnome/dash-to-dock.nix`
-
-| `dconf.settings."org/gnome/shell/extensions/dash-to-dock"` | Value |
-|-----------------------------------------------------------|-------|
-| `dock-position` | `"BOTTOM"` |
-| `extend-height` | `false` |
-| `dock-fixed` | `true` |
-| `dash-max-icon-size` | `48` |
-| `click-action` | `"minimize-or-previews"` |
-| `show-trash` | `false` |
-| `show-mounts` | `false` |
 
 ---
 
