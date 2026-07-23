@@ -20,6 +20,7 @@ Only options **set in this flake** are listed (not nixpkgs defaults). Secrets ar
 | n8n | `modules/services/n8n.nix` | Active | `127.0.0.1:5678` + Tailscale Serve HTTPS |
 | whisper.cpp | `modules/services/whisper-cpp.nix` | Active | `127.0.0.1:8081` |
 | Piper TTS | `modules/services/piper.nix` | Active | `127.0.0.1:8082` |
+| Unsloth Studio | `modules/services/unsloth-studio.nix` | Active | `127.0.0.1:8000` + Tailscale Serve HTTPS |
 | SearXNG | `modules/services/searxng.nix` | Active | `127.0.0.1:8888` |
 | Homepage | `modules/services/homepage-dashboard.nix` | Active | port `8083` (direct firewall closed); via Tailscale Serve HTTPS `:443` |
 | GPU stats API | `modules/services/gpu-stats.nix` | Active | `127.0.0.1:8091` (Homepage System widgets) |
@@ -242,6 +243,30 @@ Optional POST body keys passed to piper: `speaker_id`, `length_scale`, `noise_sc
 
 ---
 
+### Unsloth Studio
+
+**Module:** `modules/services/unsloth-studio.nix`  
+**URL:** https://nixos.taile9f484.ts.net:8000 (Tailscale Serve → `127.0.0.1:8000`)  
+**Unit:** `docker-unsloth-studio.service` (`virtualisation.oci-containers`)
+
+| Option | Value |
+|--------|-------|
+| `image` | `unsloth/unsloth:latest` |
+| `ports` | `127.0.0.1:8000:8000` (Studio UI; Jupyter/SSH not published) |
+| `extraOptions` | `[ "--device=nvidia.com/gpu=all" ]` (CDI; not `--gpus=all`) |
+| `environmentFiles` | `config.age.secrets.unsloth-studio-env.path` |
+| Data dir | `/var/lib/unsloth-studio/{work,exports,outputs,auth,cache,hf-cache}` |
+
+#### agenix
+
+| Secret | File | Runtime | Contents |
+|--------|------|---------|----------|
+| `unsloth-studio-env` | `secrets/unsloth-studio.env.age` | `/run/agenix/unsloth-studio-env` | `JUPYTER_PASSWORD`, `USER_PASSWORD` |
+
+First Studio visit sets a UI password (persisted under `auth/`). Training shares VRAM with llama.cpp.
+
+---
+
 ### SearXNG
 
 **Module:** `modules/services/searxng.nix`  
@@ -312,7 +337,7 @@ Curated dark 4-column layout in Nix (`settings`, `services`, `widgets`, `bookmar
 | Header widgets | resources (CPU/RAM/disk/uptime), DuckDuckGo search, datetime, Open-Meteo (Chicago) |
 | System & Monitoring | Host + Network + per-GPU tiles (`gpu-stats` customapi) + Uptime Kuma |
 | Network & Infra | Tailscale admin, Portainer, ntfy |
-| AI / Local | llama.cpp, whisper.cpp, Piper |
+| AI / Local | llama.cpp, whisper.cpp, Piper, Unsloth Studio |
 | Productivity | n8n, SearXNG |
 | Bookmarks | Developer (GitHub, NixOS/HM options), Social (Reddit, LinkedIn), Entertainment (YouTube, Homepage docs) |
 
@@ -344,7 +369,7 @@ Curated dark 4-column layout in Nix (`settings`, `services`, `widgets`, `bookmar
 | Tag | `nix-managed` (stale tagged monitors deleted; manual UI monitors left alone) |
 | Notifications | ntfy provider `ntfy-homeport` → `http://127.0.0.1:8090/<topic>` |
 
-Monitors (interval 60s, maxretries 3): localhost HTTP for Homepage, llama.cpp, whisper.cpp, Piper, SearXNG, n8n, Portainer (ignore TLS), GPU stats, ntfy, Kuma; Tailscale/Serve HTTP for Homepage, n8n, Portainer, ntfy, Kuma; TCP for PostgreSQL `:5432` and OpenSSH `:22`. Docker covered via Portainer. Groups match Homepage sections. Admin user must exist in the Kuma UI before sync can login.
+Monitors (interval 60s, maxretries 3): localhost HTTP for Homepage, llama.cpp, whisper.cpp, Piper, Unsloth Studio, SearXNG, n8n, Portainer (ignore TLS), GPU stats, ntfy, Kuma; Tailscale/Serve HTTP for Homepage, n8n, Portainer, ntfy, Kuma; TCP for PostgreSQL `:5432` and OpenSSH `:22`. Docker covered via Portainer. Groups match Homepage sections. Admin user must exist in the Kuma UI before sync can login.
 
 ---
 
@@ -673,6 +698,7 @@ Imported via `home.nix`. User: `rileyt` (`home/core/identity.nix`).
 | 3001 | Uptime Kuma (`tailscale0` only) |
 | 5432 | PostgreSQL (localhost) |
 | 5678 | n8n localhost + Tailscale Serve HTTPS |
+| 8000 | Unsloth Studio localhost + Tailscale Serve HTTPS |
 | 8080 | llama.cpp |
 | 8081 | whisper.cpp |
 | 8082 | Piper TTS |

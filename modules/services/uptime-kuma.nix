@@ -48,6 +48,12 @@ let
       group = "AI / Local Models";
     }
     {
+      name = "Unsloth Studio";
+      type = "http";
+      url = "http://127.0.0.1:8000";
+      group = "AI / Local Models";
+    }
+    {
       name = "SearXNG";
       type = "http";
       url = "http://127.0.0.1:8888";

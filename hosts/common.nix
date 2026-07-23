@@ -34,6 +34,7 @@
     ../modules/services/postgresql.nix
     ../modules/services/n8n.nix
     ../modules/services/docker.nix
+    ../modules/services/unsloth-studio.nix
     ../modules/services/uptime-kuma.nix
     ../modules/services/homepage-dashboard.nix
     ../modules/services/gpu-stats.nix

@@ -9,6 +9,7 @@
       "homepage-dashboard.service"
       "n8n.service"
       "docker-portainer.service"
+      "docker-unsloth-studio.service"
     ];
     wants = [ "tailscaled.service" ];
     wantedBy = [ "multi-user.target" ];
@@ -37,6 +38,7 @@
       tailscale serve --bg --yes --https=8080 http://127.0.0.1:8080
       tailscale serve --bg --yes --https=8081 http://127.0.0.1:8081
       tailscale serve --bg --yes --https=8082 http://127.0.0.1:8082
+      tailscale serve --bg --yes --https=8000 http://127.0.0.1:8000
     '';
   };
 }

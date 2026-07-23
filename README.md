@@ -86,6 +86,7 @@ This system runs local AI/search services bound to localhost.
 | llama.cpp (via Tailscale Serve) | https://nixos.taile9f484.ts.net:8080 (local `http://127.0.0.1:8080/v1`) | `modules/services/llama-cpp.nix` + `tailscale-serve.nix` |
 | whisper.cpp (via Tailscale Serve) | https://nixos.taile9f484.ts.net:8081 (local `http://127.0.0.1:8081`) | `modules/services/whisper-cpp.nix` + `tailscale-serve.nix` |
 | Piper TTS (via Tailscale Serve) | https://nixos.taile9f484.ts.net:8082 (local `http://127.0.0.1:8082`) | `modules/services/piper.nix` + `tailscale-serve.nix` |
+| Unsloth Studio (via Tailscale Serve) | https://nixos.taile9f484.ts.net:8000 (local `http://127.0.0.1:8000`) | `modules/services/unsloth-studio.nix` + `tailscale-serve.nix` |
 | SearXNG | http://127.0.0.1:8888 | `modules/services/searxng.nix` |
 | Tailscale | tailnet (MagicDNS) | `modules/services/tailscale.nix` |
 
@@ -130,6 +131,17 @@ in `modules/services/llama-cpp.nix`.
 - Voices persist under `/var/lib/piper/voices`; the default voice
   (`en_US-lessac-medium`) downloads automatically on service start.
 
+### Unsloth Studio
+
+- Official Docker image `unsloth/unsloth` with CUDA (`--device=nvidia.com/gpu=all`).
+- Studio UI on `127.0.0.1:8000` (HTTPS via Tailscale Serve). Jupyter is not
+  published (host `:8888` is SearXNG); container SSH is not published.
+- Persistent data under `/var/lib/unsloth-studio/` (work, exports, outputs,
+  auth, caches). First Studio visit sets a UI password (stored in `auth/`).
+- Container env (`JUPYTER_PASSWORD`, `USER_PASSWORD`) via agenix
+  (`secrets/unsloth-studio.env.age`).
+- Training shares VRAM with llama.cpp — idle or stop llama.cpp if you OOM.
+
 ### Tailscale
 
 - Mesh VPN via `services.tailscale`.
@@ -140,7 +152,7 @@ in `modules/services/llama-cpp.nix`.
 
 ### Tailscale Serve + apps
 
-- HTTPS via Tailscale Serve (`modules/services/tailscale-serve.nix`): Homepage `:443` → `:8083`, n8n `:5678` → localhost, Portainer `:9443` → localhost HTTPS, llama.cpp `:8080`, whisper.cpp `:8081`, Piper `:8082` → localhost.
+- HTTPS via Tailscale Serve (`modules/services/tailscale-serve.nix`): Homepage `:443` → `:8083`, n8n `:5678` → localhost, Portainer `:9443` → localhost HTTPS, llama.cpp `:8080`, whisper.cpp `:8081`, Piper `:8082`, Unsloth Studio `:8000` → localhost.
 - Homepage: dark 4-column dashboard (`modules/services/homepage-dashboard.nix`) — header widgets (resources, DuckDuckGo search, datetime, Chicago weather), service columns (System & Monitoring, Network & Infra, AI / Local, Productivity), and footer bookmarks; status dots via `siteMonitor`.
 - Uptime Kuma (`3001`) and ntfy (`8090`) stay direct HTTP on `tailscale0` (ntfy rejects a path in `base-url`).
 - Uptime Kuma monitors are declared in `modules/services/uptime-kuma.nix` and synced on boot via `uptime-kuma-sync.service` (Socket.IO API). Alerts go to ntfy. Credentials: `secrets/uptime-kuma-sync.env.age` (`KUMA_USERNAME`, `KUMA_PASSWORD`, `NTFY_TOPIC`) — create/edit with `agenix -e` after the Kuma admin account exists in the UI.
@@ -159,7 +171,7 @@ Services do not open the public firewall unless explicitly intended:
 | SSH | `tailscale0` only (port 22) |
 | Uptime Kuma | `tailscale0` only (port 3001) |
 | ntfy | `tailscale0` only (port 8090) |
-| llama.cpp, whisper.cpp, Piper, SearXNG, n8n, Portainer, Homepage, PostgreSQL | localhost only (Serve for HTTPS front doors) |
+| llama.cpp, whisper.cpp, Piper, Unsloth Studio, SearXNG, n8n, Portainer, Homepage, PostgreSQL | localhost only (Serve for HTTPS front doors) |
 | Tailscale | closed (`openFirewall = false`) |
 | Steam Remote Play | closed (`remotePlay.openFirewall = false`) |
 
@@ -173,6 +185,7 @@ All secrets use [agenix](https://github.com/ryantm/agenix). Encrypted files in `
 | SearXNG secret key | `secrets/searxng-secret-key.age` |
 | n8n DB password | `secrets/n8n-db-password.age` |
 | Uptime Kuma sync env | `secrets/uptime-kuma-sync.env.age` |
+| Unsloth Studio env | `secrets/unsloth-studio.env.age` |
 
 Edit secrets:
 
@@ -219,10 +232,11 @@ Check service status after applying:
 ```sh
 systemctl status tailscale-serve-apps homepage-dashboard n8n postgresql ntfy-sh uptime-kuma docker
 tailscale serve status
-systemctl status llama-cpp whisper-cpp piper searx tailscaled
+systemctl status llama-cpp whisper-cpp piper searx docker-unsloth-studio tailscaled
 curl http://127.0.0.1:8080/v1/models
 curl http://127.0.0.1:8081/v1/audio/transcriptions
 curl http://127.0.0.1:8082/health
+curl -I http://127.0.0.1:8000
 curl http://127.0.0.1:8888
 tailscale status
 ```

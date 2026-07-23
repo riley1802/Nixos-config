@@ -5,6 +5,7 @@
 | llama.cpp | `modules/services/llama-cpp.nix` | https://nixos.taile9f484.ts.net:8080 (local `127.0.0.1:8080`) | CUDA via `pkgsUnstable`, localhost bind; Serve TLS |
 | whisper.cpp | `modules/services/whisper-cpp.nix` | https://nixos.taile9f484.ts.net:8081 (local `127.0.0.1:8081`) | Runs as `rileyt`, model dir persisted; Serve TLS |
 | Piper TTS | `modules/services/piper.nix` | https://nixos.taile9f484.ts.net:8082 (local `127.0.0.1:8082`) | Runs as `rileyt`, voice auto-download; Serve TLS |
+| Unsloth Studio | `modules/services/unsloth-studio.nix` | https://nixos.taile9f484.ts.net:8000 (local `127.0.0.1:8000`) | Docker `unsloth/unsloth` + CUDA; Serve TLS |
 | SearXNG | `modules/services/searxng.nix` | http://127.0.0.1:8888 | Secret via agenix |
 | Tailscale | `modules/services/tailscale.nix` | tailnet | Auth key via agenix |
 | Tailscale Serve | `modules/services/tailscale-serve.nix` | HTTPS on MagicDNS | CLI oneshot (not `services.tailscale.serve` — HTTPS broken in set-config) |
@@ -97,12 +98,23 @@
 - `:5678` → n8n `http://127.0.0.1:5678` (n8n `N8N_LISTEN_ADDRESS=127.0.0.1`, `N8N_PROTOCOL=https`, `N8N_PROXY_HOPS=1`)
 - `:9443` → Portainer `https+insecure://127.0.0.1:9443` (no `--base-url`)
 - `:8080` / `:8081` / `:8082` → llama.cpp / whisper.cpp / Piper on localhost
+- `:8000` → Unsloth Studio on localhost
 - Uptime Kuma (`:3001`) and ntfy (`:8090`) stay direct on `tailscale0`
 - Uptime Kuma monitors: Nix list in `uptime-kuma.nix` → `uptime-kuma-sync.py` (uptime-kuma-api); tag `nix-managed`; ntfy provider `ntfy-homeport`; secret `uptime-kuma-sync.env.age`
 - Homepage `allowedHosts` includes `nixos.taile9f484.ts.net` and localhost `:8083`
 - n8n DB password: agenix → oneshot `n8n-postgres-password` → `ALTER USER n8n`
 - `rileyt` in `docker` group
 - Requires Serve enabled in Tailscale admin for this node
+
+## Unsloth Studio
+
+- Image: `unsloth/unsloth:latest` via `virtualisation.oci-containers` (Docker backend)
+- Studio UI: `127.0.0.1:8000` (Jupyter left unmapped — host `:8888` is SearXNG; container SSH not published)
+- GPU: `--device=nvidia.com/gpu=all` (CDI; `--gpus=all` fails here — see lessons.md) + toolkit from `docker.nix`
+- Data: `/var/lib/unsloth-studio/{work,exports,outputs,auth,cache,hf-cache}`
+- Secrets: `secrets/unsloth-studio.env.age` → `JUPYTER_PASSWORD`, `USER_PASSWORD`
+- First Studio visit sets a UI password (persisted under `auth/`)
+- Shares VRAM with llama.cpp when training — stop or idle llama.cpp if you OOM
 
 ## Gaming (Steam)
 

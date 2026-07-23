@@ -8,6 +8,7 @@ All secrets for this config are encrypted with [agenix](https://github.com/ryant
 | SearXNG secret key | `searxng-secret-key.age` | `modules/services/searxng.nix` |
 | n8n DB password | `n8n-db-password.age` | `modules/services/n8n.nix` |
 | Uptime Kuma sync env | `uptime-kuma-sync.env.age` | `modules/services/uptime-kuma.nix` |
+| Unsloth Studio env | `unsloth-studio.env.age` | `modules/services/unsloth-studio.nix` |
 
 Public keys allowed to decrypt are listed in `secrets.nix`. **Never commit plaintext secrets.**
 
@@ -21,6 +22,7 @@ cd secrets
 agenix -e tailscale-auth-key.age   # paste key only — no quotes, no trailing newline
 agenix -e searxng-secret-key.age   # file content: SEARXNG_SECRET_KEY=<hex>
 agenix -e uptime-kuma-sync.env.age # KUMA_USERNAME=… / KUMA_PASSWORD=… / NTFY_TOPIC=…
+agenix -e unsloth-studio.env.age   # JUPYTER_PASSWORD=… / USER_PASSWORD=…
 ```
 
 After changing `secrets.nix` public keys, rekey everything:

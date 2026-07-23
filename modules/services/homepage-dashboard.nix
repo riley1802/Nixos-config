@@ -272,6 +272,14 @@ in
               siteMonitor = "http://127.0.0.1:8082/health";
             };
           }
+          {
+            "Unsloth Studio" = {
+              icon = "mdi-school";
+              href = "https://${tailnet}:8000";
+              description = "Fine-tune & chat (Docker + CUDA)";
+              siteMonitor = "http://127.0.0.1:8000";
+            };
+          }
         ];
       }
       {

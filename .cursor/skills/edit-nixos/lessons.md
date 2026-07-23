@@ -13,6 +13,13 @@ Append entries when a build, rebuild, or runtime error is resolved. Format:
 
 ---
 
+### Docker `--gpus=all` fails with "AMD CDI spec not found" on NVIDIA hosts (2026-07-22)
+- **Context:** Starting Unsloth Studio OCI container with CUDA via `hardware.nvidia-container-toolkit`.
+- **Error:** `docker: Error response from daemon: AMD CDI spec not found` (exit 125); unit hit start-limit.
+- **Cause:** Docker's `--gpus=all` path looks for an AMD CDI spec on this setup; NVIDIA CDI devices are registered as `nvidia.com/gpu=…` under `/run/cdi`.
+- **Fix:** Use `extraOptions = [ "--device=nvidia.com/gpu=all" ]` instead of `--gpus=all`.
+- **Avoid:** Assuming Unsloth/Docker docs' `--gpus all` works unchanged on NixOS nvidia-container-toolkit — prefer the CDI device name from `docker info` → Discovered Devices.
+
 ### Dashboard tiles with 127.0.0.1 hrefs are dead for remote clients (2026-07-18)
 - **Context:** Homepage is served via Tailscale Serve; AI tiles (llama/whisper/piper) linked to `http://127.0.0.1:808x`.
 - **Error:** Clicking whisper.cpp / Piper tiles from another tailnet device did nothing ("doesn't work at all"), though services were healthy.

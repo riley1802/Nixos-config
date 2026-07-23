@@ -33,6 +33,7 @@
 | `modules/services/postgresql.nix` | PostgreSQL 16 (n8n DB) |
 | `modules/services/n8n.nix` | n8n (localhost `:5678`; HTTPS via Serve) |
 | `modules/services/docker.nix` | Docker + Portainer (localhost `:9443`; HTTPS via Serve) |
+| `modules/services/unsloth-studio.nix` | Unsloth Studio (Docker + CUDA; localhost `:8000`; HTTPS via Serve) |
 | `modules/services/uptime-kuma.nix` | Uptime Kuma (port 3001) + declarative monitor sync |
 | `modules/services/uptime-kuma-sync.py` | Sync script (used by `uptime-kuma-sync.service`) |
 | `modules/services/homepage-dashboard.nix` | Homepage (localhost `:8083`; HTTPS via Serve `:443`) |
@@ -67,3 +68,4 @@
 | `secrets/tailscale-auth-key.age` | Tailscale auth key |
 | `secrets/searxng-secret-key.age` | SearXNG `SEARXNG_SECRET_KEY` |
 | `secrets/n8n-db-password.age` | n8n PostgreSQL password |
+| `secrets/unsloth-studio.env.age` | Unsloth Studio / Jupyter container env (`JUPYTER_PASSWORD`, `USER_PASSWORD`) |

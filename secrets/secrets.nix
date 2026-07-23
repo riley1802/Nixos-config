@@ -27,6 +27,11 @@ in
     nixos-host
     legion-host
   ];
+  "unsloth-studio.env.age".publicKeys = [
+    rileyt
+    nixos-host
+    legion-host
+  ];
   # Uncomment when enabling cloud Honcho:
   # "honcho-env.age".publicKeys = [ rileyt nixos-host ];
   # "honcho-server-env.age".publicKeys = [ rileyt nixos-host ];
