@@ -254,6 +254,7 @@ Optional POST body keys passed to piper: `speaker_id`, `length_scale`, `noise_sc
 | `image` | `unsloth/unsloth:latest` |
 | `ports` | `127.0.0.1:8000:8000` (Studio UI; Jupyter/SSH not published) |
 | `extraOptions` | `[ "--device=nvidia.com/gpu=all" ]` (CDI; not `--gpus=all`) |
+| `environment` | `HF_HUB_DISABLE_XET=1`, `HF_HUB_ENABLE_HF_TRANSFER=0` |
 | `environmentFiles` | `config.age.secrets.unsloth-studio-env.path` |
 | Data dir | `/var/lib/unsloth-studio/{work,exports,outputs,auth,cache,hf-cache}` |
 

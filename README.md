@@ -140,6 +140,8 @@ in `modules/services/llama-cpp.nix`.
   auth, caches). First Studio visit sets a UI password (stored in `auth/`).
 - Container env (`JUPYTER_PASSWORD`, `USER_PASSWORD`) via agenix
   (`secrets/unsloth-studio.env.age`).
+- Hub downloads use plain HTTPS (`HF_HUB_DISABLE_XET=1`,
+  `HF_HUB_ENABLE_HF_TRANSFER=0`) — Xet stalls mid-download on this host.
 - Training shares VRAM with llama.cpp — idle or stop llama.cpp if you OOM.
 
 ### Tailscale

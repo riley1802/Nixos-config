@@ -13,6 +13,13 @@ Append entries when a build, rebuild, or runtime error is resolved. Format:
 
 ---
 
+### Unsloth Studio Hub downloads stall on HF Xet (2026-07-22)
+- **Context:** Models in Unsloth Studio UI never finished downloading/loading; UI kept polling `/api/inference/load-progress`.
+- **Error:** Cache held `*.incomplete` + `.lock` for `Qwen3.5-4B-MTP-GGUF` with no byte growth; xet logs showed struggling concurrency / stalled CAS transfers. Gemma GGUF had finished, but load still blocked.
+- **Cause:** Hugging Face Xet transport (and optionally `hf_transfer`) stalls mid-download inside the Docker image; Studio holds the download job open so inference never becomes ready.
+- **Fix:** Set container env `HF_HUB_DISABLE_XET=1` and `HF_HUB_ENABLE_HF_TRANSFER=0`, delete stuck `*.incomplete`/`.lock` under `/var/lib/unsloth-studio/hf-cache`, restart `docker-unsloth-studio`.
+- **Avoid:** Leaving default Hub transfer settings in the Unsloth OCI container on this host — prefer plain HTTPS downloads.
+
 ### Docker `--gpus=all` fails with "AMD CDI spec not found" on NVIDIA hosts (2026-07-22)
 - **Context:** Starting Unsloth Studio OCI container with CUDA via `hardware.nvidia-container-toolkit`.
 - **Error:** `docker: Error response from daemon: AMD CDI spec not found` (exit 125); unit hit start-limit.

@@ -33,6 +33,12 @@ in
       "${dataDir}/cache:/workspace/studio/cache"
       "${dataDir}/hf-cache:/workspace/.cache"
     ];
+    environment = {
+      # HF Xet/hf_transfer stall Hub downloads (stuck .incomplete + lock);
+      # force plain HTTPS. See unsloth#4712 / #6858 and lessons.md.
+      HF_HUB_DISABLE_XET = "1";
+      HF_HUB_ENABLE_HF_TRANSFER = "0";
+    };
     environmentFiles = [ config.age.secrets.unsloth-studio-env.path ];
     # Do not pass --restart: oci-containers uses --rm; systemd owns restarts.
     # Prefer CDI device (nvidia.com/gpu=all). Plain --gpus=all fails on this

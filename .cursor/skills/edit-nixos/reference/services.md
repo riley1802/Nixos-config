@@ -113,6 +113,7 @@
 - GPU: `--device=nvidia.com/gpu=all` (CDI; `--gpus=all` fails here — see lessons.md) + toolkit from `docker.nix`
 - Data: `/var/lib/unsloth-studio/{work,exports,outputs,auth,cache,hf-cache}`
 - Secrets: `secrets/unsloth-studio.env.age` → `JUPYTER_PASSWORD`, `USER_PASSWORD`
+- Hub downloads: `HF_HUB_DISABLE_XET=1`, `HF_HUB_ENABLE_HF_TRANSFER=0` (Xet stalls on this host)
 - First Studio visit sets a UI password (persisted under `auth/`)
 - Shares VRAM with llama.cpp when training — stop or idle llama.cpp if you OOM
 
