@@ -21,6 +21,7 @@
 | `modules/desktop/gnome-extensions.nix` | GNOME extensions and excluded apps |
 | `modules/desktop/audio.nix` | PipeWire audio |
 | `modules/programs/firefox.nix` | Firefox |
+| `modules/programs/kdeconnect.nix` | KDE Connect (firewall `1714–1764`) |
 | `modules/programs/steam.nix` | Steam |
 | `modules/programs/games-dirs.nix` | `/games` directory layout |
 | `modules/programs/packages.nix` | Essential system CLI tools |

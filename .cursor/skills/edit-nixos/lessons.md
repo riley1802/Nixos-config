@@ -13,6 +13,14 @@ Append entries when a build, rebuild, or runtime error is resolved. Format:
 
 ---
 
+### Flake check needs new modules git-added (2026-07-22)
+- **Context:** Added `modules/programs/kdeconnect.nix` and ran `nix flake check` before staging.
+- **Error:** `Path 'modules/programs/kdeconnect.nix' in the repository is not tracked by Git.`
+- **Cause:** Flakes only see files tracked by git; a new module is invisible until `git add`.
+- **Fix:** `git add` the new path, then re-run check/build.
+- **Avoid:** Creating a new `.nix` module and validating before staging it.
+
+
 ### Unsloth Studio abysmal TPS from huge context + mmproj (2026-07-22)
 - **Context:** Chat in Unsloth Studio ran ~3 t/s (then ~9 t/s after manually lowering context) on RTX 3050 + GTX 1660 Super with a 4B Q4 GGUF.
 - **Error:** `llama-server` launched with `-c 55808`, `--mmproj …F16.gguf`, MTP draft, pinned to the 1660; GPU util near 0% while CPU pegged; `fitting params to device memory` / RAM offload.

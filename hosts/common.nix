@@ -21,6 +21,7 @@
     ../modules/desktop/audio.nix
 
     ../modules/programs/firefox.nix
+    ../modules/programs/kdeconnect.nix
     ../modules/programs/steam.nix
     ../modules/programs/games-dirs.nix
     ../modules/programs/packages.nix

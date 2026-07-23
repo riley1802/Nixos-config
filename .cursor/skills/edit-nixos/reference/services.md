@@ -121,3 +121,8 @@
 ## Gaming (Steam)
 
 - Steam enabled; Remote Play does **not** open firewall ports
+
+## KDE Connect
+
+- `modules/programs/kdeconnect.nix` — `programs.kdeconnect.enable = true` (shared via `hosts/common.nix`)
+- Package: `kdePackages.kdeconnect-kde`; opens TCP/UDP `1714–1764` for LAN phone pairing

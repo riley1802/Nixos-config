@@ -49,7 +49,7 @@ auto-login, SearXNG, n8n) fails on the new host.
 - `modules/core/` - boot, locale, hostname, NetworkManager, Nix settings, agenix, OpenSSH.
 - `modules/desktop/` - Cinnamon + LightDM, audio.
 - `modules/hardware/` - graphics userspace and NVIDIA driver.
-- `modules/programs/` - one file per program or concern (Firefox, Steam, CLI tools).
+- `modules/programs/` - one file per program or concern (Firefox, KDE Connect, Steam, CLI tools).
 - `modules/services/` - system services.
 - `modules/users/` - local user accounts.
 - `secrets/` - agenix-encrypted secrets (`*.age`) and `secrets.nix` public keys.
@@ -179,6 +179,7 @@ Services do not open the public firewall unless explicitly intended:
 | llama.cpp, whisper.cpp, Piper, Unsloth Studio, SearXNG, n8n, Portainer, Homepage, PostgreSQL | localhost only (Serve for HTTPS front doors) |
 | Tailscale | closed (`openFirewall = false`) |
 | Steam Remote Play | closed (`remotePlay.openFirewall = false`) |
+| KDE Connect | open TCP/UDP `1714–1764` (phone pairing on LAN) |
 
 ## Secrets (agenix)
 
