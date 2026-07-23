@@ -142,9 +142,9 @@ in `modules/services/llama-cpp.nix`.
   (`secrets/unsloth-studio.env.age`).
 - Hub downloads use plain HTTPS (`HF_HUB_DISABLE_XET=1`,
   `HF_HUB_ENABLE_HF_TRANSFER=0`) — Xet stalls mid-download on this host.
-- Inference wrapper caps context at 8192, uses `q8_0` KV cache, skips the
-  vision mmproj (set `UNSLOTH_ALLOW_MMPROJ=1` to re-enable), and pins CUDA
-  to the RTX 3050 — Studio’s default 50k+ context + mmproj was ~3 t/s here.
+- Inference wrapper caps context at 8192 and uses `q8_0` KV cache; vision
+  mmproj stays enabled. Both GPUs are visible so mmproj fits. Studio’s
+  default 50k+ context (not vision) was what dropped TPS to ~3 t/s here.
 - Training shares VRAM with llama.cpp — idle or stop llama.cpp if you OOM.
 
 ### Tailscale

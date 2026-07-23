@@ -254,10 +254,10 @@ Optional POST body keys passed to piper: `speaker_id`, `length_scale`, `noise_sc
 | `image` | `unsloth/unsloth:latest` |
 | `ports` | `127.0.0.1:8000:8000` (Studio UI; Jupyter/SSH not published) |
 | `extraOptions` | `[ "--device=nvidia.com/gpu=all" ]` (CDI; not `--gpus=all`) |
-| `environment` | `HF_HUB_DISABLE_XET=1`, `HF_HUB_ENABLE_HF_TRANSFER=0`, `CUDA_DEVICE_ORDER=PCI_BUS_ID`, `CUDA_VISIBLE_DEVICES=0`, `LLAMA_SERVER_PATH=…/unsloth-llama-server-wrap`, `UNSLOTH_MAX_CTX=8192`, `UNSLOTH_ALLOW_MMPROJ=0` |
+| `environment` | `HF_HUB_DISABLE_XET=1`, `HF_HUB_ENABLE_HF_TRANSFER=0`, `CUDA_DEVICE_ORDER=PCI_BUS_ID`, `CUDA_VISIBLE_DEVICES=0,1`, `LLAMA_SERVER_PATH=…/unsloth-llama-server-wrap`, `UNSLOTH_MAX_CTX=8192`, `UNSLOTH_ALLOW_MMPROJ=1` |
 | `environmentFiles` | `config.age.secrets.unsloth-studio-env.path` |
 | Data dir | `/var/lib/unsloth-studio/{work,exports,outputs,auth,cache,hf-cache}` |
-| Wrapper | `/etc/unsloth-studio/llama-server-wrap` → caps `-c`, adds `q8_0` KV, strips `--mmproj` |
+| Wrapper | `/etc/unsloth-studio/llama-server-wrap` → caps `-c`, adds `q8_0` KV; passes `--mmproj` (vision required) |
 
 #### agenix
 

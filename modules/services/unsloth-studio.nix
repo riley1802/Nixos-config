@@ -8,12 +8,13 @@ let
 
   # Host-side script (#!/usr/bin/env bash) mounted into the container.
   # Must not use pkgs.writeShellScript — that shebang points at /nix/store bash.
+  # Caps n_ctx / KV only — vision (--mmproj) stays on by default.
   llamaServerWrapText = ''
     #!/usr/bin/env bash
     set -euo pipefail
     real="/home/unsloth/.unsloth/llama.cpp/build/bin/llama-server"
     max_ctx="''${UNSLOTH_MAX_CTX:-8192}"
-    allow_mmproj="''${UNSLOTH_ALLOW_MMPROJ:-0}"
+    allow_mmproj="''${UNSLOTH_ALLOW_MMPROJ:-1}"
 
     args=()
     skip=0
@@ -151,14 +152,14 @@ in
       # force plain HTTPS. See unsloth#4712 / #6858 and lessons.md.
       HF_HUB_DISABLE_XET = "1";
       HF_HUB_ENABLE_HF_TRANSFER = "0";
-      # Stable GPU ordinals; prefer RTX 3050 (Ampere) over GTX 1660 for flash-attn.
+      # Stable GPU ordinals; both GPUs visible so vision (mmproj) can fit.
       CUDA_DEVICE_ORDER = "PCI_BUS_ID";
-      CUDA_VISIBLE_DEVICES = "0";
+      CUDA_VISIBLE_DEVICES = "0,1";
       # Studio honors this instead of the bundled llama-server binary.
       LLAMA_SERVER_PATH = "/usr/local/bin/unsloth-llama-server-wrap";
+      # Cap context (not mmproj) — huge n_ctx was the TPS killer; vision stays on.
       UNSLOTH_MAX_CTX = "8192";
-      # Vision projector costs ~0.9 GiB and tanks text TPS on 6 GB cards.
-      UNSLOTH_ALLOW_MMPROJ = "0";
+      UNSLOTH_ALLOW_MMPROJ = "1";
     };
     environmentFiles = [ config.age.secrets.unsloth-studio-env.path ];
     # Do not pass --restart: oci-containers uses --rm; systemd owns restarts.
