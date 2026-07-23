@@ -30,10 +30,13 @@ let
     cacheTypeK = "q4_0";
     cacheTypeV = "q4_0";
     kvUnified = true;
+    # Nemotron-only: higher ubatch improves TG on RTX 3050 (bench 39.5 vs 33.6 @ 8k).
+    nemotronUbatchSize = "1024";
     # Phi frees VRAM after idle; watcher then restores dual.
     phiSleepIdleSeconds = "300";
     dualSleepIdleSeconds = "1800";
-    qwenSpecDraftNMax = "6";
+    # MTP dense 4B sweet spot (upstream default; ~92 vs ~80 t/s vs n_max=6).
+    qwenSpecDraftNMax = "3";
   };
 
   commonFlags = [
@@ -279,6 +282,8 @@ in
           "0"
           "--split-mode"
           "none"
+          "--ubatch-size"
+          tuned.nemotronUbatchSize
         ];
       };
 

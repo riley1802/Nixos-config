@@ -13,7 +13,13 @@ Append entries when a build, rebuild, or runtime error is resolved. Format:
 
 ---
 
-### Flake check needs new modules git-added (2026-07-22)
+
+### pkexec broken in agent shell; Phi llama-bench OOM (2026-07-23)
+- **Context:** llama.cpp TPS tuning on nixos; `pkexec nixos-rebuild switch` and Phi `llama-bench` sweeps.
+- **Error:** `pkexec must be setuid root`; `llama_bench: failed to load model` for Phi-4-reasoning-plus (~9GB) with `cudaMalloc failed: out of memory` on GPU0.
+- **Cause:** Agent non-interactive shell lacks working pkexec; Phi GGUF tries ~8.2GB single allocation on GPU0 (display uses ~1GB) — `llama-bench` layer-split still OOMs; production `llama-server` phi mode loads correctly via router.
+- **Fix:** Bench Phi via `llama-cpp-mode phi` + API (warm after load); user runs `pkexec nixos-rebuild switch --flake /etc/nixos#nixos` locally. Kill stray unsloth `llama-server` before benches.
+- **Avoid:** `llama-bench` for dual-GPU Phi on desktop GPU0; assuming pkexec works in all agent shells.
 - **Context:** Added `modules/programs/kdeconnect.nix` and ran `nix flake check` before staging.
 - **Error:** `Path 'modules/programs/kdeconnect.nix' in the repository is not tracked by Git.`
 - **Cause:** Flakes only see files tracked by git; a new module is invisible until `git add`.
