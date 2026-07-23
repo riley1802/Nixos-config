@@ -33,9 +33,11 @@
       tailscale serve --bg --yes --https=443 http://127.0.0.1:8083
       tailscale serve --bg --yes --https=5678 http://127.0.0.1:5678
       tailscale serve --bg --yes --https=9443 https+insecure://127.0.0.1:9443
-      # AI services (llama.cpp, whisper.cpp, Piper) — localhost-only backends,
-      # reachable from other tailnet devices via HTTPS.
+      # AI services (llama.cpp Phi/dual, whisper.cpp, Piper) — localhost-only
+      # backends, reachable from other tailnet devices via HTTPS.
       tailscale serve --bg --yes --https=8080 http://127.0.0.1:8080
+      tailscale serve --bg --yes --https=8084 http://127.0.0.1:8084
+      tailscale serve --bg --yes --https=8085 http://127.0.0.1:8085
       tailscale serve --bg --yes --https=8081 http://127.0.0.1:8081
       tailscale serve --bg --yes --https=8082 http://127.0.0.1:8082
       tailscale serve --bg --yes --https=8000 http://127.0.0.1:8000

@@ -83,7 +83,8 @@ This system runs local AI/search services bound to localhost.
 | Portainer (via Tailscale Serve) | https://nixos.taile9f484.ts.net:9443 | `modules/services/docker.nix` + `tailscale-serve.nix` |
 | ntfy | http://nixos.taile9f484.ts.net:8090 | `modules/services/ntfy-sh.nix` |
 | Uptime Kuma | http://nixos.taile9f484.ts.net:3001 | `modules/services/uptime-kuma.nix` |
-| llama.cpp (via Tailscale Serve) | https://nixos.taile9f484.ts.net:8080 (local `http://127.0.0.1:8080/v1`) | `modules/services/llama-cpp.nix` + `tailscale-serve.nix` |
+| llama.cpp dual (Nemotron/Qwen) | https://nixos.taile9f484.ts.net:8084 / `:8085` (local `127.0.0.1`) | `modules/services/llama-cpp.nix` + `tailscale-serve.nix` |
+| llama.cpp Phi (exclusive) | https://nixos.taile9f484.ts.net:8080 — `llama-cpp-mode phi` | same |
 | whisper.cpp (via Tailscale Serve) | https://nixos.taile9f484.ts.net:8081 (local `http://127.0.0.1:8081`) | `modules/services/whisper-cpp.nix` + `tailscale-serve.nix` |
 | Piper TTS (via Tailscale Serve) | https://nixos.taile9f484.ts.net:8082 (local `http://127.0.0.1:8082`) | `modules/services/piper.nix` + `tailscale-serve.nix` |
 | Unsloth Studio (via Tailscale Serve) | https://nixos.taile9f484.ts.net:8000 (local `http://127.0.0.1:8000`) | `modules/services/unsloth-studio.nix` + `tailscale-serve.nix` |
@@ -92,26 +93,20 @@ This system runs local AI/search services bound to localhost.
 
 ### llama.cpp
 
-- CUDA build from `nixpkgs-unstable` (llama.cpp 9747+), required for Gemma 4
-  Multi-Token Prediction (MTP).
-- Dual-GPU layer split across RTX 3050 and GTX 1660 Super.
-- Context window: 16k tokens (`--ctx-size 16384`) with `q8_0` KV cache.
-- Models are stored in `/var/lib/llama-cpp/models` and survive NixOS upgrades.
-- Models download automatically from Hugging Face on first use.
-- Router mode with `--models-max 1`: only one model fits in VRAM, so the
-  loaded model is evicted before another preset is loaded (avoids CUDA OOM
-  when switching models in the web UI).
+- CUDA build from `nixpkgs-unstable` (llama.cpp 9747+).
+- **Desktop (2 GPUs):** default dual mode — Nemotron on GPU0 `:8084`, Qwen MTP
+  on GPU1 `:8085`. Phi-4 needs both GPUs: `llama-cpp-mode phi` stops dual and
+  starts Phi on `:8080`; idle unload auto-restores dual.
+- **Laptop (1 GPU):** single router on `:8080` with all aliases (`--models-max 1`).
+- Per-model aliases for 8k and 16k context; KV cache `q4_0` (TPS-tuned).
+- Models live in `/var/lib/llama-cpp/models` (HF download on first use).
+- Tuned flags are hardcoded in `modules/services/llama-cpp.nix` (`tuned` attr).
 
-Configured model presets:
-
-| Alias | Model | Notes |
-|-------|-------|-------|
-| `gemma-4-e4b-q8` | Gemma 4 E4B Q8_0 | Fast, smaller model |
-| `nemotron-nano-12b-v2-q4` | Nemotron Nano 12B v2 Q4_K_M | NVIDIA reasoning model |
-| `gemma-4-12b-q4-mtp` | Gemma 4 12B Q4_K_M + MTP drafter | ~27% faster than baseline on this hardware |
-
-Switch the active model by restarting the service with a different preset alias
-in `modules/services/llama-cpp.nix`.
+| Alias | Port (desktop) | Model |
+|-------|----------------|-------|
+| `nemotron-8k` / `nemotron-16k` | `:8084` | Nemotron-3-Nano-4B UD-Q4_K_XL |
+| `qwen-8k` / `qwen-16k` | `:8085` | Qwen3.5-4B-MTP UD-Q4_K_XL |
+| `phi4-8k` / `phi4-16k` | `:8080` (phi mode) | Phi-4-reasoning-plus UD-Q4_K_XL |
 
 ### SearXNG
 
@@ -238,7 +233,8 @@ Check service status after applying:
 ```sh
 systemctl status tailscale-serve-apps homepage-dashboard n8n postgresql ntfy-sh uptime-kuma docker
 tailscale serve status
-systemctl status llama-cpp whisper-cpp piper searx docker-unsloth-studio tailscaled
+systemctl status llama-cpp-nemotron llama-cpp-qwen llama-cpp-phi whisper-cpp piper searx docker-unsloth-studio tailscaled
+# desktop mode switch: llama-cpp-mode dual|phi|status
 curl http://127.0.0.1:8080/v1/models
 curl http://127.0.0.1:8081/v1/audio/transcriptions
 curl http://127.0.0.1:8082/health

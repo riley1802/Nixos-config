@@ -2,7 +2,7 @@
 
 | Service | Module | URL / port | Notes |
 |---------|--------|------------|-------|
-| llama.cpp | `modules/services/llama-cpp.nix` | https://nixos.taile9f484.ts.net:8080 (local `127.0.0.1:8080`) | CUDA via `pkgsUnstable`, localhost bind; Serve TLS |
+| llama.cpp | `modules/services/llama-cpp.nix` | dual `:8084`/`:8085`, Phi `:8080` (Serve) | CUDA `pkgsUnstable`; desktop dual+phi mode; legion single router |
 | whisper.cpp | `modules/services/whisper-cpp.nix` | https://nixos.taile9f484.ts.net:8081 (local `127.0.0.1:8081`) | Runs as `rileyt`, model dir persisted; Serve TLS |
 | Piper TTS | `modules/services/piper.nix` | https://nixos.taile9f484.ts.net:8082 (local `127.0.0.1:8082`) | Runs as `rileyt`, voice auto-download; Serve TLS |
 | Unsloth Studio | `modules/services/unsloth-studio.nix` | https://nixos.taile9f484.ts.net:8000 (local `127.0.0.1:8000`) | Docker `unsloth/unsloth` + CUDA; Serve TLS |
@@ -22,22 +22,24 @@
 
 - Package: `pkgsUnstable.llama-cpp.override { cudaSupport = true; }`
 - Models dir: `/var/lib/llama-cpp/models` (persistent, tmpfiles rule)
-- Runs as `rileyt` (DynamicUser disabled)
-- `LLAMA_CACHE=/var/lib/llama-cpp/models`
+- Runs as `rileyt`; `LLAMA_CACHE=/var/lib/llama-cpp/models`
+- Desktop (2+ GPUs): `llama-cpp-nemotron` `:8084` GPU0 + `llama-cpp-qwen` `:8085` GPU1;
+  `llama-cpp-mode phi` → exclusive Phi on `:8080` (both GPUs); idle watch restores dual
+- Laptop (1 GPU): `llama-cpp` `:8080` router with all aliases, `--models-max 1`
+- Tuned winners in module `tuned` attr (cache q4_0, MTP n-max, etc.)
 
 ### Model presets
 
 | Alias | HF repo | File |
 |-------|---------|------|
-| `gemma-4-e4b-q8` | unsloth/gemma-4-E4B-it-GGUF | gemma-4-E4B-it-Q8_0.gguf |
-| `nemotron-nano-12b-v2-q4` | MaziyarPanahi/NVIDIA-Nemotron-Nano-12B-v2-GGUF | NVIDIA-Nemotron-Nano-12B-v2.Q4_K_M.gguf |
-| `gemma-4-12b-q4-mtp` | unsloth/gemma-4-12b-it-GGUF | gemma-4-12b-it-Q4_K_M.gguf (MTP drafter) |
+| `phi4-8k` / `phi4-16k` | unsloth/Phi-4-reasoning-plus-GGUF | Phi-4-reasoning-plus-UD-Q4_K_XL.gguf |
+| `nemotron-8k` / `nemotron-16k` | unsloth/NVIDIA-Nemotron-3-Nano-4B-GGUF | NVIDIA-Nemotron-3-Nano-4B-UD-Q4_K_XL.gguf |
+| `qwen-8k` / `qwen-16k` | unsloth/Qwen3.5-4B-MTP-GGUF | Qwen3.5-4B-UD-Q4_K_XL.gguf (MTP) |
 
 ### GPU flags
 
-- `--models-max 1` (router evicts loaded model before switching — one model max in VRAM)
-- `--n-gpu-layers 999`, `--flash-attn on`, `--ctx-size 16384`, `--cache-type-k/v q8_0`, `--parallel 1`, `--kv-unified`, `--sleep-idle-seconds 1800`
-- Dual GPU: `--split-mode layer`, `--tensor-split 1,1`, `--main-gpu 0`
+- Common: `--models-max 1`, `--n-gpu-layers 999`, `--flash-attn on`, `--cache-type-k/v q4_0`, `--parallel 1`, `--kv-unified`
+- Dual pins: Nemotron `--main-gpu 0`, Qwen `--main-gpu 1 --split-mode none`, Phi `--split-mode layer --tensor-split 1,1`
 
 ## whisper.cpp
 
@@ -97,7 +99,7 @@
 - `:443` → Homepage `http://127.0.0.1:8083`
 - `:5678` → n8n `http://127.0.0.1:5678` (n8n `N8N_LISTEN_ADDRESS=127.0.0.1`, `N8N_PROTOCOL=https`, `N8N_PROXY_HOPS=1`)
 - `:9443` → Portainer `https+insecure://127.0.0.1:9443` (no `--base-url`)
-- `:8080` / `:8081` / `:8082` → llama.cpp / whisper.cpp / Piper on localhost
+- `:8080` / `:8084` / `:8085` / `:8081` / `:8082` → Phi / Nemotron / Qwen / whisper / Piper on localhost
 - `:8000` → Unsloth Studio on localhost
 - Uptime Kuma (`:3001`) and ntfy (`:8090`) stay direct on `tailscale0`
 - Uptime Kuma monitors: Nix list in `uptime-kuma.nix` → `uptime-kuma-sync.py` (uptime-kuma-api); tag `nix-managed`; ntfy provider `ntfy-homeport`; secret `uptime-kuma-sync.env.age`

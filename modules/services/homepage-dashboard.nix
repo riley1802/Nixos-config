@@ -249,10 +249,18 @@ in
       {
         "AI / Local" = [
           {
-            "llama.cpp" = {
+            "llama.cpp dual" = {
+              icon = "si-ollama";
+              href = "https://${tailnet}:8084";
+              description = "Nemotron :8084 + Qwen :8085 (default)";
+              siteMonitor = "http://127.0.0.1:8084/v1/models";
+            };
+          }
+          {
+            "llama.cpp Phi" = {
               icon = "si-ollama";
               href = "https://${tailnet}:8080";
-              description = "Local LLM inference";
+              description = "Phi-4 exclusive (llama-cpp-mode phi)";
               siteMonitor = "http://127.0.0.1:8080/v1/models";
             };
           }

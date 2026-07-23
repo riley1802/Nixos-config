@@ -30,9 +30,15 @@ let
       group = "Monitoring";
     }
     {
-      name = "llama.cpp";
+      name = "llama.cpp Nemotron";
       type = "http";
-      url = "http://127.0.0.1:8080/v1/models";
+      url = "http://127.0.0.1:8084/v1/models";
+      group = "AI / Local Models";
+    }
+    {
+      name = "llama.cpp Qwen";
+      type = "http";
+      url = "http://127.0.0.1:8085/v1/models";
       group = "AI / Local Models";
     }
     {

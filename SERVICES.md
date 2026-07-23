@@ -16,7 +16,7 @@ Only options **set in this flake** are listed (not nixpkgs defaults). Secrets ar
 
 | Service | Module | Status | Bind / notes |
 |---------|--------|--------|--------------|
-| llama.cpp | `modules/services/llama-cpp.nix` | Active | `127.0.0.1:8080` |
+| llama.cpp | `modules/services/llama-cpp.nix` | Active | dual `:8084`/`:8085`, Phi `:8080` |
 | n8n | `modules/services/n8n.nix` | Active | `127.0.0.1:5678` + Tailscale Serve HTTPS |
 | whisper.cpp | `modules/services/whisper-cpp.nix` | Active | `127.0.0.1:8081` |
 | Piper TTS | `modules/services/piper.nix` | Active | `127.0.0.1:8082` |
@@ -62,58 +62,45 @@ Only options **set in this flake** are listed (not nixpkgs defaults). Secrets ar
 ### llama.cpp
 
 **Module:** `modules/services/llama-cpp.nix`  
-**URL:** http://127.0.0.1:8080/v1
+**URLs (desktop dual-GPU):**  
+- Nemotron: http://127.0.0.1:8084/v1 (`nemotron-8k` / `nemotron-16k`)  
+- Qwen MTP: http://127.0.0.1:8085/v1 (`qwen-8k` / `qwen-16k`)  
+- Phi exclusive: http://127.0.0.1:8080/v1 (`phi4-8k` / `phi4-16k`) via `llama-cpp-mode phi`
 
-#### `services.llama-cpp`
+Custom systemd units (not `services.llama-cpp` nixpkgs module):
 
-| Option | Value |
-|--------|-------|
-| `enable` | `true` |
-| `package` | `pkgsUnstable.llama-cpp.override { cudaSupport = true; }` |
-| `host` | `"127.0.0.1"` |
-| `port` | `8080` |
-| `openFirewall` | `false` |
-| `modelsDir` | `"/var/lib/llama-cpp/models"` |
+| Unit | Port | GPU | Default |
+|------|------|-----|---------|
+| `llama-cpp-nemotron` | 8084 | `--main-gpu 0` | started |
+| `llama-cpp-qwen` | 8085 | `--main-gpu 1` + MTP | started |
+| `llama-cpp-phi` | 8080 | layer split both GPUs | stopped (exclusive) |
+| `llama-cpp-phi-idle-watch` | — | restores dual after Phi unload | with phi |
 
-#### `modelsPreset`
+Single-GPU hosts use `llama-cpp.service` on `:8080` with all aliases and `--models-max 1`.
+
+#### Model presets
 
 | Alias | `hf-repo` | `hf-file` | Extra |
 |-------|-----------|-----------|-------|
-| `gemma-4-e4b-q8` | `unsloth/gemma-4-E4B-it-GGUF` | `gemma-4-E4B-it-Q8_0.gguf` | `jinja = "on"` |
-| `nemotron-nano-12b-v2-q4` | `MaziyarPanahi/NVIDIA-Nemotron-Nano-12B-v2-GGUF` | `NVIDIA-Nemotron-Nano-12B-v2.Q4_K_M.gguf` | `jinja = "on"` |
-| `gemma-4-12b-q4-mtp` | `unsloth/gemma-4-12b-it-GGUF` | `gemma-4-12b-it-Q4_K_M.gguf` | `jinja = "on"`, `spec-type = "draft-mtp"`, `spec-draft-n-max = "2"` |
+| `phi4-8k` / `phi4-16k` | `unsloth/Phi-4-reasoning-plus-GGUF` | `Phi-4-reasoning-plus-UD-Q4_K_XL.gguf` | ctx 8k/16k |
+| `nemotron-8k` / `nemotron-16k` | `unsloth/NVIDIA-Nemotron-3-Nano-4B-GGUF` | `NVIDIA-Nemotron-3-Nano-4B-UD-Q4_K_XL.gguf` | ctx 8k/16k |
+| `qwen-8k` / `qwen-16k` | `unsloth/Qwen3.5-4B-MTP-GGUF` | `Qwen3.5-4B-UD-Q4_K_XL.gguf` | MTP `spec-draft-n-max` tuned |
 
-#### `extraFlags`
+#### Tuned common flags (`tuned` in module)
 
 ```
---n-gpu-layers 999
---flash-attn on
---ctx-size 16384
---cache-type-k q8_0
---cache-type-v q8_0
---parallel 1
---kv-unified
---split-mode layer
---tensor-split 1,1
---main-gpu 0
---sleep-idle-seconds 1800
+--models-max 1 --n-gpu-layers 999 --flash-attn on
+--cache-type-k/v q4_0 --parallel 1 --kv-unified
 ```
 
-#### systemd overrides (`systemd.services.llama-cpp.serviceConfig`)
-
-| Option | Value |
-|--------|-------|
-| `DynamicUser` | `false` (forced) |
-| `User` | `"rileyt"` |
-| `Group` | `"users"` |
-| `Environment` | `LLAMA_CACHE=/var/lib/llama-cpp/models` (forced) |
+Mode switch: `llama-cpp-mode dual|phi|status` (desktop).
 
 #### Other
 
 | Setting | Value |
 |---------|-------|
 | `systemd.tmpfiles.rules` | `d /var/lib/llama-cpp/models 0755 rileyt users -` |
-| `environment.systemPackages` | CUDA-enabled `llama-cpp` |
+| `environment.systemPackages` | CUDA `llama-cpp` + `llama-cpp-mode` (dual-GPU) |
 
 ---
 
@@ -135,8 +122,9 @@ Only options **set in this flake** are listed (not nixpkgs defaults). Secrets ar
 
 A oneshot unit runs after `n8n.service` and upserts (via `n8n import:credentials`) a fixed-id
 `openAiApi` credential named **"llama.cpp (local)"** pointing at llama.cpp's OpenAI-compatible API
-(`http://127.0.0.1:8080/v1`, see `llama-cpp.nix`). This lets the **OpenAI Chat Model** / **AI Agent**
-nodes use local models (`gemma-4-e4b-q8`, `nemotron-nano-12b-v2-q4`, `gemma-4-12b-q4-mtp`) with zero
+(`http://127.0.0.1:8080/v1` for Phi mode, or `:8084`/`:8085` for dual — see `llama-cpp.nix`).
+This lets the **OpenAI Chat Model** / **AI Agent** nodes use local aliases
+(`phi4-8k`, `nemotron-8k`, `qwen-8k`, …) with zero
 manual credential setup. It reads the personal project id from the `n8n` Postgres DB, so on a
 brand-new instance (no owner account yet) it skips gracefully — rerun
 `systemctl start n8n-llama-cpp-credential` once the first-run setup wizard is done.
@@ -701,7 +689,9 @@ Imported via `home.nix`. User: `rileyt` (`home/core/identity.nix`).
 | 5432 | PostgreSQL (localhost) |
 | 5678 | n8n localhost + Tailscale Serve HTTPS |
 | 8000 | Unsloth Studio localhost + Tailscale Serve HTTPS |
-| 8080 | llama.cpp |
+| 8080 | llama.cpp Phi (exclusive mode) |
+| 8084 | llama.cpp Nemotron (dual) |
+| 8085 | llama.cpp Qwen MTP (dual) |
 | 8081 | whisper.cpp |
 | 8082 | Piper TTS |
 | 8083 | Homepage (direct firewall closed; Serve upstream) |
