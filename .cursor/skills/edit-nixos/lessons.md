@@ -13,6 +13,13 @@ Append entries when a build, rebuild, or runtime error is resolved. Format:
 
 ---
 
+### Unsloth Studio abysmal TPS from huge context + mmproj (2026-07-22)
+- **Context:** Chat in Unsloth Studio ran ~3 t/s (then ~9 t/s after manually lowering context) on RTX 3050 + GTX 1660 Super with a 4B Q4 GGUF.
+- **Error:** `llama-server` launched with `-c 55808`, `--mmproj …F16.gguf`, MTP draft, pinned to the 1660; GPU util near 0% while CPU pegged; `fitting params to device memory` / RAM offload.
+- **Cause:** Studio UI context/maxTokens synced to ~55k and auto-attached the vision projector; that KV + mmproj does not fit in 6 GB so llama.cpp offloads and decode crawls. Auto GPU pick also preferred the Turing 1660 (more free VRAM) over the Ampere 3050.
+- **Fix:** Mount a `LLAMA_SERVER_PATH` wrapper that caps `-c`/`--ctx-size` to `UNSLOTH_MAX_CTX` (8192), injects `--cache-type-k/v q8_0`, strips `--mmproj` unless `UNSLOTH_ALLOW_MMPROJ=1`, and set `CUDA_VISIBLE_DEVICES=0` + `CUDA_DEVICE_ORDER=PCI_BUS_ID`.
+- **Avoid:** Trusting Studio’s default context slider on 6–8 GB GPUs, or leaving mmproj enabled for text-only chat.
+
 ### Unsloth Studio Hub downloads stall on HF Xet (2026-07-22)
 - **Context:** Models in Unsloth Studio UI never finished downloading/loading; UI kept polling `/api/inference/load-progress`.
 - **Error:** Cache held `*.incomplete` + `.lock` for `Qwen3.5-4B-MTP-GGUF` with no byte growth; xet logs showed struggling concurrency / stalled CAS transfers. Gemma GGUF had finished, but load still blocked.

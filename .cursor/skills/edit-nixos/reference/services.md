@@ -114,6 +114,7 @@
 - Data: `/var/lib/unsloth-studio/{work,exports,outputs,auth,cache,hf-cache}`
 - Secrets: `secrets/unsloth-studio.env.age` → `JUPYTER_PASSWORD`, `USER_PASSWORD`
 - Hub downloads: `HF_HUB_DISABLE_XET=1`, `HF_HUB_ENABLE_HF_TRANSFER=0` (Xet stalls on this host)
+- Perf: `LLAMA_SERVER_PATH` wrapper caps context to 8192, forces `q8_0` KV, strips `--mmproj`; `CUDA_VISIBLE_DEVICES=0` (RTX 3050)
 - First Studio visit sets a UI password (persisted under `auth/`)
 - Shares VRAM with llama.cpp when training — stop or idle llama.cpp if you OOM
 
