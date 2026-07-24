@@ -98,7 +98,8 @@ This system runs local AI/search services bound to localhost.
   on GPU1 `:8085`. Phi-4 needs both GPUs: `llama-cpp-mode phi` stops dual and
   starts Phi on `:8080`; idle unload auto-restores dual.
 - **Laptop (1 GPU):** single router on `:8080` with all aliases (`--models-max 1`).
-- Per-model aliases for 8k and 16k context; KV cache `q4_0` (TPS-tuned).
+- Per-model aliases for 8k and 16k context; KV cache **`q8_0`** (16k quality + TPS retune).
+- Qwen MTP `--spec-draft-n-max 2`; Nemotron `--ubatch-size 1024`.
 - Models live in `/var/lib/llama-cpp/models` (HF download on first use).
 - Tuned flags are hardcoded in `modules/services/llama-cpp.nix` (`tuned` attr).
 

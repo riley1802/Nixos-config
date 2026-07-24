@@ -90,7 +90,9 @@ Single-GPU hosts use `llama-cpp.service` on `:8080` with all aliases and `--mode
 
 ```
 --models-max 1 --n-gpu-layers 999 --flash-attn on
---cache-type-k/v q4_0 --parallel 1 --kv-unified
+--cache-type-k/v q8_0 --parallel 1 --kv-unified
+--ubatch-size 1024   # Nemotron only
+--spec-draft-n-max 2 # Qwen MTP (re-verified @ 16k+q8)
 ```
 
 Mode switch: `llama-cpp-mode dual|phi|status` (desktop).

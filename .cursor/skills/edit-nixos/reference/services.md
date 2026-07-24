@@ -26,7 +26,7 @@
 - Desktop (2+ GPUs): `llama-cpp-nemotron` `:8084` GPU0 + `llama-cpp-qwen` `:8085` GPU1;
   `llama-cpp-mode phi` → exclusive Phi on `:8080` (both GPUs); idle watch restores dual
 - Laptop (1 GPU): `llama-cpp` `:8080` router with all aliases, `--models-max 1`
-- Tuned winners in module `tuned` attr (cache q4_0, MTP n-max, etc.)
+- Tuned winners in module `tuned` attr (cache q8_0, MTP n_max=2, Nemotron ubatch 1024)
 
 ### Model presets
 
@@ -38,8 +38,8 @@
 
 ### GPU flags
 
-- Common: `--models-max 1`, `--n-gpu-layers 999`, `--flash-attn on`, `--cache-type-k/v q4_0`, `--parallel 1`, `--kv-unified`
-- Dual pins: Nemotron `--main-gpu 0`, Qwen `--main-gpu 1 --split-mode none`, Phi `--split-mode layer --tensor-split 1,1`
+- Common: `--models-max 1`, `--n-gpu-layers 999`, `--flash-attn on`, `--cache-type-k/v q8_0`, `--parallel 1`, `--kv-unified`
+- Dual pins: Nemotron `--main-gpu 0 --ubatch-size 1024`, Qwen `--main-gpu 1` + MTP `n_max=2`, Phi `--split-mode layer --tensor-split 1,1`
 
 ## whisper.cpp
 
