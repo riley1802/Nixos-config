@@ -52,7 +52,7 @@ Discovery:
 | Change type | Location | Import via |
 |-------------|----------|------------|
 | Boot, locale, network, system | `modules/core/` | `hosts/nixos/configuration.nix` |
-| GNOME, audio (system) | `modules/desktop/` | `hosts/nixos/configuration.nix` |
+| Cinnamon, audio (system) | `modules/desktop/` | `hosts/common.nix` |
 | NVIDIA, hardware | `modules/hardware/` | `hosts/nixos/configuration.nix` |
 | System packages/programs | `modules/programs/` | `hosts/nixos/configuration.nix` |
 | **Each service gets its own file** | `modules/services/<name>.nix` | `hosts/nixos/configuration.nix` |

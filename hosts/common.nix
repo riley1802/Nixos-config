@@ -1,7 +1,7 @@
 { ... }:
 
-# Everything shared by all hosts: core system, programs, users, and the full
-# service stack. Hosts add only hardware and desktop-environment modules.
+# Everything shared by all hosts: core system, desktop (Cinnamon), programs,
+# users, and the full service stack. Hosts add only hardware modules.
 {
   imports = [
     ../modules/core/boot.nix
@@ -18,6 +18,7 @@
 
     ../modules/hardware/graphics.nix
 
+    ../modules/desktop/cinnamon.nix
     ../modules/desktop/audio.nix
 
     ../modules/programs/firefox.nix

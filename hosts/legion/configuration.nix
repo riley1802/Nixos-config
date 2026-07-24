@@ -6,8 +6,6 @@
     ../common.nix
 
     ../../modules/hardware/nvidia-prime.nix
-
-    ../../modules/desktop/cinnamon.nix
   ];
 
   networking.hostName = "legion";

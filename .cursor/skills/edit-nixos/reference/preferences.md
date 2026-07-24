@@ -22,7 +22,7 @@ machine should feel like the same system.
 |------------|----------|
 | Shared stack | `hosts/common.nix` + `home/common.nix` — full AI/dashboard/services stack on every host unless a host explicitly opts out. |
 | Per-host deltas | Only in `hosts/<name>/` and via `host.*` options in `modules/core/host-facts.nix` (e.g. `host.gpus`, `host.uptimeKumaSync`, `host.tailnetName`). |
-| Desktops | `nixos` (desktop): GNOME + GDM. `legion` (laptop): Cinnamon + LightDM (X11). |
+| Desktops | Both hosts: Cinnamon + LightDM (X11) via `modules/desktop/cinnamon.nix` in `hosts/common.nix`. |
 | GPU / Legion | PRIME **offload** (`modules/hardware/nvidia-prime.nix`). BIOS **GPU Working Mode = Hybrid** (not Discrete). Discrete muxes the panel to NVIDIA and black-screens the X11 offload greeter. |
 | Secrets | Every host that runs the shared stack must be able to decrypt the same agenix secrets. Adding a host key to `secrets/secrets.nix` is incomplete until `agenix -r` runs on a machine that can already decrypt, then push the rekeyed `.age` files. |
 | Auth / git | Declarative git identity + `gh` credential helper in `home/programs/git.nix` so commits/pushes work the same on both hosts without hand-editing HM-managed git config. |

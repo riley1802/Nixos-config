@@ -1,11 +1,9 @@
 { ... }:
 
-# Desktop (host "nixos"): shared home config plus GNOME dconf settings.
+# Home Manager entry for every host — shared modules only. Cinnamon is
+# configured through its GUI; no DE-specific dconf modules yet.
 {
   imports = [
     ./home/common.nix
-    ./home/desktop/gnome/interface.nix
-    ./home/desktop/gnome/extensions.nix
-    ./home/desktop/gnome/dash-to-dock.nix
   ];
 }

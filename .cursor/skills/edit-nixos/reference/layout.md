@@ -16,9 +16,7 @@
 | `modules/core/polkit-pkexec.nix` | Passwordless pkexec for `rileyt` (agent admin) |
 | `modules/hardware/graphics.nix` | OpenGL/Vulkan userspace |
 | `modules/hardware/nvidia.nix` | NVIDIA proprietary driver |
-| `modules/desktop/gdm.nix` | GDM display manager |
-| `modules/desktop/gnome.nix` | GNOME desktop and dconf |
-| `modules/desktop/gnome-extensions.nix` | GNOME extensions and excluded apps |
+| `modules/desktop/cinnamon.nix` | Cinnamon + LightDM (X11; via `hosts/common.nix`) |
 | `modules/desktop/audio.nix` | PipeWire audio |
 | `modules/programs/firefox.nix` | Firefox |
 | `modules/programs/kdeconnect.nix` | KDE Connect (firewall `1714–1764`) |
@@ -43,7 +41,7 @@
 | `modules/services/tailscale-serve.nix` | Tailscale Serve HTTPS front doors |
 | `modules/users/rileyt.nix` | User account |
 
-## Home Manager (`home.nix` imports)
+## Home Manager (`home.nix` → `home/common.nix` imports)
 
 | Path | Module |
 |------|--------|
@@ -51,9 +49,6 @@
 | `home/core/state-version.nix` | home.stateVersion |
 | `home/core/home-manager.nix` | Enable Home Manager |
 | `home/desktop/cursor.nix` | Pointer cursor theme |
-| `home/desktop/gnome/interface.nix` | GNOME interface dconf |
-| `home/desktop/gnome/extensions.nix` | GNOME shell extensions dconf |
-| `home/desktop/gnome/dash-to-dock.nix` | Dash to Dock dconf |
 | `home/programs/utilities.nix` | CLI utilities (htop, ripgrep, fd, unzip) |
 | `home/programs/google-chrome.nix` | Google Chrome |
 | `home/programs/spotify.nix` | Spotify |

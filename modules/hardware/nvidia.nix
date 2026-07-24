@@ -7,7 +7,7 @@
     # Use the proprietary NVIDIA kernel module
     open = false;
 
-    # Required for modern NVIDIA Wayland support through GDM/GNOME.
+    # Modesetting for the proprietary driver (X11 / Cinnamon + LightDM).
     modesetting.enable = true;
 
     powerManagement.enable = false;

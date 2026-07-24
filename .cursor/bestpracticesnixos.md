@@ -78,15 +78,14 @@ Example handoff:
 /etc/nixos/
 ├── flake.nix                    # inputs, mkNixos helper, one output per host
 ├── flake.lock                   # committed — always
-├── home.nix                     # HM entry: desktop (nixos)
-├── home-legion.nix              # HM entry: laptop (legion)
+├── home.nix                     # HM entry (every host)
 ├── hosts/
-│   ├── common.nix               # shared system profile (all hosts)
+│   ├── common.nix               # shared system profile (all hosts), including Cinnamon
 │   ├── nixos/                   # desktop
 │   └── legion/                  # laptop
 ├── modules/
 │   ├── core/                    # boot, locale, host-facts, networkmanager, nix, agenix, openssh
-│   ├── desktop/                 # gdm/gnome (desktop), cinnamon (laptop), audio
+│   ├── desktop/                 # cinnamon + LightDM, audio
 │   ├── hardware/                # graphics, nvidia, nvidia-prime
 │   ├── programs/
 │   ├── services/                # one file per service (shared stack)
@@ -107,8 +106,8 @@ The flake's `mkNixos` helper wires agenix, Home Manager, and `specialArgs` (`pkg
 
 - **One concern = one file** — a service, program, dconf domain, or single NixOS option group. No bundled "system defaults" catch-alls.
 - **One service = one file** under `modules/services/<name>.nix`.
-- Shared services/programs go in `hosts/common.nix`; host-only imports (hardware, desktop DE) go in `hosts/<name>/configuration.nix`.
-- **`hosts/*/configuration.nix`**, **`home.nix`**, and **`home-legion.nix`** are import lists only — no logic.
+- Shared services/programs/desktop go in `hosts/common.nix`; host-only imports (hardware) go in `hosts/<name>/configuration.nix`.
+- **`hosts/*/configuration.nix`** and **`home.nix`** are import lists only — no logic.
 - Colocate packages with the module that needs them (`environment.systemPackages` in the relevant module, not a giant global list).
 - Split Home Manager the same way: `home/programs/`, `home/desktop/`, etc.; share via `home/common.nix`.
 - Do not edit `hosts/*/hardware-configuration.nix` unless hardware changed or the user explicitly asks.
@@ -503,7 +502,7 @@ GitHub `main` is the **source of truth** for both desktop and laptop. Details: [
 
 These practices are tuned for riley's setup:
 
-- Hosts: `nixos` (desktop, GNOME) + `legion` (laptop, Cinnamon / PRIME offload); user `rileyt`
+- Hosts: `nixos` (desktop) + `legion` (laptop, PRIME offload); both Cinnamon + LightDM; user `rileyt`
 - Preferences & multi-host decisions: [preferences.md](skills/edit-nixos/reference/preferences.md)
 - Machine facts: [reference/machine.md](skills/edit-nixos/reference/machine.md)
 - Stable `nixos-26.05` + `pkgsUnstable` for CUDA llama.cpp

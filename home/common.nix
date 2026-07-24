@@ -1,7 +1,6 @@
 { ... }:
 
-# Home Manager configuration shared by every host. Desktop-environment
-# specific settings (GNOME dconf, Cinnamon) live in the per-host home files.
+# Home Manager configuration shared by every host.
 {
   imports = [
     ./core/identity.nix

@@ -70,7 +70,7 @@
       nixosConfigurations.legion = mkNixos {
         name = "legion";
         system = "x86_64-linux";
-        homeFile = ./home-legion.nix;
+        homeFile = ./home.nix;
       };
     };
 }

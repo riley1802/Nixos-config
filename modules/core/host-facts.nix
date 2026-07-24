@@ -13,7 +13,7 @@
     gpus = lib.mkOption {
       type = lib.types.listOf lib.types.str;
       default = [ "GPU" ];
-      description = "Display labels for NVIDIA GPUs, index-ordered (drives Homepage tiles and llama.cpp multi-GPU flags).";
+      description = "Display labels for NVIDIA GPUs, index-ordered (drives llama.cpp multi-GPU flags).";
     };
 
     uptimeKumaSync = lib.mkOption {

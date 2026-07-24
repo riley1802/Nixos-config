@@ -1,7 +1,7 @@
 # Home Manager
 
 - User: `rileyt`
-- Entries: `home.nix` (nixos desktop), `home-legion.nix` (legion laptop); both import `home/common.nix`
+- Entry: `home.nix` on every host (imports `home/common.nix` only)
 - Uses global pkgs from flake (`useGlobalPkgs = true`)
 
 ## Modules
@@ -12,9 +12,6 @@
 | `home/core/state-version.nix` | home.stateVersion |
 | `home/core/home-manager.nix` | Enable Home Manager |
 | `home/desktop/cursor.nix` | Pointer cursor theme |
-| `home/desktop/gnome/interface.nix` | GNOME interface dconf |
-| `home/desktop/gnome/extensions.nix` | GNOME shell extensions dconf |
-| `home/desktop/gnome/dash-to-dock.nix` | Dash to Dock dconf |
 | `home/programs/git.nix` | Git identity (user.name / user.email) |
 | `home/programs/utilities.nix` | CLI utilities |
 | `home/programs/google-chrome.nix` | Google Chrome |
@@ -26,5 +23,5 @@
 ## Conventions
 
 - Managed config files that may already exist on disk → `force = true`
-- Desktop app launchers on GNOME/Wayland → prefer `kgx` (GNOME Console) over `gnome-terminal` (see lessons.md)
 - One program or one dconf domain per file
+- Cinnamon settings are left to the DE GUI for now (no shared dconf modules yet)
