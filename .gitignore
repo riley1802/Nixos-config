@@ -28,3 +28,6 @@
 *.swo
 .vscode/
 .idea/
+
+# GitNexus local index (created by `gitnexus analyze`)
+.gitnexus/

@@ -1,36 +1,33 @@
 # NixOS Config
 
-Personal NixOS flake for all machines (Cinnamon, NVIDIA, local AI).
+Personal NixOS flake for the desktop workstation (Cinnamon, NVIDIA, local AI).
 
 **GitHub is the source of truth:** [`riley1802/Nixos-config`](https://github.com/riley1802/Nixos-config)
-(`main`). Every machine checks out this repo at `/etc/nixos` and stays in sync
-so the desktop and laptop stay seamless. Agent preferences and multi-host
-decisions live in
+(`main`). This machine checks out the repo at `/etc/nixos`. Agent preferences live in
 [`.cursor/skills/edit-nixos/reference/preferences.md`](.cursor/skills/edit-nixos/reference/preferences.md).
 
 System configuration lives under `hosts/` and `modules/`. User configuration
-lives under `home/`.
+lives under `home/`. The `legion` flake output remains but is no longer an
+active day-to-day target.
 
 ## Hosts
 
-One repo, every machine. `nixos-rebuild` finds `/etc/nixos/flake.nix` on its
-own and picks the output matching the machine's hostname, so on any host:
+`nixos-rebuild` finds `/etc/nixos/flake.nix` and picks the output matching the
+hostname:
 
     sudo nixos-rebuild switch
 
-Keep `/etc/nixos` on GitHub `main` before treating a change as done. On the
-other machine: `git pull` then rebuild.
+Keep `/etc/nixos` on GitHub `main` before treating a change as done.
 
-- `nixos` — desktop workstation (Cinnamon + LightDM, dual NVIDIA, Uptime Kuma monitor sync).
-- `legion` — Lenovo Legion 5 Pro laptop (Cinnamon + LightDM, AMD/NVIDIA Optimus).
-  BIOS "GPU Working Mode" must be **Hybrid**: in Discrete mode the panel is
+- `nixos` — desktop workstation (Cinnamon + LightDM, dual NVIDIA, Uptime Kuma monitor sync). **Active host.**
+- `legion` — Lenovo Legion 5 Pro laptop profile (still in the flake; not actively used from this checkout).
+  BIOS "GPU Working Mode" must be **Hybrid** if brought back: in Discrete mode the panel is
   muxed to the NVIDIA card and the PRIME-offload X session boots to a black
   screen.
 
-Both import `hosts/common.nix` (Cinnamon desktop + full shared service stack).
-Per-host differences live in `modules/core/host-facts.nix` options
-(`host.tailnetName`, `host.gpus`, `host.uptimeKumaSync`) set in each
-`hosts/<name>/configuration.nix`.
+Shared system modules live in `hosts/common.nix`. Per-host differences use
+`modules/core/host-facts.nix` options (`host.tailnetName`, `host.gpus`,
+`host.uptimeKumaSync`) set in each `hosts/<name>/configuration.nix`.
 
 ### Bringing up a new host
 
@@ -44,8 +41,9 @@ auto-login, SearXNG, n8n) fails on the new host.
 - `flake.nix` - flake inputs, one `nixosConfigurations` output per host.
 - `hosts/common.nix` - shared system profile imported by every host.
 - `hosts/<name>/` - per-host `configuration.nix` and `hardware-configuration.nix`.
-- `home.nix` - Home Manager entry point (every host).
-- `home/common.nix` - Home Manager modules shared by every host.
+- `home.nix` - Home Manager entry for legion (common only; unused day-to-day).
+- `home/nixos.nix` - Home Manager entry for desktop (common + GitNexus).
+- `home/common.nix` - Home Manager modules shared across entries.
 - `modules/core/` - boot, locale, hostname, NetworkManager, Nix settings, agenix, OpenSSH.
 - `modules/desktop/` - Cinnamon + LightDM, audio.
 - `modules/hardware/` - graphics userspace and NVIDIA driver.
@@ -56,9 +54,25 @@ auto-login, SearXNG, n8n) fails on the new host.
 - `home/` - Home Manager modules: one file per program, dconf domain, or core setting.
 - `.cursor/` - Cursor agent skills and rules (NixOS workflow + [agent-rules-books](https://github.com/ciembor/agent-rules-books)).
 
-User CLI tools include Cursor (`home/programs/cursor.nix`) and Claude Code
-(`home/programs/claude-code.nix`, `pkgsUnstable.claude-code`). After login, run
-`claude` and complete Anthropic auth when prompted.
+User CLI tools include Cursor (`home/programs/cursor.nix`), Claude Code
+(`home/programs/claude-code.nix`, `pkgsUnstable.claude-code`), and on the
+desktop GitNexus (`home/programs/gitnexus.nix` via `numtide/llm-agents.nix`).
+After login, run `claude` and complete Anthropic auth when prompted.
+
+### GitNexus (desktop)
+
+Graph-powered codebase index + visualization:
+
+| Piece | How |
+|-------|-----|
+| CLI | `gitnexus` on PATH (Home Manager package) |
+| Cursor MCP | `~/.cursor/mcp.json` → `gitnexus mcp` (written on HM activation) |
+| Local web backend | user unit `gitnexus-serve` on `http://127.0.0.1:4747` |
+| Web UI | open [gitnexus.vercel.app](https://gitnexus.vercel.app) (auto-detects local backend) |
+| Index a repo | `cd /path/to/repo && gitnexus analyze --index-only` |
+| API check | `curl http://localhost:4747/api/repos` |
+
+`.gitnexus/` is gitignored. Restart Cursor after the first rebuild so MCP picks up the new server. Embeddings are off by default; pass `--embeddings` if you want semantic search.
 
 ## Cursor agent setup
 

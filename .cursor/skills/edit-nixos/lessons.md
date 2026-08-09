@@ -14,6 +14,13 @@ Append entries when a build, rebuild, or runtime error is resolved. Format:
 ---
 
 
+### GitNexus MCP JSON quoting + HM cursor clobber (2026-08-09)
+- **Context:** Adding GitNexus via `numtide/llm-agents.nix` on desktop; HM activation writes `~/.cursor/mcp.json`.
+- **Error:** (1) `mcp.json` written without quotes (`{mcpServers:{...}}`); (2) `home-manager-rileyt.service` failed: Existing file `~/.local/share/icons/default/index.theme` would be clobbered.
+- **Cause:** Embedding `builtins.toJSON` inside `sh -c "…'${json}'…"` — outer double quotes terminate early on JSON `"`. Cursor theme files were leftover plain files from a prior generation.
+- **Fix:** Write MCP JSON with `pkgs.writeText` and `cp`/`jq --slurpfile`. Move conflicting theme files aside; set `home-manager.backupFileExtension = "hm-bak"`.
+- **Avoid:** Nesting JSON with `"` inside double-quoted `sh -c` in HM activation; assume icon theme files are always HM symlinks.
+
 ### pkexec broken in agent shell; Phi llama-bench OOM (2026-07-23)
 - **Context:** llama.cpp TPS tuning on nixos; `pkexec nixos-rebuild switch` and Phi `llama-bench` sweeps.
 - **Error:** `pkexec must be setuid root`; `llama_bench: failed to load model` for Phi-4-reasoning-plus (~9GB) with `cudaMalloc failed: out of memory` on GPU0.

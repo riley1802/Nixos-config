@@ -41,7 +41,10 @@
 | `modules/services/tailscale-serve.nix` | Tailscale Serve HTTPS front doors |
 | `modules/users/rileyt.nix` | User account |
 
-## Home Manager (`home.nix` → `home/common.nix` imports)
+## Home Manager
+
+- Desktop (`nixos`): `home/nixos.nix` → `home/common.nix` + `home/programs/gitnexus.nix`
+- Legion (unused): `home.nix` → `home/common.nix` only
 
 | Path | Module |
 |------|--------|
@@ -55,6 +58,7 @@
 | `home/programs/discord.nix` | Discord |
 | `home/programs/cursor.nix` | Cursor editor and CLI |
 | `home/programs/claude-code.nix` | Claude Code (`pkgsUnstable`) |
+| `home/programs/gitnexus.nix` | GitNexus CLI + Cursor MCP + localhost `:4747` serve (**desktop only**) |
 
 ## Secrets (`secrets/`)
 

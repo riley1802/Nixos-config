@@ -12,11 +12,17 @@ changes a decision. Read this before multi-host, git, or laptop/desktop work.
 | **Pull before rebuild on the other host** | After pushing from one machine, the other must `git pull` (or equivalent) before `nixos-rebuild` so it does not rebuild stale config. |
 | **Ask before push** | Default: ask once before `git push` to `main`. Exception: Riley already directed "push", "commit to GitHub", or "repo is the source of truth" for the current work — then push after a successful commit. |
 
-## Seamless desktop + laptop
+## Active host
 
-Goal: one flake, same service stack and Home Manager commons, host-specific
-only where hardware or desktop environment truly differs. Working on either
-machine should feel like the same system.
+| Rule | Detail |
+|------|--------|
+| **Desktop (`nixos`) is the active machine for this repo** | Laptop (`legion`) is no longer managed from this checkout. Prefer desktop-only deltas when asked; leave `legion` flake output intact unless Riley asks to remove it. |
+
+## Seamless desktop + laptop (historical)
+
+Previous goal: one flake, same service stack and Home Manager commons, host-specific
+only where hardware or desktop environment truly differs. Still true for shared
+modules that remain, but day-to-day work targets **desktop only**.
 
 | Preference | Decision |
 |------------|----------|

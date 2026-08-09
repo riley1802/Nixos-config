@@ -13,6 +13,9 @@
       url = "github:ryantm/agenix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    llm-agents = {
+      url = "github:numtide/llm-agents.nix";
+    };
   };
 
   outputs = { self, nixpkgs, home-manager, agenix, ... }@inputs:
@@ -48,6 +51,7 @@
             ({ ... }: {
               home-manager.useGlobalPkgs = true;
               home-manager.useUserPackages = true;
+              home-manager.backupFileExtension = "hm-bak";
               home-manager.extraSpecialArgs = {
                 inherit inputs;
                 pkgsUnstable = mkPkgsUnstable system;
@@ -64,7 +68,7 @@
       nixosConfigurations.nixos = mkNixos {
         name = "nixos";
         system = "x86_64-linux";
-        homeFile = ./home.nix;
+        homeFile = ./home/nixos.nix;
       };
 
       nixosConfigurations.legion = mkNixos {

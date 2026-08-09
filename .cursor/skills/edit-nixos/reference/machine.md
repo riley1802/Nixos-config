@@ -8,6 +8,7 @@
 - GPUs: RTX 3050 + GTX 1660 Super
 - Repo path: `/etc/nixos`
 - Remote: `git@github.com:riley1802/Nixos-config.git`
+- **Active host** for this repo; Home Manager entry `home/nixos.nix` (includes GitNexus)
 
 ## legion (laptop)
 
@@ -16,6 +17,7 @@
 - Desktop: Cinnamon + LightDM (X11, shared `modules/desktop/cinnamon.nix`)
 - GPUs: AMD Radeon 680M iGPU (PCI 35:00.0) + RTX 3070 Ti dGPU (PCI 01:00.0), PRIME offload (`modules/hardware/nvidia-prime.nix`)
 - **BIOS "GPU Working Mode" must be Hybrid.** Discrete mode muxes the panel to the NVIDIA card, leaving the iGPU with no outputs → black screen under the X11 offload config.
+- Flake output still present; **not actively managed** from this checkout (Riley decision 2026-08-09).
 
 ## Publishing caution
 
