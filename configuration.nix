@@ -1,7 +1,10 @@
 { config, pkgs, ... }:
 
 {
-  imports = [ ./hardware-configuration.nix ];
+  imports = [
+    ./hardware-configuration.nix
+    ./llama-cpp.nix
+  ];
 
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
@@ -47,21 +50,33 @@
   };
 
   programs.dconf.enable = true;
+  programs.kdeconnect.enable = true;
+  programs.steam.enable = true;
+
+  services.tailscale.enable = true;
+  virtualisation.docker.enable = true;
 
   users.users.rileyt = {
     isNormalUser = true;
     description = "riley thomason";
     extraGroups = [
+      "docker"
       "networkmanager"
       "wheel"
     ];
   };
+
+  systemd.tmpfiles.rules = [
+    "d /home/rileyt/.local/share/Steam 0755 rileyt users - -"
+    "d /home/rileyt/.local/share/unsloth 0755 rileyt users - -"
+  ];
 
   environment.systemPackages = with pkgs; [
     code-cursor
     git
     google-chrome
     spotify
+    vscodium
   ];
 
   system.stateVersion = "26.05";
