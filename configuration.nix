@@ -61,6 +61,7 @@
     code-cursor
     git
     google-chrome
+    spotify
   ];
 
   system.stateVersion = "26.05";
