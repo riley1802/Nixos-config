@@ -59,6 +59,7 @@
 
   environment.systemPackages = with pkgs; [
     code-cursor
+    git
     google-chrome
   ];
 
