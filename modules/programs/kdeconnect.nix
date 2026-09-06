@@ -1,5 +1,0 @@
-{ ... }:
-
-{
-  programs.kdeconnect.enable = true;
-}

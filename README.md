@@ -1,3 +1,24 @@
+# Minimal NixOS Desktop
+
+This is the complete configuration for the `nixos` desktop:
+
+- Cinnamon with LightDM
+- NVIDIA graphics
+- NetworkManager and PipeWire
+- Google Chrome
+- Cursor
+
+## Apply
+
+```sh
+nix fmt .
+nix flake check
+nix build .#nixosConfigurations.nixos.config.system.build.toplevel --no-link
+pkexec nixos-rebuild switch --flake /etc/nixos#nixos
+```
+
+The machine-specific disk and hardware settings are in
+`hardware-configuration.nix`.
 # NixOS Config
 
 Personal NixOS flake for the desktop workstation (Cinnamon, NVIDIA, local AI).
@@ -67,7 +88,7 @@ Graph-powered codebase index + visualization:
 |-------|-----|
 | CLI | `gitnexus` on PATH (Home Manager package) |
 | Cursor MCP | `~/.cursor/mcp.json` → `gitnexus mcp` (written on HM activation) |
-| Local web backend | user unit `gitnexus-serve` on `http://127.0.0.1:4747` |
+| Local web backend | user unit `gitnexus-serve` on `http://localhost:4747` |
 | Web UI | open [gitnexus.vercel.app](https://gitnexus.vercel.app) (auto-detects local backend) |
 | Index a repo | `cd /path/to/repo && gitnexus analyze --index-only` |
 | API check | `curl http://localhost:4747/api/repos` |
