@@ -29,6 +29,10 @@ in
       "n8n.service"
       "tailscaled.service"
     ];
+    partOf = [
+      "n8n.service"
+      "tailscaled.service"
+    ];
     wantedBy = [ "multi-user.target" ];
 
     serviceConfig = {
