@@ -4,6 +4,7 @@
   imports = [
     ./hardware-configuration.nix
     ./llama-cpp.nix
+    ./n8n.nix
   ];
 
   boot.loader.systemd-boot.enable = true;
