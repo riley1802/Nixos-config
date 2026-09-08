@@ -2,6 +2,7 @@
 
 {
   imports = [
+    ./flashforge.nix
     ./hardware-configuration.nix
     ./llama-cpp.nix
     ./n8n.nix
@@ -21,6 +22,20 @@
     "flakes"
   ];
   nixpkgs.config.allowUnfree = true;
+  nixpkgs.overlays = [
+    (final: prev: {
+      # 0.0.18 adds the single-buffer export path required by Chromium.
+      nvidia-vaapi-driver = prev.nvidia-vaapi-driver.overrideAttrs (_: rec {
+        version = "0.0.18";
+        src = final.fetchFromGitHub {
+          owner = "elFarto";
+          repo = "nvidia-vaapi-driver";
+          rev = "v${version}";
+          hash = "sha256-cEEPRKoWtNXk8LsDbkhNjnIY7UD1rfYbv2Q6ThG0YLg=";
+        };
+      });
+    })
+  ];
 
   hardware.enableRedistributableFirmware = true;
   hardware.graphics.enable = true;
@@ -29,6 +44,11 @@
     modesetting.enable = true;
     powerManagement.enable = false;
     package = config.boot.kernelPackages.nvidiaPackages.stable;
+  };
+
+  environment.sessionVariables = {
+    LIBVA_DRIVER_NAME = "nvidia";
+    NVD_BACKEND = "direct";
   };
 
   services.xserver = {
@@ -75,7 +95,14 @@
   environment.systemPackages = with pkgs; [
     code-cursor
     git
-    google-chrome
+    (google-chrome.override {
+      commandLineArgs = [
+        "--enable-features=AcceleratedVideoDecodeLinuxGL,VaapiOnNvidiaGPUs"
+        "--ignore-gpu-blocklist"
+        "--use-gl=angle"
+        "--use-angle=gl"
+      ];
+    })
     spotify
     vscodium
   ];
