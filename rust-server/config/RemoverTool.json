@@ -1,0 +1,58 @@
+{
+  "Settings": {
+    "Enable Debug Mode": false,
+    "Use Teams": false,
+    "Use Clans": false,
+    "Use Friends": false,
+    "Use Entity Owners": true,
+    "Use Building Locks": false,
+    "Use Tool Cupboards (Strongly unrecommended)": false,
+    "Remove Interval (Min = 0.2)": 0.2,
+    "Only start cooldown when an entity is removed": false,
+    "RemoveType - Normal - Max Removable Objects - Exclude admins": false,
+    "RemoveType - Normal - Cooldown - Exclude admins": false,
+    "RemoveType - Normal - Entity Spawned Time Limit - Enabled": false
+  },
+  "Container Settings": {
+    "Storage Container - Enable remove of not empty storages": true,
+    "Storage Container - Drop items from container": false,
+    "Storage Container - Drop a item container from container": true,
+    "IOEntity Container - Enable remove of not empty storages": true,
+    "IOEntity Container - Drop items from container": false,
+    "IOEntity Container - Drop a item container from container": true
+  },
+  "Remove Damaged Entities": {
+    "Enabled": true,
+    "Exclude Quarries": false,
+    "Exclude Building Blocks": false,
+    "Percentage (Can be removed when (health / max health * 100) is not less than it)": 0.0
+  },
+  "Permission Settings (Just for normal type)": {
+    "removertool.normal": {
+      "Priority": 0,
+      "Distance": 10.0,
+      "Cooldown": 0.0,
+      "Max Time": 2147483647,
+      "Remove Interval (Min = 0.2)": 0.2,
+      "Max Removable Objects (0 = Unlimited)": 0,
+      "Pay": false,
+      "Refund": true,
+      "Reset the time after removing an entity": false
+    }
+  },
+  "Remove Type Settings": {
+    "Normal": {
+      "Display Name": "Normal",
+      "Distance": 10.0,
+      "Default Time": 2147483647,
+      "Max Time": 2147483647,
+      "Gibs": true,
+      "Reset the time after removing an entity": false
+    }
+  },
+  "Remove Info (Refund & Price)": {
+    "Price Enabled": false,
+    "Refund Enabled": true,
+    "Refund Items In Entity Slot": true
+  }
+}

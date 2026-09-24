@@ -1,0 +1,18 @@
+{
+  "Backpack size": {
+    "Default size": 48,
+    "Max size per page": 48,
+    "Enable legacy backpacks.use.1-8 row permissions": false,
+    "Permission sizes": [48],
+    "Dynamic Size (EXPERIMENTAL)": {
+      "Enabled": false
+    }
+  },
+  "Drop on Death (true/false)": false,
+  "Erase on Death (true/false)": false,
+  "Minimum Despawn Time (Seconds)": 300,
+  "Clear on wipe": {
+    "Enabled": false,
+    "Enable legacy keeponwipe permission": false
+  }
+}

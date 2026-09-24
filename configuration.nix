@@ -4,8 +4,10 @@
   imports = [
     ./flashforge.nix
     ./hardware-configuration.nix
+    ./hermes.nix
     ./llama-cpp.nix
     ./n8n.nix
+    ./rust-server.nix
   ];
 
   boot.loader.systemd-boot.enable = true;
@@ -54,6 +56,9 @@
   services.xserver = {
     enable = true;
     videoDrivers = [ "nvidia" ];
+    screenSection = ''
+      Option "ForceFullCompositionPipeline" "true"
+    '';
     xkb = {
       layout = "us";
       variant = "";
@@ -76,6 +81,10 @@
 
   services.tailscale.enable = true;
   virtualisation.docker.enable = true;
+  services.rust-lan-server = {
+    enable = true;
+    enableCarbon = true;
+  };
 
   users.users.rileyt = {
     isNormalUser = true;
@@ -99,8 +108,6 @@
       commandLineArgs = [
         "--enable-features=AcceleratedVideoDecodeLinuxGL,VaapiOnNvidiaGPUs"
         "--ignore-gpu-blocklist"
-        "--use-gl=angle"
-        "--use-angle=gl"
       ];
     })
     spotify
