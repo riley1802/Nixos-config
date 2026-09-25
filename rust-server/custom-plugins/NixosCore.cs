@@ -9,7 +9,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NixosCore", "NixOS", "1.0.1")]
+    [Info("NixosCore", "NixOS", "1.0.2")]
     [Description("LAN administration, PvE rules, homes, respawn loadout, and player quality of life.")]
     public class NixosCore : RustPlugin
     {
@@ -158,7 +158,10 @@ namespace Oxide.Plugins
             if (attackerId == 0 && victim == null && IsPlayerOwnedEntity(entity))
                 NotifyStructureOwner(entity, info);
 
-            if (victim != null && attackerId != 0 && attackerId != victim.userID)
+            if (victim != null &&
+                !(victim is NPCPlayer) &&
+                attackerId != 0 &&
+                attackerId != victim.userID)
             {
                 info.damageTypes.Clear();
                 return true;
@@ -186,15 +189,20 @@ namespace Oxide.Plugins
         {
             BasePlayer player = info.InitiatorPlayer;
             if (player != null)
-                return player.userID;
+                return player is NPCPlayer ? 0 : player.userID;
 
             BaseEntity source = info.Initiator as BaseEntity;
             if (source == null)
                 return 0;
+            if (source is NPCPlayer)
+                return 0;
+
+            BaseEntity parent = source.GetParentEntity();
+            if (parent is NPCPlayer)
+                return 0;
             if (source.OwnerID != 0)
                 return source.OwnerID;
 
-            BaseEntity parent = source.GetParentEntity();
             return parent != null ? parent.OwnerID : 0;
         }
 
@@ -423,7 +431,7 @@ namespace Oxide.Plugins
 
         private void OnEntityDeath(BasePlayer victim, HitInfo info)
         {
-            if (victim == null)
+            if (victim == null || victim is NPCPlayer)
                 return;
 
             storedData.LatestDeaths[victim.userID] = new SerializableVector3(victim.transform.position);
