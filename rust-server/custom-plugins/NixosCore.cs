@@ -9,7 +9,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NixosCore", "NixOS", "1.0.0")]
+    [Info("NixosCore", "NixOS", "1.0.1")]
     [Description("LAN administration, PvE rules, homes, respawn loadout, and player quality of life.")]
     public class NixosCore : RustPlugin
     {
@@ -591,7 +591,8 @@ namespace Oxide.Plugins
             SendReply(player,
                 "<size=18><color=#ffd479>NixOS LAN PvE</color></size>\n" +
                 "PvE only: player/sleeper damage and unauthorized structure damage are blocked.\n" +
-                "Rates: 100x gathering/general loot, 75x pickups/event loot/recycling, instant craft, 200x cooking.\n" +
+                "Rates: 10,000x core materials, 2,500x components/electrical, and 75-100x other gather/loot.\n" +
+                "Production: instant craft, 200x cooking, 10x cooker output, and 75% less cooker fuel.\n" +
                 "Players: 200 health, boosted regeneration, half radiation, 48-slot persistent backpack.\n" +
                 "Commands: /backpack, /remove, /sethome <name>, /home <name>, /homes, /removehome <name>.\n" +
                 "Homes: 3 per player, instant, no cooldown. Native teams and player teleport are disabled.\n" +

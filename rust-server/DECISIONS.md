@@ -46,11 +46,14 @@ unless marked as a staged gate.
 
 ## Gathering
 
-- Trees, ore nodes, and harvestable corpses: 100x per-hit yield and 100x total
-  capacity, uniformly across materials.
-- Ground pickups and crop harvests: 75x.
+- Wood, stone, metal, sulfur, and HQM (raw or refined): 10,000x from
+  gathering, pickups, automated extraction, and loot.
+- Other tree, ore-node, and harvestable-corpse yields: 100x per hit and 100x
+  total capacity.
+- Other ground pickups and crop harvests: 75x.
 - Crop growth: 10x speed.
-- Quarries, Giant Excavator, Pump Jacks, and Survey Charges: 75x output.
+- Quarries, Giant Excavator, Pump Jacks, and Survey Charges: 10,000x for the
+  listed materials and 75x for other output.
 - Automated extractors: 10x cycle speed with normal fuel consumed per cycle.
 - Fishing rewards: 75x; bite/catch speed: 5x.
 
@@ -62,6 +65,7 @@ unless marked as a staged gate.
 - Unspecified event rewards: 75x.
 - Three times the vanilla item rolls/slots and 3x rare-item weighting.
 - Scrap: 75x. Blueprint drops: disabled. Duplicate item rolls: allowed.
+- Component- and electrical-category loot stacks: 2,500x, excluding scrap.
 - Use vanilla-derived item pools; no blocked or guaranteed items.
 - No additional monument-location multiplier.
 - Respawn all loot sources 5x faster.
@@ -72,7 +76,7 @@ unless marked as a staged gate.
 - Exclude weapons, tools, armor, and other condition/attachment-bearing items.
 - Crafting: instant.
 - Recycling: instant with 75x output yield.
-- Smelting/cooking: 200x speed, 5x output yield, vanilla fuel cost.
+- Smelting/cooking: 200x speed, 10x output yield, and 25% of vanilla fuel cost.
 - Cooker inventories: 3x normal slot count.
 - Auto-split cooker input and calculate/insert fuel.
 - Equipment durability: 10x effective durability (90% less wear).

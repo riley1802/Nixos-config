@@ -6,11 +6,16 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("NixosEconomy", "NixOS", "1.0.0")]
+    [Info("NixosEconomy", "NixOS", "1.1.0")]
     [Description("Gathering, loot, inventory, crafting, cooking, and durability rates.")]
     public class NixosEconomy : RustPlugin
     {
         private const int MaximumStack = 100000000;
+        private const int MaterialMultiplier = 10000;
+        private const int ComponentMultiplier = 2500;
+        private const float CookingSpeedMultiplier = 200f;
+        private const float CookingOutputMultiplier = 10f;
+        private const float FuelCostMultiplier = 0.25f;
         private readonly Dictionary<int, int> originalStackSizes = new Dictionary<int, int>();
         private readonly Dictionary<ItemModCookable, float> originalCookTimes =
             new Dictionary<ItemModCookable, float>();
@@ -101,8 +106,12 @@ namespace Oxide.Plugins
                         originalCookTimes[cookable] = cookable.cookTime;
                         originalCookAmounts[cookable] = cookable.amountOfBecome;
                     }
-                    cookable.cookTime = Math.Max(0.01f, originalCookTimes[cookable] / 200f);
-                    cookable.amountOfBecome = Math.Max(1f, originalCookAmounts[cookable] * 5f);
+                    cookable.cookTime = Math.Max(
+                        0.01f,
+                        originalCookTimes[cookable] / CookingSpeedMultiplier);
+                    cookable.amountOfBecome = Math.Max(
+                        1f,
+                        originalCookAmounts[cookable] * CookingOutputMultiplier);
                 }
 
                 ItemModBurnable burnable = definition.GetComponent<ItemModBurnable>();
@@ -110,7 +119,12 @@ namespace Oxide.Plugins
                 {
                     if (!originalFuelAmounts.ContainsKey(burnable))
                         originalFuelAmounts[burnable] = burnable.fuelAmount;
-                    burnable.fuelAmount = Math.Max(0.01f, originalFuelAmounts[burnable] / 200f);
+                    // Cook time is divided by 200. Dividing fuel duration by 50 keeps
+                    // one fuel item alive for four times as many inputs: 25% vanilla cost.
+                    burnable.fuelAmount = Math.Max(
+                        0.01f,
+                        originalFuelAmounts[burnable] /
+                            (CookingSpeedMultiplier * FuelCostMultiplier));
                 }
             }
         }
@@ -193,13 +207,13 @@ namespace Oxide.Plugins
 
         private void OnDispenserGather(ResourceDispenser dispenser, BasePlayer player, Item item)
         {
-            Multiply(item, 100);
+            Multiply(item, GetGatherMultiplier(item?.info, 100));
             RecordGather(player, item);
         }
 
         private void OnDispenserBonus(ResourceDispenser dispenser, BasePlayer player, Item item)
         {
-            Multiply(item, 100);
+            Multiply(item, GetGatherMultiplier(item?.info, 100));
             RecordGather(player, item);
         }
 
@@ -210,30 +224,30 @@ namespace Oxide.Plugins
 
             foreach (ItemAmount output in collectible.itemList)
             {
-                output.amount *= 75f;
+                output.amount *= GetGatherMultiplier(output.itemDef, 75);
                 RecordGather(player, output.itemDef, Mathf.RoundToInt(output.amount));
             }
         }
 
         private void OnGrowableGathered(GrowableEntity growable, Item item, BasePlayer player)
         {
-            Multiply(item, 75);
+            Multiply(item, GetGatherMultiplier(item?.info, 75));
             RecordGather(player, item);
         }
 
         private void OnQuarryGather(MiningQuarry quarry, Item item)
         {
-            Multiply(item, 75);
+            Multiply(item, GetGatherMultiplier(item?.info, 75));
         }
 
         private void OnExcavatorGather(ExcavatorArm excavator, Item item)
         {
-            Multiply(item, 75);
+            Multiply(item, GetGatherMultiplier(item?.info, 75));
         }
 
         private void OnSurveyGather(SurveyCharge charge, Item item)
         {
-            Multiply(item, 75);
+            Multiply(item, GetGatherMultiplier(item?.info, 75));
         }
 
         private void OnFishCatch(Item fish, BaseFishingRod fishingRod, BasePlayer player)
@@ -539,7 +553,7 @@ namespace Oxide.Plugins
                 }
 
                 if (IsFungible(item.info))
-                    Multiply(item, item.info.shortname == "scrap" ? 75 : quantityMultiplier);
+                    Multiply(item, GetLootMultiplier(item.info, quantityMultiplier));
                 int copyCount = IsRare(item.info) ? 8 : 2;
                 for (int copyIndex = 0; copyIndex < copyCount; copyIndex++)
                 {
@@ -595,7 +609,7 @@ namespace Oxide.Plugins
                     }
 
                     if (IsFungible(item.info))
-                        Multiply(item, 75);
+                        Multiply(item, GetLootMultiplier(item.info, 75));
                     int copyCount = IsRare(item.info) ? 8 : 2;
                     for (int copyIndex = 0; copyIndex < copyCount; copyIndex++)
                     {
@@ -614,6 +628,45 @@ namespace Oxide.Plugins
                 return;
             entity.CancelInvoke("IdleDestroy");
             entity.Invoke("IdleDestroy", item.GetDespawnDuration() * 5f);
+        }
+
+        private int GetGatherMultiplier(ItemDefinition definition, int fallback)
+        {
+            return IsTargetMaterial(definition) ? MaterialMultiplier : fallback;
+        }
+
+        private int GetLootMultiplier(ItemDefinition definition, int fallback)
+        {
+            if (IsTargetMaterial(definition))
+                return MaterialMultiplier;
+            if (definition != null && definition.shortname == "scrap")
+                return 75;
+            if (definition != null &&
+                (definition.category == ItemCategory.Component ||
+                 definition.category == ItemCategory.Electrical))
+                return ComponentMultiplier;
+            return fallback;
+        }
+
+        private bool IsTargetMaterial(ItemDefinition definition)
+        {
+            if (definition == null)
+                return false;
+
+            switch (definition.shortname)
+            {
+                case "wood":
+                case "stones":
+                case "metal.ore":
+                case "metal.fragments":
+                case "sulfur.ore":
+                case "sulfur":
+                case "hq.metal.ore":
+                case "metal.refined":
+                    return true;
+                default:
+                    return false;
+            }
         }
     }
 }
