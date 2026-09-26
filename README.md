@@ -2,8 +2,8 @@
 
 This repository is the complete NixOS configuration for the `nixos`
 workstation. It defines a Cinnamon desktop, dual-NVIDIA graphics, local
-llama.cpp inference, n8n access through Tailscale Serve, and the system
-packages used by the `rileyt` account.
+llama.cpp inference, n8n access through Tailscale Serve, OpenSSH over the
+tailnet, and the system packages used by the `rileyt` account.
 
 ## Repository layout
 
@@ -46,8 +46,11 @@ under `/home/rileyt/.local/share`.
 The NixOS firewall remains enabled. KDE Connect opens its standard TCP and UDP
 ports 1714–1764 for LAN device discovery and pairing. Steam Remote Play,
 dedicated-server, and local-network game-transfer firewall rules are not
-enabled. Tailscale does not automatically open a public firewall port, and
-OpenSSH is not enabled by this configuration.
+enabled. Tailscale does not automatically open a public firewall port.
+OpenSSH accepts TCP port 22 only on the `tailscale0` interface, and only for
+the `rileyt` account, using public keys. Password and root logins are
+disabled. The system SSH client maps `ssh laptop` to
+`riley@rileys-minty.taile9f484.ts.net`.
 
 `system.stateVersion` is `26.05`. Do not change it during a normal NixOS
 upgrade; it controls compatibility defaults for stateful services.
@@ -212,6 +215,59 @@ curl http://127.0.0.1:5678
 
 The hostname identifies the private tailnet endpoint. Do not add plaintext
 credentials, API keys, or access tokens to this repository.
+
+## OpenSSH
+
+OpenSSH is the remote shell for this workstation and the Linux Mint laptop
+`rileys-minty`. Both machines are on the `taile9f484.ts.net` tailnet. SSH is
+not exposed on the LAN or the public internet: `sshd` listens on port 22, and
+the firewall accepts that port only on `tailscale0`.
+
+`services.openssh.openFirewall` stays false because its NixOS default would
+open port 22 on every interface. Password authentication,
+keyboard-interactive authentication, and root login are disabled. The only
+allowed account on this machine is `rileyt`. Login from the laptop uses the
+public key installed in `/home/rileyt/.ssh/authorized_keys`. That file and
+the private keys under `/home/rileyt/.ssh/` are local state; they are not
+stored in this repository.
+
+The system SSH client alias is:
+
+```text
+ssh laptop
+```
+
+It connects to `riley@rileys-minty.taile9f484.ts.net`. The laptop account is
+`riley`, which is a different name from the `rileyt` account on this
+workstation. From the laptop, this machine is:
+
+```text
+ssh rileyt@nixos
+```
+
+`nixos` resolves through Tailscale MagicDNS. The same host is
+`nixos.taile9f484.ts.net`.
+
+The Ed25519 host key at `/etc/ssh/ssh_host_ed25519_key` is also the age key
+used by sops-nix for the Rust server secret. OpenSSH generates a host key
+only when that file is missing, so replacing or deleting the host keys breaks
+secret decryption.
+
+On the laptop, OpenSSH must be installed and the public key from
+`/home/rileyt/.ssh/id_ed25519.pub` must be present in
+`/home/riley/.ssh/authorized_keys`. `apt update` on that machine can fail
+while the Spotify or Cursor apt repositories have missing signing keys. The
+install can continue with `sudo apt update || true` and then
+`sudo apt install -y openssh-server`. If `ufw` is active, allow TCP port 22
+on `tailscale0` only.
+
+Useful checks:
+
+```sh
+systemctl status sshd
+ssh -G laptop
+tailscale status
+```
 
 ## Hardware configuration
 

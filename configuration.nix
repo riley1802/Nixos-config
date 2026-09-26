@@ -80,6 +80,28 @@
   programs.steam.enable = true;
 
   services.tailscale.enable = true;
+
+  # OpenSSH is reachable from the tailnet only. services.openssh.openFirewall
+  # defaults to true and would accept port 22 on every interface.
+  services.openssh = {
+    enable = true;
+    openFirewall = false;
+    settings = {
+      AllowUsers = [ "rileyt" ];
+      KbdInteractiveAuthentication = false;
+      PasswordAuthentication = false;
+      PermitRootLogin = "no";
+    };
+  };
+  networking.firewall.interfaces.tailscale0.allowedTCPPorts = [ 22 ];
+
+  # `ssh laptop` uses the Linux machine already on this tailnet.
+  programs.ssh.extraConfig = ''
+    Host laptop
+      HostName rileys-minty.taile9f484.ts.net
+      User riley
+  '';
+
   virtualisation.docker.enable = true;
   services.rust-lan-server = {
     enable = true;
