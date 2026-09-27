@@ -1,113 +1,98 @@
 { config, pkgs, ... }:
 
 {
-  imports = [
-    ./flashforge.nix
-    ./hardware-configuration.nix
-    ./hermes.nix
-    ./llama-cpp.nix
-    ./n8n.nix
-    ./rust-server.nix
-  ];
+  imports = [ ./hardware-configuration.nix ];
 
-  boot.loader.systemd-boot.enable = true;
-  boot.loader.efi.canTouchEfiVariables = true;
+  # Boot and regional settings
+  boot.loader = {
+    systemd-boot.enable = true;
+    efi.canTouchEfiVariables = true;
+  };
 
-  networking.hostName = "nixos";
-  networking.networkmanager.enable = true;
-
-  time.timeZone = "America/Chicago";
+  time = {
+    timeZone = "America/Chicago";
+  };
   i18n.defaultLocale = "en_US.UTF-8";
 
-  nix.settings.experimental-features = [
-    "nix-command"
-    "flakes"
-  ];
+  # Nix
+  nix.settings.experimental-features = [ "nix-command" "flakes" ];
+
   nixpkgs.config.allowUnfree = true;
-  nixpkgs.overlays = [
-    (final: prev: {
-      # 0.0.18 adds the single-buffer export path required by Chromium.
-      nvidia-vaapi-driver = prev.nvidia-vaapi-driver.overrideAttrs (_: rec {
-        version = "0.0.18";
-        src = final.fetchFromGitHub {
-          owner = "elFarto";
-          repo = "nvidia-vaapi-driver";
-          rev = "v${version}";
-          hash = "sha256-cEEPRKoWtNXk8LsDbkhNjnIY7UD1rfYbv2Q6ThG0YLg=";
-        };
-      });
-    })
-  ];
 
-  hardware.enableRedistributableFirmware = true;
-  hardware.graphics.enable = true;
-  hardware.nvidia = {
-    open = false;
-    modesetting.enable = true;
-    powerManagement.enable = false;
-    package = config.boot.kernelPackages.nvidiaPackages.stable;
-  };
-
-  environment.sessionVariables = {
-    LIBVA_DRIVER_NAME = "nvidia";
-    NVD_BACKEND = "direct";
-  };
-
-  services.xserver = {
-    enable = true;
-    videoDrivers = [ "nvidia" ];
-    screenSection = ''
-      Option "ForceFullCompositionPipeline" "true"
-    '';
-    xkb = {
-      layout = "us";
-      variant = "";
+  # Hardware and desktop
+  hardware = {
+    enableRedistributableFirmware = true;
+    graphics.enable = true;
+    nvidia = {
+      open = false;
+      modesetting.enable = true;
+      powerManagement.enable = false;
+      videoAcceleration = false;
+      package = config.boot.kernelPackages.nvidiaPackages.stable;
     };
-    desktopManager.cinnamon.enable = true;
-    displayManager.lightdm.enable = true;
   };
 
-  services.pulseaudio.enable = false;
+  services = {
+    xserver = {
+      enable = true;
+      videoDrivers = [ "nvidia" ];
+      screenSection = ''
+        Option "ForceFullCompositionPipeline" "true"
+      '';
+      xkb = {
+        layout = "us";
+        variant = "";
+      };
+      desktopManager.cinnamon.enable = true;
+      displayManager.lightdm.enable = true;
+    };
+
+    pulseaudio.enable = false;
+    pipewire = {
+      enable = true;
+      alsa.enable = true;
+      pulse.enable = true;
+    };
+
+    tailscale.enable = true;
+
+    # OpenSSH is reachable from the tailnet only.
+    openssh = {
+      enable = true;
+      openFirewall = false;
+      settings = {
+        AllowUsers = [ "rileyt" ];
+        KbdInteractiveAuthentication = false;
+        PasswordAuthentication = false;
+        PermitRootLogin = "no";
+      };
+    };
+  };
+
   security.rtkit.enable = true;
-  services.pipewire = {
-    enable = true;
-    alsa.enable = true;
-    pulse.enable = true;
+
+  programs = {
+    dconf.enable = true;
+    kdeconnect.enable = true;
+
+    # `ssh laptop` uses the Linux machine already on this tailnet.
+    ssh.extraConfig = ''
+      Host laptop
+        HostName rileys-minty.taile9f484.ts.net
+        User riley
+    '';
   };
 
-  programs.dconf.enable = true;
-  programs.kdeconnect.enable = true;
-  programs.steam.enable = true;
-
-  services.tailscale.enable = true;
-
-  # OpenSSH is reachable from the tailnet only. services.openssh.openFirewall
-  # defaults to true and would accept port 22 on every interface.
-  services.openssh = {
-    enable = true;
-    openFirewall = false;
-    settings = {
-      AllowUsers = [ "rileyt" ];
-      KbdInteractiveAuthentication = false;
-      PasswordAuthentication = false;
-      PermitRootLogin = "no";
-    };
+  # Networking
+  networking = {
+    hostName = "nixos";
+    networkmanager.enable = true;
+    firewall.interfaces.tailscale0.allowedTCPPorts = [ 22 ];
   };
-  networking.firewall.interfaces.tailscale0.allowedTCPPorts = [ 22 ];
-
-  # `ssh laptop` uses the Linux machine already on this tailnet.
-  programs.ssh.extraConfig = ''
-    Host laptop
-      HostName rileys-minty.taile9f484.ts.net
-      User riley
-  '';
 
   virtualisation.docker.enable = true;
-  services.rust-lan-server = {
-    enable = true;
-    enableCarbon = true;
-  };
 
+  # User and packages
   users.users.rileyt = {
     isNormalUser = true;
     description = "riley thomason";
@@ -118,23 +103,14 @@
     ];
   };
 
-  systemd.tmpfiles.rules = [
-    "d /home/rileyt/.local/share/Steam 0755 rileyt users - -"
-    "d /home/rileyt/.local/share/unsloth 0755 rileyt users - -"
-  ];
-
   environment.systemPackages = with pkgs; [
     code-cursor
     git
-    (google-chrome.override {
-      commandLineArgs = [
-        "--enable-features=AcceleratedVideoDecodeLinuxGL,VaapiOnNvidiaGPUs"
-        "--ignore-gpu-blocklist"
-      ];
-    })
+    google-chrome
+    htop
     spotify
-    vscodium
   ];
 
+  # Keep this at the version used for the first installation.
   system.stateVersion = "26.05";
 }
