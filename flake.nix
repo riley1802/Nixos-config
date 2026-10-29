@@ -37,6 +37,8 @@
               in
               {
                 lidarr = prev.callPackage ./lidarr-package.nix { };
+                # nixos-26.05's llama-cpp is build 9190. LFM3 needs v0.8.0.
+                llama-cpp = prev.callPackage ./llama-cpp-package.nix { };
                 uptime-kuma = prev.callPackage ./uptime-kuma-package.nix { };
                 radarr = unstable.radarr;
                 code-cursor = unstable.code-cursor.overrideAttrs (old: rec {

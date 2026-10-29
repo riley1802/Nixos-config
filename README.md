@@ -2,9 +2,9 @@
 
 This repository is the NixOS configuration for the `nixos` workstation. It
 defines a Cinnamon desktop, dual-NVIDIA graphics, OpenSSH over the tailnet,
-Uptime Kuma, and a torrent media stack. qBittorrent and Prowlarr lookups use
-a Private Internet Access WireGuard tunnel. The rest of the desktop stays on
-the home network.
+two llama.cpp servers, Uptime Kuma, and a torrent media stack. qBittorrent
+and Prowlarr lookups use a Private Internet Access WireGuard tunnel. The
+rest of the desktop stays on the home network.
 
 ## Repository layout
 
@@ -17,6 +17,9 @@ the home network.
   current release and includes its admin-only remote-code-execution fix.
 - `uptime-kuma.nix` runs that package. `uptime-kuma-database-permissions.patch`
   keeps a newly created database from being world-readable.
+- `llama-cpp-package.nix` builds llama.cpp 0.8.0 with CUDA. The 26.05 pin
+  is build 9190, which cannot load LFM3. `llama-cpp.nix` runs the two
+  servers and publishes them with Tailscale Serve.
 - `flake.lock` fixes the exact input revisions used by builds.
 - `configuration.nix` contains the desktop, qBittorrent, firewall, user,
   vault disk, and DNS configuration.
@@ -52,13 +55,20 @@ The workstation uses:
   container ports bind to `127.0.0.1` by default, because Docker's own
   iptables rules bypass the NixOS firewall. Use `-p 0.0.0.0:PORT:PORT` only
   for a port that should really be open on the home network.
-- a local DNS proxy on `127.0.0.1:53` that forwards lookups over TLS
+- a local DNS proxy on `127.0.0.1:53` that forwards lookups over TLS.
+  Names under `taile9f484.ts.net` go to MagicDNS at `100.100.100.100`
+  instead, because 1.1.1.1 does not know them. Tailscale's own DNS client
+  stays off so it does not replace this forwarder.
+- a managed Chrome policy that turns Chrome's "secure DNS" off, so Chrome
+  uses that forwarder. With secure DNS left on Cloudflare, Chrome cannot
+  resolve `nixos.taile9f484.ts.net`.
 
 The normal user is `rileyt`, with membership in `wheel`, `networkmanager`,
 `docker`, and `media`. Docker group membership is effectively root-equivalent
 and should only be granted to trusted users.
 
-Cursor, Google Chrome, Git, htop, and Spotify are installed system-wide.
+Cursor, Google Chrome, Git, htop, llama.cpp, and Spotify are installed
+system-wide.
 
 The NixOS firewall stays enabled.
 
@@ -75,6 +85,13 @@ The NixOS firewall stays enabled.
   the firewall is what keeps the home network and the VPN out. This computer
   can still open `http://127.0.0.1:3001` through the trusted loopback
   interface.
+- llama.cpp is reached through Tailscale Serve on TCP 8081 and 8082.
+  Those ports are accepted on `tailscale0`. The llama processes themselves
+  listen on `127.0.0.1` only. Chrome forces HTTPS for every `*.ts.net`
+  name, so plain HTTP on the tailnet hostname times out. Serve presents a
+  Let's Encrypt certificate for `nixos.taile9f484.ts.net` and proxies to
+  the loopback ports. Uptime Kuma still checks `http://127.0.0.1:8081/health`
+  and `http://127.0.0.1:8082/health`.
 - The media web pages and the qBittorrent WebUI accept their ports on
   `tailscale0` only: 5055, 6767, 7878, 8080, 8686, 8989, and 9696. Each app
   has its own login. KDE Connect stays on the home network, and the torrent
@@ -130,6 +147,70 @@ check is still up. The admin account, monitor list, and the saved ntfy
 notification live in `/var/lib/uptime-kuma`. That directory is not in git.
 The dashboard is HTTP inside the Tailscale tunnel, which is already
 encrypted. It is not published on the home LAN.
+
+## llama.cpp
+
+Two `llama-server` processes from llama.cpp 0.8.0 (build 11960). One
+process cannot be GPU-only for one model and CPU-only for the other.
+
+| Model | Where it runs | Context | Browser | API base |
+|---|---|---|---|---|
+| LFM3-Omni-2B Q8_0 | RTX 3050 | 16384 | https://nixos.taile9f484.ts.net:8081/ | https://nixos.taile9f484.ts.net:8081/v1 |
+| LFM3-1.7B Q8_0 | CPU, 12 threads | 8192 | https://nixos.taile9f484.ts.net:8082/ | https://nixos.taile9f484.ts.net:8082/v1 |
+
+On this computer the same pages are `http://127.0.0.1:8081/` and
+`http://127.0.0.1:8082/`. The `/v1` path is the OpenAI-compatible API. A
+browser opened on `/v1` does not show the chat page.
+
+The GGUF files are official Liquid AI Q8_0 weights. They are downloaded to
+`/home/rileyt/llama-models` and copied into `/var/lib/llama-cpp/models`
+when the system activates. The weights are not in git. Omni also loads
+`mmproj-LFM3-Omni-2B-Q8_0.gguf` so image and audio input work. `ffmpeg` is
+on that service's `PATH` for video input.
+
+Omni is pinned to the RTX 3050 by GPU UUID
+`GPU-d80211d0-ecb1-e279-4f4d-34c53d278895`. That card also drives the
+desktop. The GTX 1660 SUPER is left idle. The package builds CUDA for
+compute capabilities 7.5 and 8.6, which covers both cards, and CPU backends
+for runtime dispatch. The 1.7B server sets `CUDA_VISIBLE_DEVICES` empty,
+`--device none`, and `-ngl 0`. A thread sweep at 8, 12, 16, and 20 chose 12
+because that count had the fastest generation. 20 was fastest on a
+512-token prefill.
+
+Omni is a non-reasoning model, so its server starts with `--reasoning off`
+and `--temp 0`. The 1.7B server uses the published sampling of `--temp 0.1`,
+`--top-k 50`, and `--repeat-penalty 1.1`. It keeps a reasoning trace in
+`reasoning_content`, so a very small `max_tokens` can come back with an
+empty answer.
+
+Measured on 2026-10-28 with `llama-bench`, three runs each. llama-bench
+sizes the context to the test. The servers stay at the context lengths in
+the table above.
+
+LFM3-Omni-2B Q8_0 on the RTX 3050:
+
+| Test | Tokens/s |
+|---|---|
+| pp512 | 4082.64 ± 159.09 |
+| pp4096 | 3625.93 ± 52.43 |
+| pp16384 | 3262.16 ± 26.90 |
+| tg128 | 53.12 ± 0.20 |
+| tg512 | 52.53 ± 0.52 |
+
+LFM3-1.7B Q8_0 on the CPU at 12 threads:
+
+| Test | Tokens/s |
+|---|---|
+| pp512 | 246.60 ± 5.24 |
+| pp2048 | 240.25 ± 1.62 |
+| pp8192 | 227.70 ± 1.03 |
+| tg128 | 31.33 ± 0.06 |
+| tg512 | 31.00 ± 0.20 |
+
+`llama-bench` labels the Omni text file `lfm3 1.7B Q8_0` because the text
+tensors are 1.73B parameters. The file's own metadata says
+`general.name = LFM3 Omni 2B`. The vision and audio weights are in the
+mmproj.
 
 ## VPN
 

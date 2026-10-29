@@ -6,6 +6,7 @@
     ./pia-wireguard.nix
     ./media-stack.nix
     ./uptime-kuma.nix
+    ./llama-cpp.nix
   ];
 
   age.secrets."pia-credentials" = {
@@ -239,6 +240,7 @@
     git
     google-chrome
     htop
+    llama-cpp
     spotify
   ];
 
@@ -247,14 +249,31 @@
 
   # Encrypted DNS: a local forwarder on 127.0.0.1 that sends lookups
   # out over TLS (port 853), because plain DNS is blocked for VPN sites.
+  # Tailscale DNS stays off so it does not replace this forwarder. The
+  # tailnet zone is the exception: MagicDNS at 100.100.100.100 answers
+  # nixos.taile9f484.ts.net, which 1.1.1.1 does not know.
+  # https://github.com/AdguardTeam/dnsproxy#usage
   services.dnsproxy = {
     enable = true;
     settings = {
       listen-addrs = [ "127.0.0.1" ];
       listen-ports = [ 53 ];
-      upstream = [ "tls://1.1.1.1" "tls://1.0.0.1" ];
+      upstream = [
+        "[/taile9f484.ts.net/]100.100.100.100:53"
+        "tls://1.1.1.1"
+        "tls://1.0.0.1"
+      ];
     };
   };
   networking.nameservers = [ "127.0.0.1" ];
   networking.networkmanager.dns = "none";
+
+  # Chrome was set to "secure" DNS through Cloudflare only. That never
+  # asks the local forwarder, so tailnet names do not resolve and Chrome
+  # reports that the site cannot be reached. Off means Chrome uses the
+  # system resolver above.
+  # https://chromeenterprise.google/policies/#DnsOverHttpsMode
+  environment.etc."opt/chrome/policies/managed/dns.json".text = builtins.toJSON {
+    DnsOverHttpsMode = "off";
+  };
 }

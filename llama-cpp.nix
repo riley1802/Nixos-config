@@ -1,0 +1,194 @@
+{ lib, pkgs, ... }:
+let
+  models = "/var/lib/llama-cpp/models";
+  # Fastest generation in the 8/12/16/20 sweep was 12 threads
+  # (30.9 t/s). 20 threads won the short prefill and lost generation.
+  cpuThreads = 12;
+  server = "${pkgs.llama-cpp}/bin/llama-server";
+in
+{
+  # llama.cpp v0.8.0 from llama-cpp-package.nix. One process cannot be
+  # GPU-only for Omni and CPU-only for the 1.7B model, so these are two
+  # services.
+  #
+  # Omni is pinned to the RTX 3050 by GPU UUID, so a change in nvidia-smi
+  # order cannot move it onto the 1660 SUPER. The 3050 also drives the
+  # desktop. The 1.7B server is refused every GPU.
+  #
+  # The servers listen on loopback. Chrome forces HTTPS for *.ts.net, so
+  # plain HTTP on the tailnet name times out. Tailscale Serve terminates
+  # TLS on 8081 and 8082 and proxies to these loopback ports. Uptime Kuma
+  # still probes loopback. 8080 is qBittorrent.
+  # https://github.com/ggml-org/llama.cpp/blob/v0.8.0/common/arg.cpp
+
+  users.groups.llama = { };
+  users.users.llama = {
+    isSystemUser = true;
+    group = "llama";
+    home = "/var/lib/llama-cpp";
+    createHome = true;
+  };
+
+  # The weights are downloaded to the home directory first. This runs as
+  # root during nixos-rebuild and copies them into the service directory.
+  system.activationScripts.llama-cpp-models.text = ''
+    install -d -m 0755 /var/lib/llama-cpp/models /var/lib/llama-cpp/cache
+    src=/home/rileyt/llama-models
+    for f in LFM3-1.7B-Q8_0.gguf LFM3-Omni-2B-Q8_0.gguf mmproj-LFM3-Omni-2B-Q8_0.gguf; do
+      if [[ -f $src/$f ]]; then
+        # cmp is diffutils, which is not on the activation PATH.
+        if [[ ! -f /var/lib/llama-cpp/models/$f ]] || ! ${pkgs.diffutils}/bin/cmp -s "$src/$f" "/var/lib/llama-cpp/models/$f"; then
+          cp -a "$src/$f" "/var/lib/llama-cpp/models/$f"
+          chmod 644 "/var/lib/llama-cpp/models/$f"
+        fi
+      fi
+    done
+  '';
+
+  systemd.tmpfiles.settings.llama-cpp = {
+    "/var/lib/llama-cpp/models".d = {
+      mode = "0755";
+      user = "root";
+      group = "root";
+    };
+    "/var/lib/llama-cpp/cache".d = {
+      mode = "0755";
+      user = "llama";
+      group = "llama";
+    };
+  };
+
+  systemd.services.llama-cpp-omni = {
+    description = "llama.cpp server for LFM3-Omni-2B";
+    after = [ "network.target" ];
+    wantedBy = [ "multi-user.target" ];
+    # Video input needs ffmpeg on PATH. Image and audio do not.
+    path = [ pkgs.ffmpeg ];
+    unitConfig.ConditionPathExists = [
+      "${models}/LFM3-Omni-2B-Q8_0.gguf"
+      "${models}/mmproj-LFM3-Omni-2B-Q8_0.gguf"
+    ];
+    environment = {
+      # RTX 3050, from `nvidia-smi -L` on this machine.
+      CUDA_VISIBLE_DEVICES = "GPU-d80211d0-ecb1-e279-4f4d-34c53d278895";
+      LLAMA_CACHE = "/var/lib/llama-cpp/cache";
+    };
+    serviceConfig = {
+      User = "llama";
+      Group = "llama";
+      WorkingDirectory = "/var/lib/llama-cpp";
+      ExecStart = lib.escapeShellArgs [
+        server
+        "--host"
+        "127.0.0.1"
+        "--port"
+        "8081"
+        "-m"
+        "${models}/LFM3-Omni-2B-Q8_0.gguf"
+        "--mmproj"
+        "${models}/mmproj-LFM3-Omni-2B-Q8_0.gguf"
+        "-c"
+        "16384"
+        "-np"
+        "1"
+        "-ngl"
+        "all"
+        "--fit"
+        "off"
+        "--reasoning"
+        "off"
+        "--temp"
+        "0"
+        "--jinja"
+      ];
+      Restart = "on-failure";
+      RestartSec = 5;
+      KillSignal = "SIGINT";
+      # CUDA JIT and the driver need writable executable pages, and the
+      # GPU device nodes are not visible inside a user namespace.
+      MemoryDenyWriteExecute = false;
+      PrivateUsers = false;
+      PrivateDevices = false;
+    };
+  };
+
+  systemd.services."llama-cpp-1.7b" = {
+    description = "llama.cpp server for LFM3-1.7B";
+    after = [ "network.target" ];
+    wantedBy = [ "multi-user.target" ];
+    unitConfig.ConditionPathExists = "${models}/LFM3-1.7B-Q8_0.gguf";
+    environment = {
+      CUDA_VISIBLE_DEVICES = "";
+      LLAMA_CACHE = "/var/lib/llama-cpp/cache";
+    };
+    serviceConfig = {
+      User = "llama";
+      Group = "llama";
+      WorkingDirectory = "/var/lib/llama-cpp";
+      ExecStart = lib.escapeShellArgs [
+        server
+        "--host"
+        "127.0.0.1"
+        "--port"
+        "8082"
+        "-m"
+        "${models}/LFM3-1.7B-Q8_0.gguf"
+        "-c"
+        "8192"
+        "-np"
+        "1"
+        "-ngl"
+        "0"
+        "--device"
+        "none"
+        "--fit"
+        "off"
+        "-t"
+        (toString cpuThreads)
+        "--temp"
+        "0.1"
+        "--top-k"
+        "50"
+        "--repeat-penalty"
+        "1.1"
+        "--jinja"
+      ];
+      Restart = "on-failure";
+      RestartSec = 5;
+      KillSignal = "SIGINT";
+      MemoryDenyWriteExecute = false;
+      PrivateUsers = false;
+      PrivateDevices = true;
+    };
+  };
+
+  # Chrome's HSTS list upgrades http://*.ts.net to HTTPS on the same port.
+  # Without a certificate there, Chrome reports that the site timed out.
+  systemd.services.llama-cpp-tailscale-serve = {
+    description = "Tailscale HTTPS for the llama.cpp servers";
+    after = [
+      "tailscaled.service"
+      "network-online.target"
+      "llama-cpp-omni.service"
+      "llama-cpp-1.7b.service"
+    ];
+    wants = [ "tailscaled.service" "network-online.target" ];
+    wantedBy = [ "multi-user.target" ];
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+      TimeoutStartSec = 120;
+      ExecStart = pkgs.writeShellScript "llama-cpp-tailscale-serve" ''
+        set -euo pipefail
+        ts=${pkgs.tailscale}/bin/tailscale
+        $ts serve --bg --yes --https=8081 http://127.0.0.1:8081
+        $ts serve --bg --yes --https=8082 http://127.0.0.1:8082
+      '';
+    };
+  };
+
+  networking.firewall.interfaces.tailscale0.allowedTCPPorts = [
+    8081 # LFM3-Omni-2B
+    8082 # LFM3-1.7B
+  ];
+}
