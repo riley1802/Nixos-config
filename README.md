@@ -72,6 +72,10 @@ The NixOS firewall stays enabled.
   the firewall is what keeps the home network and the VPN out. This computer
   can still open `http://127.0.0.1:3001` through the trusted loopback
   interface.
+- The media web pages and the qBittorrent WebUI accept their ports on
+  `tailscale0` only: 5055, 6767, 7878, 8080, 8686, 8989, and 9696. Each app
+  has its own login. KDE Connect stays on the home network, and the torrent
+  listen port stays on the VPN.
 - qBittorrent's torrent port is accepted only on the `pia` interface.
 
 The system SSH client maps `ssh laptop` to
@@ -82,21 +86,20 @@ upgrade; it controls compatibility defaults for stateful services.
 
 ## Media stack
 
-Requests happen in a browser on this computer. Playback is also available
-from a phone on the home Wi-Fi and from the tailnet. The other app pages
-stay on this computer.
+Requests and playback work in a browser on this computer. The same pages
+are available on the tailnet. Only Jellyfin is also open on the home Wi-Fi.
 
 | App | Address | Role |
 |---|---|---|
-| Seerr | http://127.0.0.1:5055 | Request a show or movie |
+| Seerr | http://127.0.0.1:5055 or http://nixos.taile9f484.ts.net:5055 | Request a show or movie |
 | Jellyfin | http://192.168.50.101:8096 on Wi-Fi, http://nixos.taile9f484.ts.net:8096 on Tailscale | Watch and listen |
-| Sonarr | http://127.0.0.1:8989 | TV downloads and library |
-| Radarr | http://127.0.0.1:7878 | Movie downloads and library |
-| Prowlarr | http://127.0.0.1:9696 | Indexers for the apps above |
-| Lidarr | http://127.0.0.1:8686 | Music. Add artists here; Seerr does not request music |
-| Bazarr | http://127.0.0.1:6767 | Subtitles, after a language profile is chosen |
-| qBittorrent | http://127.0.0.1:8080 | Torrent client. Sonarr, Radarr, and Lidarr drive it |
-| Uptime Kuma | http://127.0.0.1:3001 on this PC, http://nixos.taile9f484.ts.net:3001 on Tailscale | Whether the apps above, Pi-hole, and the tailnet path to the Pi are up |
+| Sonarr | http://127.0.0.1:8989 or http://nixos.taile9f484.ts.net:8989 | TV downloads and library |
+| Radarr | http://127.0.0.1:7878 or http://nixos.taile9f484.ts.net:7878 | Movie downloads and library |
+| Prowlarr | http://127.0.0.1:9696 or http://nixos.taile9f484.ts.net:9696 | Indexers for the apps above |
+| Lidarr | http://127.0.0.1:8686 or http://nixos.taile9f484.ts.net:8686 | Music. Add artists here; Seerr does not request music |
+| Bazarr | http://127.0.0.1:6767 or http://nixos.taile9f484.ts.net:6767 | Subtitles, after a language profile is chosen |
+| qBittorrent | http://127.0.0.1:8080 or http://nixos.taile9f484.ts.net:8080 | Torrent client. Sonarr, Radarr, and Lidarr drive it |
+| Uptime Kuma | http://127.0.0.1:3001 or http://nixos.taile9f484.ts.net:3001 | Whether the apps above, Pi-hole, and the tailnet path to the Pi are up |
 
 A request in Seerr goes to Sonarr or Radarr. That app asks Prowlarr for a
 torrent. Prowlarr's search leaves through the VPN. The grab goes to
@@ -134,7 +137,9 @@ the tunnel address uses that table. The desktop default route stays on
 `enp132s0`.
 
 Prowlarr lookups are marked and sent through the same table. Traffic to
-`127.0.0.1` is not marked, so Sonarr, Radarr, and Lidarr stay on localhost.
+`127.0.0.1` and to the Tailscale range `100.64.0.0/10` is not marked, so
+the local apps and a browser on the tailnet can still reach Prowlarr.
+Sonarr, Radarr, and Lidarr are not marked.
 The forwarded-port keepalive runs every 15 minutes. The listen port in
 `configuration.nix` has to match the port PIA assigned.
 

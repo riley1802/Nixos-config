@@ -187,7 +187,18 @@ let
     while iptables -t mangle -D OUTPUT -m cgroup --path ${prowlarrCgroupPath} ! -d 127.0.0.0/8 -j MARK --set-mark 0x7072 2>/dev/null; do
       true
     done
-    iptables -t mangle -A OUTPUT -m cgroup --path ${prowlarrCgroupPath} ! -d 127.0.0.0/8 -j MARK --set-mark 0x7072
+    while iptables -t mangle -D OUTPUT -m cgroup --path ${prowlarrCgroupPath} -j PROWLARR-VPN 2>/dev/null; do
+      true
+    done
+    iptables -t mangle -N PROWLARR-VPN 2>/dev/null || true
+    iptables -t mangle -F PROWLARR-VPN
+    # Localhost and the tailnet stay on the normal route. A reply to a
+    # Tailscale browser has to go back over the tailnet; everything else
+    # Prowlarr sends is a lookup and goes through the VPN.
+    iptables -t mangle -A PROWLARR-VPN -d 127.0.0.0/8 -j RETURN
+    iptables -t mangle -A PROWLARR-VPN -d 100.64.0.0/10 -j RETURN
+    iptables -t mangle -A PROWLARR-VPN -j MARK --set-mark 0x7072
+    iptables -t mangle -A OUTPUT -m cgroup --path ${prowlarrCgroupPath} -j PROWLARR-VPN
     iptables -t nat -C POSTROUTING -o pia -m mark --mark 0x7072 -j MASQUERADE 2>/dev/null || \
       iptables -t nat -A POSTROUTING -o pia -m mark --mark 0x7072 -j MASQUERADE
     ip rule show | grep -q 'fwmark 0x7072 lookup 51820' || ip rule add fwmark 0x7072 lookup 51820 priority 110
@@ -196,7 +207,13 @@ let
   prowlarrVpnRouteStop = pkgs.writeShellScript "prowlarr-vpn-route-stop" ''
     set -euo pipefail
     export PATH=${lib.makeBinPath [ pkgs.iproute2 pkgs.iptables ]}:$PATH
+    iptables -t mangle -D OUTPUT -m cgroup --path ${prowlarrCgroupPath} ! -d 127.0.0.0/8 -p tcp -j MARK --set-mark 0x7072 2>/dev/null || true
     iptables -t mangle -D OUTPUT -m cgroup --path ${prowlarrCgroupPath} ! -d 127.0.0.0/8 -j MARK --set-mark 0x7072 2>/dev/null || true
+    while iptables -t mangle -D OUTPUT -m cgroup --path ${prowlarrCgroupPath} -j PROWLARR-VPN 2>/dev/null; do
+      true
+    done
+    iptables -t mangle -F PROWLARR-VPN 2>/dev/null || true
+    iptables -t mangle -X PROWLARR-VPN 2>/dev/null || true
     iptables -t nat -D POSTROUTING -o pia -m mark --mark 0x7072 -j MASQUERADE 2>/dev/null || true
     iptables -t nat -D POSTROUTING -m cgroup --path ${prowlarrCgroupPath} -o pia -j MASQUERADE 2>/dev/null || true
     ip rule del fwmark 0x7072 lookup 51820 priority 110 2>/dev/null || true

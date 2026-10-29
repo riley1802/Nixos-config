@@ -142,6 +142,7 @@
         interfaces = {
           tailscale0.allowedTCPPorts = [
             22
+            8080 # qBittorrent WebUI
             8096
           ];
           enp132s0 = {

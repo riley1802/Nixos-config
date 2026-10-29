@@ -1,7 +1,10 @@
 { lib, ... }:
 let
-  localOnly = {
-    server.bindaddress = "127.0.0.1";
+  # Servarr uses "*" for every interface. The firewall below opens the
+  # web ports on tailscale0 only.
+  # https://wiki.servarr.com/sonarr/settings#bind-address
+  tailnet = {
+    server.bindaddress = "*";
   };
   mediaGroup = {
     group = "media";
@@ -13,22 +16,22 @@ in
     prowlarr = {
       enable = true;
       openFirewall = false;
-      settings = localOnly;
+      settings = tailnet;
     };
     sonarr = mediaGroup // {
       enable = true;
       openFirewall = false;
-      settings = localOnly;
+      settings = tailnet;
     };
     radarr = mediaGroup // {
       enable = true;
       openFirewall = false;
-      settings = localOnly;
+      settings = tailnet;
     };
     lidarr = mediaGroup // {
       enable = true;
       openFirewall = false;
-      settings = localOnly;
+      settings = tailnet;
     };
     bazarr = mediaGroup // {
       enable = true;
@@ -56,4 +59,14 @@ in
   systemd.services.lidarr.serviceConfig.UMask = "0002";
   systemd.services.bazarr.serviceConfig.UMask = "0002";
   systemd.services.jellyfin.serviceConfig.UMask = lib.mkForce "0002";
+
+  # Web UIs only. The torrent port stays on the VPN interface.
+  networking.firewall.interfaces.tailscale0.allowedTCPPorts = [
+    5055 # Seerr
+    6767 # Bazarr
+    7878 # Radarr
+    8686 # Lidarr
+    8989 # Sonarr
+    9696 # Prowlarr
+  ];
 }
