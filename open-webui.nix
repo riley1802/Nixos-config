@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+{ ... }:
 {
   # Open WebUI 0.11.1 from the nixos-26.05 module. Chat front end for the
   # llama.cpp servers in llama-cpp.nix. Those stay on 8081 and 8082, and
@@ -7,6 +7,7 @@
   # The module default port is 8080, which is qBittorrent. This listens on
   # loopback. Chrome's HSTS list upgrades http://*.ts.net to HTTPS on the
   # same port, so Tailscale Serve terminates TLS on 8088 and proxies here.
+  # tailscale-serve.nix installs that route.
   # https://github.com/NixOS/nixpkgs/blob/6713828a351efa628b025a1adf7f43cbf8597513/nixos/modules/services/misc/open-webui.nix
   # https://docs.openwebui.com/reference/env-configuration
   services.open-webui = {
@@ -39,24 +40,10 @@
     };
   };
 
-  systemd.services.open-webui-tailscale-serve = {
-    description = "Tailscale HTTPS for Open WebUI";
-    after = [
-      "tailscaled.service"
-      "network-online.target"
-      "open-webui.service"
-    ];
-    wants = [ "tailscaled.service" "network-online.target" ];
-    wantedBy = [ "multi-user.target" ];
-    serviceConfig = {
-      Type = "oneshot";
-      RemainAfterExit = true;
-      TimeoutStartSec = 120;
-      ExecStart = pkgs.writeShellScript "open-webui-tailscale-serve" ''
-        set -euo pipefail
-        ${pkgs.tailscale}/bin/tailscale serve --bg --yes --https=8088 http://127.0.0.1:8088
-      '';
-    };
+  # Start again if the process dies while the machine is coming up.
+  systemd.services.open-webui.serviceConfig = {
+    Restart = "on-failure";
+    RestartSec = "5s";
   };
 
   networking.firewall.interfaces.tailscale0.allowedTCPPorts = [

@@ -1,10 +1,10 @@
-{ pkgs, ... }:
+{ ... }:
 {
   # n8n 2.34.6 from the nixos-26.05 module. The editor listens on loopback.
   # Chrome's HSTS list upgrades http://*.ts.net to HTTPS on the same port,
-  # so Tailscale Serve terminates TLS on 5678 and proxies here. 5678 is
-  # free: 8080 is qBittorrent, 8081 and 8082 are llama.cpp, and 8088 is
-  # Open WebUI.
+  # so Tailscale Serve terminates TLS on 5678 and proxies here.
+  # tailscale-serve.nix installs that route. 5678 is free: 8080 is
+  # qBittorrent, 8081 and 8082 are llama.cpp, and 8088 is Open WebUI.
   #
   # The owner account, workflows, SQLite database, and the generated
   # encryption key live in /var/lib/n8n. That directory is not in git.
@@ -55,26 +55,6 @@
   systemd.services.n8n = {
     after = [ "llama-cpp-1.7b.service" ];
     wants = [ "llama-cpp-1.7b.service" ];
-  };
-
-  systemd.services.n8n-tailscale-serve = {
-    description = "Tailscale HTTPS for n8n";
-    after = [
-      "tailscaled.service"
-      "network-online.target"
-      "n8n.service"
-    ];
-    wants = [ "tailscaled.service" "network-online.target" ];
-    wantedBy = [ "multi-user.target" ];
-    serviceConfig = {
-      Type = "oneshot";
-      RemainAfterExit = true;
-      TimeoutStartSec = 120;
-      ExecStart = pkgs.writeShellScript "n8n-tailscale-serve" ''
-        set -euo pipefail
-        ${pkgs.tailscale}/bin/tailscale serve --bg --yes --https=5678 http://127.0.0.1:5678
-      '';
-    };
   };
 
   networking.firewall.interfaces.tailscale0.allowedTCPPorts = [

@@ -18,8 +18,9 @@ in
   #
   # The servers listen on loopback. Chrome forces HTTPS for *.ts.net, so
   # plain HTTP on the tailnet name times out. Tailscale Serve terminates
-  # TLS on 8081 and 8082 and proxies to these loopback ports. Uptime Kuma
-  # still probes loopback. 8080 is qBittorrent.
+  # TLS on 8081 and 8082 and proxies to these loopback ports.
+  # tailscale-serve.nix installs those routes. Uptime Kuma still probes
+  # loopback. 8080 is qBittorrent.
   # https://github.com/ggml-org/llama.cpp/blob/v0.8.0/common/arg.cpp
 
   users.groups.llama = { };
@@ -129,6 +130,9 @@ in
     after = [ "network.target" ];
     wantedBy = [ "multi-user.target" ];
     unitConfig.ConditionPathExists = "${models}/LFM3-1.7B-Q8_0.gguf";
+    # The NVIDIA nodes show up when the module loads. systemd does not
+    # track them as device units, so wait on the files. A start before
+    # they exist fails, then Restart brings the server back.
     environment = {
       # RTX 3050, from `nvidia-smi -L` on this machine.
       CUDA_VISIBLE_DEVICES = "GPU-d80211d0-ecb1-e279-4f4d-34c53d278895";
@@ -138,6 +142,15 @@ in
       User = "llama";
       Group = "llama";
       WorkingDirectory = "/var/lib/llama-cpp";
+      ExecStartPre = pkgs.writeShellScript "llama-wait-nvidia" ''
+        set -euo pipefail
+        for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30; do
+          [[ -e /dev/nvidia0 && -e /dev/nvidiactl ]] && exit 0
+          ${pkgs.coreutils}/bin/sleep 1
+        done
+        echo "NVIDIA device nodes are not present" >&2
+        exit 1
+      '';
       ExecStart = lib.escapeShellArgs [
         server
         "--host"
@@ -178,31 +191,6 @@ in
       MemoryDenyWriteExecute = false;
       PrivateUsers = false;
       PrivateDevices = false;
-    };
-  };
-
-  # Chrome's HSTS list upgrades http://*.ts.net to HTTPS on the same port.
-  # Without a certificate there, Chrome reports that the site timed out.
-  systemd.services.llama-cpp-tailscale-serve = {
-    description = "Tailscale HTTPS for the llama.cpp servers";
-    after = [
-      "tailscaled.service"
-      "network-online.target"
-      "llama-cpp-omni.service"
-      "llama-cpp-1.7b.service"
-    ];
-    wants = [ "tailscaled.service" "network-online.target" ];
-    wantedBy = [ "multi-user.target" ];
-    serviceConfig = {
-      Type = "oneshot";
-      RemainAfterExit = true;
-      TimeoutStartSec = 120;
-      ExecStart = pkgs.writeShellScript "llama-cpp-tailscale-serve" ''
-        set -euo pipefail
-        ts=${pkgs.tailscale}/bin/tailscale
-        $ts serve --bg --yes --https=8081 http://127.0.0.1:8081
-        $ts serve --bg --yes --https=8082 http://127.0.0.1:8082
-      '';
     };
   };
 

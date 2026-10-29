@@ -1,11 +1,12 @@
-{ config, pkgs, ... }:
+{ config, ... }:
 {
   # ntfy 2.26.0 from the nixos-26.05 module. The phone, Uptime Kuma, n8n,
   # and the arr apps all publish or subscribe here. The process listens on
   # loopback. Chrome's HSTS list upgrades http://*.ts.net to HTTPS, and the
   # iOS app requires the public URL to be HTTPS, so Tailscale Serve
-  # terminates TLS on 2586 and proxies here. 2586 is the module default and
-  # is free: 5678 is n8n and 3001 is Uptime Kuma.
+  # terminates TLS on 2586 and proxies here. tailscale-serve.nix installs
+  # that route. 2586 is the module default and is free: 5678 is n8n and
+  # 3001 is Uptime Kuma.
   #
   # Anonymous clients are denied. Signup stays off. The phone user and the
   # publisher user are provisioned from an age secret so the bcrypt hashes
@@ -59,27 +60,12 @@
     };
   };
 
-  # Secrets are installed at sysinit. ntfy reads the auth file as it starts.
-  systemd.services.ntfy-sh.after = [ "agenix-install-secrets.service" ];
-
-  systemd.services.ntfy-tailscale-serve = {
-    description = "Tailscale HTTPS for ntfy";
-    after = [
-      "tailscaled.service"
-      "network-online.target"
-      "ntfy-sh.service"
-    ];
-    wants = [ "tailscaled.service" "network-online.target" ];
-    wantedBy = [ "multi-user.target" ];
-    serviceConfig = {
-      Type = "oneshot";
-      RemainAfterExit = true;
-      TimeoutStartSec = 120;
-      ExecStart = pkgs.writeShellScript "ntfy-tailscale-serve" ''
-        set -euo pipefail
-        ${pkgs.tailscale}/bin/tailscale serve --bg --yes --https=2586 http://127.0.0.1:2586
-      '';
-    };
+  # Secrets are decrypted by activation before systemd starts services.
+  # /run is empty after a shutdown; the next boot fills it again.
+  # Start again if the process dies while the machine is coming up.
+  systemd.services.ntfy-sh.serviceConfig = {
+    Restart = "on-failure";
+    RestartSec = "5s";
   };
 
   networking.firewall.interfaces.tailscale0.allowedTCPPorts = [

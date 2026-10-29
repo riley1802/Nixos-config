@@ -10,6 +10,7 @@
     ./open-webui.nix
     ./n8n.nix
     ./ntfy.nix
+    ./tailscale-serve.nix
   ];
 
   age.secrets."pia-credentials" = {
@@ -201,9 +202,66 @@
       "allow_other"
       "big_writes"
       "silent"
+      # USB hard disk. After a shutdown it has to spin up and enumerate.
+      # nofail still lets the desktop boot if the cable is unplugged.
+      # The timeout is a maximum, not a delay: once the disk is there,
+      # the mount proceeds. 15s was short enough that a cold start
+      # skipped the mount, and every media service bound to it stayed down.
       "nofail"
-      "x-systemd.device-timeout=15s"
+      "x-systemd.device-timeout=2min"
+      "x-systemd.mount-timeout=3min"
     ];
+  };
+
+  # This Seagate enclosure autosuspends. A sleeping disk misses the boot
+  # mount and can stall the unmount during shutdown.
+  # https://docs.kernel.org/driver-api/usb/power-management.html
+  services.udev.extraRules = ''
+    ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="0bc2", ATTR{idProduct}=="ab08", TEST=="power/control", ATTR{power/control}="on"
+  '';
+
+  # local-fs already waits up to the device timeout above. If the disk
+  # appears after that, start the mount and the services that bind to it.
+  # The timer stops once that succeeds, and it gives up after a few tries.
+  systemd.services.media-stack-boot = {
+    description = "Start media services once the game drive is mounted";
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+      TimeoutStartSec = "5min";
+      ExecStart = pkgs.writeShellScript "media-stack-boot" ''
+        set -euo pipefail
+        export PATH=${pkgs.lib.makeBinPath [ pkgs.systemd pkgs.coreutils ]}:$PATH
+        attempts=/run/media-stack-boot.attempts
+        n=0
+        if [[ -f $attempts ]]; then
+          n=$(cat "$attempts")
+        fi
+        n=$((n + 1))
+        printf '%s\n' "$n" > "$attempts"
+        if (( n > 6 )); then
+          echo "game drive is still not mounted; media services stay down" >&2
+          systemctl stop media-stack-boot.timer
+          exit 1
+        fi
+        systemctl start "$(systemd-escape -p --suffix=mount /mnt/game-drive)"
+        systemctl start vault-media.service media-directories.service
+        for s in qbittorrent sonarr radarr lidarr bazarr jellyfin; do
+          if systemctl is-enabled --quiet "$s.service" && ! systemctl is-active --quiet "$s.service"; then
+            systemctl start "$s.service"
+          fi
+        done
+      '';
+    };
+  };
+  systemd.timers.media-stack-boot = {
+    description = "Retry media services until the game drive is mounted";
+    wantedBy = [ "timers.target" ];
+    timerConfig = {
+      OnBootSec = "30s";
+      OnUnitInactiveSec = "30s";
+      AccuracySec = "5s";
+    };
   };
 
   # bindfs publishes only the media directory to the media group.
@@ -349,6 +407,21 @@
   };
   networking.nameservers = [ "127.0.0.1" ];
   networking.networkmanager.dns = "none";
+  # This process is the resolver. The module orders it after
+  # nss-lookup.target, which is the target other services wait on.
+  # Unbound starts before that target instead. NetworkManager's online
+  # check also needs a resolver, and it runs before network-online.
+  systemd.services.dnsproxy = {
+    after = pkgs.lib.mkForce [ "network.target" ];
+    before = [
+      "nss-lookup.target"
+      "NetworkManager-wait-online.service"
+    ];
+    wantedBy = [
+      "nss-lookup.target"
+      "network-online.target"
+    ];
+  };
 
   # Chrome was set to "secure" DNS through Cloudflare only. That never
   # asks the local forwarder, so tailnet names do not resolve and Chrome

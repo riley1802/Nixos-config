@@ -204,10 +204,17 @@ let
 
   prowlarrVpnRoute = pkgs.writeShellScript "prowlarr-vpn-route" ''
     set -euo pipefail
-    export PATH=${lib.makeBinPath [ pkgs.iproute2 pkgs.iptables ]}:$PATH
+    export PATH=${lib.makeBinPath [ pkgs.coreutils pkgs.iproute2 pkgs.iptables ]}:$PATH
     cgroup=/sys/fs/cgroup/${prowlarrCgroupPath}
+    # Exiting 0 here used to mark the unit successful with no rules, so
+    # Prowlarr lookups left through the home connection after a boot race.
+    for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
+      [[ -d $cgroup ]] && break
+      sleep 0.5
+    done
     if [[ ! -d $cgroup ]]; then
-      exit 0
+      echo "prowlarr cgroup $cgroup is not ready" >&2
+      exit 1
     fi
     while iptables -t mangle -D OUTPUT -m cgroup --path ${prowlarrCgroupPath} ! -d 127.0.0.0/8 -p tcp -j MARK --set-mark 0x7072 2>/dev/null; do
       true
@@ -285,10 +292,25 @@ in
   # own HTTP requests (RSS, .torrent URLs), which do not use that binding.
   # after pia-client-refresh: that oneshot restarts this service when pia
   # already existed, then this start records the new interface index.
+  # RestrictNetworkInterfaces resolves names once, at start. tailscale0
+  # has to exist by then or the WebUI is unreachable on the tailnet until
+  # the process is restarted.
   systemd.services.qbittorrent = {
-    wants = [ "pia-wireguard.service" ];
-    after = [ "pia-wireguard.service" "pia-client-refresh.service" ];
-    serviceConfig.RestrictNetworkInterfaces = [ "lo" "pia" "tailscale0" ];
+    wants = [
+      "pia-wireguard.service"
+      "sys-subsystem-net-devices-tailscale0.device"
+    ];
+    after = [
+      "pia-wireguard.service"
+      "pia-client-refresh.service"
+      "tailscaled.service"
+      "sys-subsystem-net-devices-tailscale0.device"
+    ];
+    serviceConfig = {
+      RestrictNetworkInterfaces = [ "lo" "pia" "tailscale0" ];
+      Restart = "on-failure";
+      RestartSec = "5s";
+    };
   };
 
   systemd.services.prowlarr-vpn-route = {
@@ -296,9 +318,13 @@ in
     after = [ "prowlarr.service" "pia-wireguard.service" "firewall.service" ];
     wants = [ "pia-wireguard.service" ];
     partOf = [ "prowlarr.service" ];
+    startLimitIntervalSec = 60;
+    startLimitBurst = 10;
     serviceConfig = {
       Type = "oneshot";
       RemainAfterExit = true;
+      Restart = "on-failure";
+      RestartSec = "2s";
       ExecStart = prowlarrVpnRoute;
       ExecStop = prowlarrVpnRouteStop;
     };
@@ -314,8 +340,17 @@ in
   # this unit waits until the tunnel service has created the interface.
   # pia-client-refresh restarts the process when that interface is replaced.
   systemd.services.prowlarr = {
-    wants = [ "prowlarr-vpn-route.service" "pia-wireguard.service" ];
-    after = [ "pia-wireguard.service" "pia-client-refresh.service" ];
+    wants = [
+      "prowlarr-vpn-route.service"
+      "pia-wireguard.service"
+      "sys-subsystem-net-devices-tailscale0.device"
+    ];
+    after = [
+      "pia-wireguard.service"
+      "pia-client-refresh.service"
+      "tailscaled.service"
+      "sys-subsystem-net-devices-tailscale0.device"
+    ];
     before = [ "prowlarr-vpn-route.service" ];
     serviceConfig.RestrictNetworkInterfaces = [ "lo" "pia" "tailscale0" ];
   };
@@ -323,9 +358,12 @@ in
   systemd.services.pia-port-forward = {
     description = "Refresh the PIA forwarded-port binding";
     after = [ "pia-wireguard.service" ];
+    requires = [ "pia-wireguard.service" ];
     serviceConfig = {
       Type = "oneshot";
-      TimeoutStartSec = 60;
+      # Includes waiting for the tunnel, which retries for a few minutes
+      # when the network is late.
+      TimeoutStartSec = 180;
       ExecStart = refreshPort;
     };
   };

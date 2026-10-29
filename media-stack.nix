@@ -59,6 +59,10 @@ in
   systemd.services.lidarr.serviceConfig.UMask = "0002";
   systemd.services.bazarr.serviceConfig.UMask = "0002";
   systemd.services.jellyfin.serviceConfig.UMask = lib.mkForce "0002";
+  # The module's TimeoutSec=15 also covers shutdown. The library is on
+  # the USB disk. Killing Jellyfin at 15 seconds leaves its database
+  # half written, and the next boot opens a broken library.
+  systemd.services.jellyfin.serviceConfig.TimeoutStopSec = "2min";
 
   # Web UIs only. The torrent port stays on the VPN interface.
   networking.firewall.interfaces.tailscale0.allowedTCPPorts = [
