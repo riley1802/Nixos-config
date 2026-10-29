@@ -1,0 +1,60 @@
+{ lib
+, stdenv
+, fetchFromGitHub
+, buildNpmPackage
+, nodejs
+, nixosTests
+}:
+
+# nixos-26.05 packages 2.5.3. nixos-unstable packages 2.5.7.
+# 2.5.8 is the current release and is not in nixpkgs yet. It includes
+# the admin-only remote code execution fix from the 2.5.8 release notes:
+# https://github.com/louislam/uptime-kuma/releases/tag/2.5.8
+buildNpmPackage (finalAttrs: {
+  pname = "uptime-kuma";
+  version = "2.5.8";
+
+  src = fetchFromGitHub {
+    owner = "louislam";
+    repo = "uptime-kuma";
+    tag = finalAttrs.version;
+    hash = "sha256-9Sq35o1ecsNR28ooZb2m2phFT5CXe930FK6JLb4eMkc=";
+  };
+
+  npmDepsHash = "sha256-aF5HXuPyIn1HZ7gWiJV1ABfJNkTnNqfE5rdG5Dccq/o=";
+
+  patches = [
+    # The packaged service runs as a dynamic user. A newly copied
+    # database must not be left world-readable.
+    # https://github.com/louislam/uptime-kuma/pull/2119
+    ./uptime-kuma-database-permissions.patch
+  ];
+
+  postInstall = ''
+    cp -r dist $out/lib/node_modules/uptime-kuma/
+
+    # remove references to nodejs source
+    rm -r $out/lib/node_modules/uptime-kuma/node_modules/@louislam/sqlite3/build-tmp-napi-v*
+  '';
+
+  postFixup = ''
+    makeWrapper ${nodejs}/bin/node $out/bin/uptime-kuma-server \
+      --add-flags $out/lib/node_modules/uptime-kuma/server/server.js \
+      --chdir $out/lib/node_modules/uptime-kuma
+  '';
+
+  passthru.tests.uptime-kuma = nixosTests.uptime-kuma;
+
+  meta = {
+    description = "Fancy self-hosted monitoring tool";
+    mainProgram = "uptime-kuma-server";
+    homepage = "https://github.com/louislam/uptime-kuma";
+    changelog = "https://github.com/louislam/uptime-kuma/releases/tag/${finalAttrs.version}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [
+      julienmalka
+      felixsinger
+    ];
+    broken = stdenv.hostPlatform.isDarwin;
+  };
+})

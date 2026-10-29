@@ -5,6 +5,7 @@
     ./hardware-configuration.nix
     ./pia-wireguard.nix
     ./media-stack.nix
+    ./uptime-kuma.nix
   ];
 
   age.secrets."pia-credentials" = {
@@ -91,6 +92,16 @@
         DefaultSavePath = "/vault/media/downloads";
         TempPathEnabled = true;
         TempPath = "/vault/media/downloads/incomplete";
+        # A torrent under 1 MB/s does not use up a download slot, so a
+        # nearly stopped album cannot keep every movie waiting.
+        QueueingSystemEnabled = true;
+        MaxActiveDownloads = 8;
+        MaxActiveUploads = 4;
+        MaxActiveTorrents = 16;
+        IgnoreSlowTorrentsForQueueing = true;
+        SlowTorrentsDownloadRate = 1024;
+        SlowTorrentsUploadRate = 10;
+        SlowTorrentsInactivityTimer = 60;
       };
     };
   };

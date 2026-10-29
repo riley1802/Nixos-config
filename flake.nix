@@ -26,6 +26,7 @@
 
           # Cursor and Radarr come from unstable. Lidarr's current release is
           # not packaged yet, so use the official build in lidarr-package.nix.
+          # Uptime Kuma 2.5.8 is newer than both nixpkgs pins.
           nixpkgs.overlays = [
             (final: prev:
               let
@@ -36,6 +37,7 @@
               in
               {
                 lidarr = prev.callPackage ./lidarr-package.nix { };
+                uptime-kuma = prev.callPackage ./uptime-kuma-package.nix { };
                 radarr = unstable.radarr;
                 code-cursor = unstable.code-cursor.overrideAttrs (old: rec {
                   version = "3.27.22";

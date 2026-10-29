@@ -2,9 +2,9 @@
 
 This repository is the NixOS configuration for the `nixos` workstation. It
 defines a Cinnamon desktop, dual-NVIDIA graphics, OpenSSH over the tailnet,
-and a torrent media stack. qBittorrent and Prowlarr lookups use a Private
-Internet Access WireGuard tunnel. The rest of the desktop stays on the home
-network.
+Uptime Kuma, and a torrent media stack. qBittorrent and Prowlarr lookups use
+a Private Internet Access WireGuard tunnel. The rest of the desktop stays on
+the home network.
 
 ## Repository layout
 
@@ -12,7 +12,11 @@ network.
   `nixosConfigurations.nixos` system. Cursor and Radarr come from
   `nixpkgs-unstable` because 26.05 lags behind. Lidarr 3.1.6.5079 is the
   official release in `lidarr-package.nix`, because nixpkgs does not have it
-  yet.
+  yet. Uptime Kuma 2.5.8 is built by `uptime-kuma-package.nix` for the same
+  reason: 26.05 has 2.5.3 and the unstable pin has 2.5.7. 2.5.8 is the
+  current release and includes its admin-only remote-code-execution fix.
+- `uptime-kuma.nix` runs that package. `uptime-kuma-database-permissions.patch`
+  keeps a newly created database from being world-readable.
 - `flake.lock` fixes the exact input revisions used by builds.
 - `configuration.nix` contains the desktop, qBittorrent, firewall, user,
   vault disk, and DNS configuration.
@@ -63,6 +67,11 @@ The NixOS firewall stays enabled.
 - Jellyfin accepts TCP port 8096 on `enp132s0` and `tailscale0`, so a phone
   on the home Wi-Fi or any device on the tailnet can play video and music.
   That port is not accepted on the VPN interface.
+- Uptime Kuma accepts TCP port 3001 on `tailscale0` only. The process listens
+  on every address so both IPv4 and IPv6 tailnet clients can connect, and
+  the firewall is what keeps the home network and the VPN out. This computer
+  can still open `http://127.0.0.1:3001` through the trusted loopback
+  interface.
 - qBittorrent's torrent port is accepted only on the `pia` interface.
 
 The system SSH client maps `ssh laptop` to
@@ -87,6 +96,7 @@ stay on this computer.
 | Lidarr | http://127.0.0.1:8686 | Music. Add artists here; Seerr does not request music |
 | Bazarr | http://127.0.0.1:6767 | Subtitles, after a language profile is chosen |
 | qBittorrent | http://127.0.0.1:8080 | Torrent client. Sonarr, Radarr, and Lidarr drive it |
+| Uptime Kuma | http://127.0.0.1:3001 on this PC, http://nixos.taile9f484.ts.net:3001 on Tailscale | Whether the apps above, Pi-hole, and the tailnet path to the Pi are up |
 
 A request in Seerr goes to Sonarr or Radarr. That app asks Prowlarr for a
 torrent. Prowlarr's search leaves through the VPN. The grab goes to
@@ -106,6 +116,14 @@ config directory and qBittorrent's config directory are mode `0700` so other
 local accounts cannot read API keys or the WebUI password hash. PIA
 credentials stay in the age file. Do not commit plaintext passwords, API
 keys, or WireGuard private keys.
+
+Uptime Kuma checks those apps every 60 seconds, plus Pi-hole on the home
+network and the same Pi-hole page over its tailnet address. The second
+check fails when Tailscale cannot reach the Pi even if the home-network
+check is still up. The admin account, monitor list, and the saved ntfy
+notification live in `/var/lib/uptime-kuma`. That directory is not in git.
+The dashboard is HTTP inside the Tailscale tunnel, which is already
+encrypted. It is not published on the home LAN.
 
 ## VPN
 
