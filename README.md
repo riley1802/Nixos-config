@@ -2,8 +2,8 @@
 
 This repository is the NixOS configuration for the `nixos` workstation. It
 defines a Cinnamon desktop, dual-NVIDIA graphics, OpenSSH over the tailnet,
-two llama.cpp servers, Uptime Kuma, and a torrent media stack. qBittorrent
-and Prowlarr lookups use a Private Internet Access WireGuard tunnel. The
+two llama.cpp servers, n8n, ntfy, Uptime Kuma, and a torrent media stack.
+qBittorrent and Prowlarr lookups use a Private Internet Access WireGuard tunnel. The
 rest of the desktop stays on the home network.
 
 ## Repository layout
@@ -20,6 +20,13 @@ rest of the desktop stays on the home network.
 - `llama-cpp-package.nix` builds llama.cpp 0.8.0 with CUDA. The 26.05 pin
   is build 9190, which cannot load LFM3. `llama-cpp.nix` runs the two
   servers and publishes them with Tailscale Serve.
+- `n8n.nix` runs n8n 2.34.6 from the nixos-26.05 module and publishes it
+  with Tailscale Serve. The owner account and workflows stay in
+  `/var/lib/n8n`.
+- `ntfy.nix` runs ntfy 2.26.0 from the nixos-26.05 module and publishes it
+  with Tailscale Serve. The phone password and the publisher token are
+  age secrets. `secrets/ntfy-auth.age` is what the server reads.
+  `secrets/ntfy-passwords.age` is the copy for the phone app.
 - `flake.lock` fixes the exact input revisions used by builds.
 - `configuration.nix` contains the desktop, qBittorrent, firewall, user,
   vault disk, and DNS configuration.
@@ -32,7 +39,9 @@ rest of the desktop stays on the home network.
   should not be edited manually.
 - `secrets/secrets.nix` lists the age recipients. `secrets/pia-credentials.age`
   is the encrypted PIA username and password. The decrypted file is
-  `/run/agenix/pia-credentials` and is not in git.
+  `/run/agenix/pia-credentials` and is not in git. `secrets/ntfy-auth.age`
+  and `secrets/ntfy-passwords.age` are the ntfy credentials. Decrypted
+  copies are `/run/agenix/ntfy-auth` and `/run/agenix/ntfy-passwords`.
 - `pia/ca.rsa.4096.crt` and `pia/pia-servers.json` are public PIA material
   used to reach a server by IP when the VPN hostnames are filtered.
 
@@ -92,6 +101,15 @@ The NixOS firewall stays enabled.
   Let's Encrypt certificate for `nixos.taile9f484.ts.net` and proxies to
   the loopback ports. Uptime Kuma still checks `http://127.0.0.1:8081/health`
   and `http://127.0.0.1:8082/health`.
+- n8n accepts TCP port 5678 on `tailscale0` only. The process listens on
+  `127.0.0.1`. Tailscale Serve presents HTTPS for
+  `nixos.taile9f484.ts.net:5678` and proxies to that port. This computer
+  can still open `http://127.0.0.1:5678`.
+- ntfy accepts TCP port 2586 on `tailscale0` only. The process listens on
+  `127.0.0.1`. Tailscale Serve presents HTTPS for
+  `nixos.taile9f484.ts.net:2586` and proxies to that port. This computer
+  can still open `http://127.0.0.1:2586`. The home network and the VPN
+  cannot.
 - The media web pages and the qBittorrent WebUI accept their ports on
   `tailscale0` only: 5055, 6767, 7878, 8080, 8686, 8989, and 9696. Each app
   has its own login. KDE Connect stays on the home network, and the torrent
@@ -143,8 +161,10 @@ keys, or WireGuard private keys.
 Uptime Kuma checks those apps every 60 seconds, plus Pi-hole on the home
 network and the same Pi-hole page over its tailnet address. The second
 check fails when Tailscale cannot reach the Pi even if the home-network
-check is still up. The admin account, monitor list, and the saved ntfy
+check is still up. The admin account, monitor list, and the ntfy
 notification live in `/var/lib/uptime-kuma`. That directory is not in git.
+The notification posts to this computer's ntfy topic `uptime` and is
+attached to every monitor.
 The dashboard is HTTP inside the Tailscale tunnel, which is already
 encrypted. It is not published on the home LAN.
 
@@ -153,10 +173,10 @@ encrypted. It is not published on the home LAN.
 Two `llama-server` processes from llama.cpp 0.8.0 (build 11960). One
 process cannot be GPU-only for one model and CPU-only for the other.
 
-| Model | Where it runs | Context | Browser | API base |
-|---|---|---|---|---|
-| LFM3-Omni-2B Q8_0 | RTX 3050 | 16384 | https://nixos.taile9f484.ts.net:8081/ | https://nixos.taile9f484.ts.net:8081/v1 |
-| LFM3-1.7B Q8_0 | CPU, 12 threads | 8192 | https://nixos.taile9f484.ts.net:8082/ | https://nixos.taile9f484.ts.net:8082/v1 |
+| Model | Where it runs | Context | KV cache | Browser | API base |
+|---|---|---|---|---|---|
+| LFM3-Omni-2B Q8_0 | CPU, 12 threads | 6144 | q8_0 | https://nixos.taile9f484.ts.net:8081/ | https://nixos.taile9f484.ts.net:8081/v1 |
+| LFM3-1.7B Q8_0 | RTX 3050 | 32768 | q8_0 | https://nixos.taile9f484.ts.net:8082/ | https://nixos.taile9f484.ts.net:8082/v1 |
 
 On this computer the same pages are `http://127.0.0.1:8081/` and
 `http://127.0.0.1:8082/`. The `/v1` path is the OpenAI-compatible API. A
@@ -168,14 +188,15 @@ when the system activates. The weights are not in git. Omni also loads
 `mmproj-LFM3-Omni-2B-Q8_0.gguf` so image and audio input work. `ffmpeg` is
 on that service's `PATH` for video input.
 
-Omni is pinned to the RTX 3050 by GPU UUID
+The 1.7B server is pinned to the RTX 3050 by GPU UUID
 `GPU-d80211d0-ecb1-e279-4f4d-34c53d278895`. That card also drives the
 desktop. The GTX 1660 SUPER is left idle. The package builds CUDA for
 compute capabilities 7.5 and 8.6, which covers both cards, and CPU backends
-for runtime dispatch. The 1.7B server sets `CUDA_VISIBLE_DEVICES` empty,
-`--device none`, and `-ngl 0`. A thread sweep at 8, 12, 16, and 20 chose 12
-because that count had the fastest generation. 20 was fastest on a
-512-token prefill.
+for runtime dispatch. Omni sets `CUDA_VISIBLE_DEVICES` empty, `--device
+none`, `--mmproj-device none`, and `-ngl 0`. A thread sweep at 8, 12, 16,
+and 20 chose 12 because that count had the fastest generation. 20 was
+fastest on a 512-token prefill. Both servers set `--cache-type-k q8_0`,
+`--cache-type-v q8_0`, and `--flash-attn on`.
 
 Omni is a non-reasoning model, so its server starts with `--reasoning off`
 and `--temp 0`. The 1.7B server uses the published sampling of `--temp 0.1`,
@@ -183,9 +204,9 @@ and `--temp 0`. The 1.7B server uses the published sampling of `--temp 0.1`,
 `reasoning_content`, so a very small `max_tokens` can come back with an
 empty answer.
 
-Measured on 2026-10-28 with `llama-bench`, three runs each. llama-bench
-sizes the context to the test. The servers stay at the context lengths in
-the table above.
+Measured on 2026-10-28 with `llama-bench`, three runs each, before the
+servers moved. Those runs used an f16 KV cache, with Omni on the RTX 3050
+and the 1.7B model on the CPU. llama-bench sizes the context to the test.
 
 LFM3-Omni-2B Q8_0 on the RTX 3050:
 
@@ -211,6 +232,96 @@ LFM3-1.7B Q8_0 on the CPU at 12 threads:
 tensors are 1.73B parameters. The file's own metadata says
 `general.name = LFM3 Omni 2B`. The vision and audio weights are in the
 mmproj.
+
+## n8n
+
+n8n 2.34.6 is the workflow editor. On this computer it is
+`http://127.0.0.1:5678`. On the tailnet it is
+`https://nixos.taile9f484.ts.net:5678`. The first visit creates the owner
+account. That account, the workflows, the SQLite database, and the
+encryption key live in `/var/lib/n8n` and are not in git.
+
+LFM3-1.7B is the model n8n calls. The request stays on this computer at
+`http://127.0.0.1:8082/v1`. It does not go out through Tailscale. Omni is
+not connected. After the owner account exists, add one OpenAI credential:
+
+- API key: `local` (`llama-server` ignores it)
+- Base URL: `http://127.0.0.1:8082/v1`
+- Organization ID: empty
+
+On an OpenAI node or an OpenAI Chat Model node, the model id is
+`lfm3-1.7b`. Leave "Use Responses API" off. The 1.7B server has one slot
+and is shared with Open WebUI, so a workflow waits if a chat is already
+generating.
+
+Uptime Kuma checks `http://127.0.0.1:5678/healthz` every 60 seconds, the
+same way it checks the other apps. That monitor lives in
+`/var/lib/uptime-kuma`, not in this repository.
+
+A workflow sends a phone notification with an HTTP Request node. n8n does
+not send one on its own.
+
+- Method: `POST`
+- URL: `http://127.0.0.1:2586/n8n`
+- Authentication: Generic credential type, Header Auth. Name
+  `Authorization`, value `Bearer` and the publisher token from
+  `pkexec cat /run/agenix/ntfy-passwords`
+- Body: the message text
+
+`Title` and `Priority` can be extra headers. `Priority: high` is 4 and
+`urgent` is 5. The phone is subscribed to the topic `n8n`.
+
+## ntfy
+
+ntfy is the push server for the phone. On this computer the web app is
+`http://127.0.0.1:2586`. On the tailnet it is
+`https://nixos.taile9f484.ts.net:2586`. The phone has to be on the same
+tailnet. Install Tailscale on the phone and log in before subscribing.
+
+Anonymous publish and subscribe are denied, and signup is off. Two users
+are created at startup. The plaintext is not in git. Read it with:
+
+```sh
+pkexec cat /run/agenix/ntfy-passwords
+```
+
+| Who | User | Can |
+|---|---|---|
+| Phone | `rileyt` | Read and publish every topic |
+| Sonarr, Radarr, Lidarr, Uptime Kuma, n8n | `apps` | Publish only, using the token |
+
+| Topic | Who publishes | When |
+|---|---|---|
+| `movies` | Radarr | A movie file is imported |
+| `shows` | Sonarr | An episode file is imported |
+| `music` | Lidarr | A release is imported |
+| `uptime` | Uptime Kuma | A monitor changes state |
+| `n8n` | an n8n workflow | The workflow posts a message |
+
+A grab, which is the moment a torrent is added, does not notify. An
+upgrade to a better copy does not notify either. Those switches are in
+each app under Settings, Connect, on the ntfy connection. The connections
+are stored in each app's database, not in this repository.
+
+Messages are kept for 24 hours, including across a reboot, so a phone that
+was off overnight still receives them.
+
+On the phone:
+
+1. Install the ntfy app.
+2. Set the default server to `https://nixos.taile9f484.ts.net:2586` with
+   no trailing slash. The iOS app only wakes for a server URL that matches
+   this exactly.
+3. Log in as `rileyt` with the phone password from the file above.
+4. Subscribe to `movies`, `shows`, `music`, `uptime`, and `n8n`.
+
+Android keeps its own connection to this server. Turn off battery
+optimization for ntfy, or the phone will stop showing notifications after
+it sleeps. iOS cannot keep that connection. This server asks `ntfy.sh` to
+wake the phone. The wake-up text is `New message` and does not include the
+movie, show, or song title. The phone then downloads the real message from
+this computer. If the phone is not on the tailnet, the lock screen stays
+on `New message`.
 
 ## VPN
 

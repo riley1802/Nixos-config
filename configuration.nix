@@ -7,6 +7,9 @@
     ./media-stack.nix
     ./uptime-kuma.nix
     ./llama-cpp.nix
+    ./open-webui.nix
+    ./n8n.nix
+    ./ntfy.nix
   ];
 
   age.secrets."pia-credentials" = {
@@ -168,10 +171,101 @@
   };
 
   # The disk labeled "vault". Existing backups stay where they are.
+  # The arr files live on the 4 TB game drive. /vault/media is only the
+  # view the apps already use, so their saved paths do not change.
   fileSystems."/vault" = {
     device = "/dev/disk/by-uuid/f279aaed-ae58-47e8-9629-d6654c68a0e9";
     fsType = "ext4";
   };
+
+  # NTFS, so the existing "old stuff" directory is not rewritten or
+  # repartitioned. The kernel ntfs3 driver left that directory open to
+  # other users. ntfs-3g with a uid and dmask shows the whole volume
+  # as rileyt-only, and silent ignores chmod on a filesystem that has
+  # one mode for every file.
+  # https://wiki.nixos.org/wiki/NTFS
+  # https://man.archlinux.org/man/ntfs-3g.8.en
+  boot.supportedFilesystems = [ "ntfs" ];
+  fileSystems."/mnt/game-drive" = {
+    device = "/dev/disk/by-uuid/1882D08A82D06DAE";
+    fsType = "ntfs-3g";
+    noCheck = true;
+    options = [
+      "nosuid"
+      "nodev"
+      "uid=1000" # rileyt
+      "gid=100"
+      "dmask=077"
+      "fmask=177"
+      "no_def_opts"
+      "allow_other"
+      "big_writes"
+      "silent"
+      "nofail"
+      "x-systemd.device-timeout=15s"
+    ];
+  };
+
+  # bindfs publishes only the media directory to the media group.
+  # "old stuff" stays on the NTFS mount, outside this view.
+  # Setgid bits do not work on FUSE, so new files are forced into the
+  # media group here instead.
+  # https://bindfs.org/docs/bindfs.1.html
+  systemd.services.vault-media = {
+    description = "Media group view of the game drive";
+    # The hyphen in /mnt/game-drive is escaped in the systemd unit name.
+    wants = [ "mnt-game\\x2ddrive.mount" ];
+    after = [ "mnt-game\\x2ddrive.mount" "vault.mount" ];
+    bindsTo = [ "mnt-game\\x2ddrive.mount" "vault.mount" ];
+    serviceConfig = {
+      Type = "simple";
+      ExecStartPre = "${pkgs.coreutils}/bin/mkdir -p /vault/media";
+      ExecStart = "${pkgs.bindfs}/bin/bindfs -f -o mirror-only=@media,perms=u=rwX:g=rwX:o=,create-for-user=rileyt,create-for-group=media,create-with-perms=u=rwX:g=rwX:o=,chown-ignore,chgrp-ignore,chmod-ignore,multithreaded /mnt/game-drive/media /vault/media";
+      Restart = "on-failure";
+      RestartSec = "3s";
+    };
+    unitConfig = {
+      StartLimitIntervalSec = "60";
+      StartLimitBurst = "5";
+    };
+  };
+  systemd.services.media-directories = {
+    description = "Create the shared media directories";
+    wants = [ "vault-media.service" ];
+    after = [ "vault-media.service" ];
+    bindsTo = [ "vault-media.service" ];
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+    };
+    script = ''
+      install -d -m 0775 -o root -g media \
+        /vault/media/downloads \
+        /vault/media/downloads/incomplete \
+        /vault/media/library \
+        /vault/media/library/tv \
+        /vault/media/library/movies \
+        /vault/media/library/music
+    '';
+  };
+  systemd.services.qbittorrent.wants = [ "media-directories.service" ];
+  systemd.services.qbittorrent.after = [ "media-directories.service" ];
+  systemd.services.qbittorrent.bindsTo = [ "media-directories.service" ];
+  systemd.services.sonarr.wants = [ "media-directories.service" ];
+  systemd.services.sonarr.after = [ "media-directories.service" ];
+  systemd.services.sonarr.bindsTo = [ "media-directories.service" ];
+  systemd.services.radarr.wants = [ "media-directories.service" ];
+  systemd.services.radarr.after = [ "media-directories.service" ];
+  systemd.services.radarr.bindsTo = [ "media-directories.service" ];
+  systemd.services.lidarr.wants = [ "media-directories.service" ];
+  systemd.services.lidarr.after = [ "media-directories.service" ];
+  systemd.services.lidarr.bindsTo = [ "media-directories.service" ];
+  systemd.services.jellyfin.wants = [ "media-directories.service" ];
+  systemd.services.jellyfin.after = [ "media-directories.service" ];
+  systemd.services.jellyfin.bindsTo = [ "media-directories.service" ];
+  systemd.services.bazarr.wants = [ "media-directories.service" ];
+  systemd.services.bazarr.after = [ "media-directories.service" ];
+  systemd.services.bazarr.bindsTo = [ "media-directories.service" ];
 
   users.groups.media = { };
   users.users.qbittorrent.extraGroups = [ "media" ];
@@ -202,26 +296,14 @@
       fi
     '')
   ];
-  systemd.tmpfiles.settings.media =
-    let
-      mediaDirectory = {
-        mode = "2775";
-        user = "root";
-        group = "media";
-      };
-    in
-    pkgs.lib.genAttrs [
-      "/vault/media"
-      "/vault/media/downloads"
-      "/vault/media/downloads/incomplete"
-      "/vault/media/library"
-      "/vault/media/library/tv"
-      "/vault/media/library/movies"
-      "/vault/media/library/music"
-    ]
-      (_path: {
-        "d" = mediaDirectory;
-      });
+  # Only the mountpoint, and not group-writable. The real directories are
+  # created after bindfs is up. Creating them here would put them on the
+  # vault disk and bindfs would refuse to cover a non-empty directory.
+  systemd.tmpfiles.settings.media."/vault/media"."d" = {
+    mode = "0755";
+    user = "root";
+    group = "root";
+  };
 
   # User and packages
   users.users.rileyt = {

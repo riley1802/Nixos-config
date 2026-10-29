@@ -8,12 +8,13 @@ let
 in
 {
   # llama.cpp v0.8.0 from llama-cpp-package.nix. One process cannot be
-  # GPU-only for Omni and CPU-only for the 1.7B model, so these are two
+  # GPU-only for one model and CPU-only for the other, so these are two
   # services.
   #
-  # Omni is pinned to the RTX 3050 by GPU UUID, so a change in nvidia-smi
-  # order cannot move it onto the 1660 SUPER. The 3050 also drives the
-  # desktop. The 1.7B server is refused every GPU.
+  # The 1.7B server is pinned to the RTX 3050 by GPU UUID, so a change in
+  # nvidia-smi order cannot move it onto the 1660 SUPER. The 3050 also
+  # drives the desktop. Omni is refused every GPU. Both servers use Q8_0
+  # weights and a q8_0 KV cache. Quantized KV needs flash attention.
   #
   # The servers listen on loopback. Chrome forces HTTPS for *.ts.net, so
   # plain HTTP on the tailnet name times out. Tailscale Serve terminates
@@ -69,8 +70,7 @@ in
       "${models}/mmproj-LFM3-Omni-2B-Q8_0.gguf"
     ];
     environment = {
-      # RTX 3050, from `nvidia-smi -L` on this machine.
-      CUDA_VISIBLE_DEVICES = "GPU-d80211d0-ecb1-e279-4f4d-34c53d278895";
+      CUDA_VISIBLE_DEVICES = "";
       LLAMA_CACHE = "/var/lib/llama-cpp/cache";
     };
     serviceConfig = {
@@ -85,16 +85,30 @@ in
         "8081"
         "-m"
         "${models}/LFM3-Omni-2B-Q8_0.gguf"
+        "--alias"
+        "lfm3-omni"
         "--mmproj"
         "${models}/mmproj-LFM3-Omni-2B-Q8_0.gguf"
+        "--mmproj-device"
+        "none"
         "-c"
-        "16384"
+        "6144"
         "-np"
         "1"
         "-ngl"
-        "all"
+        "0"
+        "--device"
+        "none"
         "--fit"
         "off"
+        "-t"
+        (toString cpuThreads)
+        "--cache-type-k"
+        "q8_0"
+        "--cache-type-v"
+        "q8_0"
+        "--flash-attn"
+        "on"
         "--reasoning"
         "off"
         "--temp"
@@ -104,11 +118,9 @@ in
       Restart = "on-failure";
       RestartSec = 5;
       KillSignal = "SIGINT";
-      # CUDA JIT and the driver need writable executable pages, and the
-      # GPU device nodes are not visible inside a user namespace.
       MemoryDenyWriteExecute = false;
       PrivateUsers = false;
-      PrivateDevices = false;
+      PrivateDevices = true;
     };
   };
 
@@ -118,7 +130,8 @@ in
     wantedBy = [ "multi-user.target" ];
     unitConfig.ConditionPathExists = "${models}/LFM3-1.7B-Q8_0.gguf";
     environment = {
-      CUDA_VISIBLE_DEVICES = "";
+      # RTX 3050, from `nvidia-smi -L` on this machine.
+      CUDA_VISIBLE_DEVICES = "GPU-d80211d0-ecb1-e279-4f4d-34c53d278895";
       LLAMA_CACHE = "/var/lib/llama-cpp/cache";
     };
     serviceConfig = {
@@ -133,18 +146,22 @@ in
         "8082"
         "-m"
         "${models}/LFM3-1.7B-Q8_0.gguf"
+        "--alias"
+        "lfm3-1.7b"
         "-c"
-        "8192"
+        "32768"
         "-np"
         "1"
         "-ngl"
-        "0"
-        "--device"
-        "none"
+        "all"
         "--fit"
         "off"
-        "-t"
-        (toString cpuThreads)
+        "--cache-type-k"
+        "q8_0"
+        "--cache-type-v"
+        "q8_0"
+        "--flash-attn"
+        "on"
         "--temp"
         "0.1"
         "--top-k"
@@ -156,9 +173,11 @@ in
       Restart = "on-failure";
       RestartSec = 5;
       KillSignal = "SIGINT";
+      # CUDA JIT and the driver need writable executable pages, and the
+      # GPU device nodes are not visible inside a user namespace.
       MemoryDenyWriteExecute = false;
       PrivateUsers = false;
-      PrivateDevices = true;
+      PrivateDevices = false;
     };
   };
 
