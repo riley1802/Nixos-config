@@ -124,6 +124,16 @@ let
     test "$vpn_loc" = CA
   '';
 
+  # pia is destroyed and created again on every tunnel start, so its index
+  # changes. RestrictNetworkInterfaces saved the old index. Restart clients
+  # that are already up; on boot they are not up yet, and --no-block returns
+  # before they start so this service does not wait on them.
+  refreshClients = pkgs.writeShellScript "pia-client-refresh" ''
+    set -euo pipefail
+    export PATH=${lib.makeBinPath [ pkgs.systemd ]}:$PATH
+    systemctl try-restart --no-block prowlarr.service qbittorrent.service
+  '';
+
   disconnect = pkgs.writeShellScript "pia-wireguard-disconnect" ''
     set -euo pipefail
     export PATH=${tools}:$PATH
@@ -245,8 +255,9 @@ in
   systemd.services.pia-wireguard = {
     description = "PIA WireGuard tunnel for qBittorrent";
     wantedBy = [ "multi-user.target" ];
-    wants = [ "network-online.target" ];
+    wants = [ "network-online.target" "pia-client-refresh.service" ];
     after = [ "network-online.target" ];
+    before = [ "pia-client-refresh.service" ];
     startLimitIntervalSec = 300;
     startLimitBurst = 5;
     serviceConfig = {
@@ -260,11 +271,23 @@ in
     };
   };
 
+  systemd.services.pia-client-refresh = {
+    description = "Restart VPN clients after the pia interface is created";
+    after = [ "pia-wireguard.service" ];
+    requires = [ "pia-wireguard.service" ];
+    serviceConfig = {
+      Type = "oneshot";
+      ExecStart = refreshClients;
+    };
+  };
+
   # Interface = pia binds the torrent traffic. This also covers qBittorrent's
   # own HTTP requests (RSS, .torrent URLs), which do not use that binding.
+  # after pia-client-refresh: that oneshot restarts this service when pia
+  # already existed, then this start records the new interface index.
   systemd.services.qbittorrent = {
     wants = [ "pia-wireguard.service" ];
-    after = [ "pia-wireguard.service" ];
+    after = [ "pia-wireguard.service" "pia-client-refresh.service" ];
     serviceConfig.RestrictNetworkInterfaces = [ "lo" "pia" "tailscale0" ];
   };
 
@@ -286,8 +309,13 @@ in
   # interface instead (tunnel down, startup before the mark, IPv6) is
   # dropped. Loopback reaches the other apps and DNS; tailscale0 serves the
   # web pages to the tailnet.
+  # RestrictNetworkInterfaces resolves interface names once, at start. If pia
+  # does not exist yet, systemd omits it for the life of the process, so
+  # this unit waits until the tunnel service has created the interface.
+  # pia-client-refresh restarts the process when that interface is replaced.
   systemd.services.prowlarr = {
-    wants = [ "prowlarr-vpn-route.service" ];
+    wants = [ "prowlarr-vpn-route.service" "pia-wireguard.service" ];
+    after = [ "pia-wireguard.service" "pia-client-refresh.service" ];
     before = [ "prowlarr-vpn-route.service" ];
     serviceConfig.RestrictNetworkInterfaces = [ "lo" "pia" "tailscale0" ];
   };
