@@ -19,12 +19,24 @@ let
     pkgs.wireguard-tools
   ];
 
+  # Secrets reach curl on stdin (`curl -K -`), never on its command line,
+  # where every local account could read them with ps.
+  curlConfig = ''
+    curl_config() {
+      local value=$2
+      value=''${value//\\/\\\\}
+      value=''${value//\"/\\\"}
+      printf '%s = "%s"\n' "$1" "$value"
+    }
+  '';
+
   # The tunnel only captures traffic sourced from the tunnel address.
   # Desktop traffic keeps the normal route.
   connect = pkgs.writeShellScript "pia-wireguard-connect" ''
     set -euo pipefail
     umask 077
     export PATH=${tools}:$PATH
+    ${curlConfig}
 
     creds=/run/agenix/pia-credentials
     region=${piaRegion}
@@ -55,19 +67,17 @@ let
 
     user=$(sed -n '1p' "$creds")
     pass=$(sed -n '2p' "$creds")
-    token=$(curl -fsS --max-time 20 \
+    token=$(curl_config user "$user:$pass" | curl -fsS --max-time 20 -K - \
       --connect-to "$meta_cn::$meta_ip:" \
       --cacert ${piaCert} \
-      -u "$user:$pass" \
       "https://$meta_cn/authv3/generateToken" | jq -er .token)
     unset user pass
 
     private_key=$(wg genkey)
     public_key=$(printf '%s\n' "$private_key" | wg pubkey)
-    key_json=$(curl -fsS --max-time 20 -G \
+    key_json=$(curl_config data-urlencode "pt=$token" | curl -fsS --max-time 20 -G -K - \
       --connect-to "$wg_cn::$wg_ip:" \
       --cacert ${piaCert} \
-      --data-urlencode "pt=$token" \
       --data-urlencode "pubkey=$public_key" \
       "https://$wg_cn:1337/addKey")
     unset token public_key
@@ -77,6 +87,14 @@ let
     peer_addr=''${peer_ip%%/*}
     server_key=$(jq -er .server_key <<< "$key_json")
     server_port=$(jq -er .server_port <<< "$key_json")
+    # wg-quick runs PostUp through eval as root, so the server's answer
+    # must be an address, a WireGuard key, and a port before it goes there.
+    if ! [[ $peer_ip =~ ^[0-9]{1,3}(\.[0-9]{1,3}){3}(/[0-9]{1,2})?$ &&
+      $server_key =~ ^[A-Za-z0-9+/]{43}=$ &&
+      $server_port =~ ^[0-9]{1,5}$ ]]; then
+      echo "PIA addKey returned an unexpected peer_ip, server_key, or server_port" >&2
+      exit 1
+    fi
 
     install -d -m 700 /etc/wireguard
     cat > /etc/wireguard/pia.conf <<EOF
@@ -121,6 +139,7 @@ let
     set -euo pipefail
     umask 077
     export PATH=${tools}:$PATH
+    ${curlConfig}
 
     state=/var/lib/pia/port-forward.json
     creds=/run/agenix/pia-credentials
@@ -141,17 +160,15 @@ let
       meta_ip=$(jq -er --arg id "$region" --arg cn "$server" \
         '.regions[] | select(.id == $id) | .servers.meta[] | select(.cn == $cn) | .ip' \
         ${piaServers})
-      token=$(curl -fsS --max-time 20 \
+      token=$(curl_config user "$user:$pass" | curl -fsS --max-time 20 -K - \
         --connect-to "$hostname::$meta_ip:" \
         --cacert ${piaCert} \
-        -u "$user:$pass" \
         "https://$hostname/authv3/generateToken" | jq -er .token)
       unset user pass
-      signature_json=$(curl -fsS --max-time 20 -G \
+      signature_json=$(curl_config data-urlencode "token=$token" | curl -fsS --max-time 20 -G -K - \
         --interface pia \
         --connect-to "$hostname::$gateway:" \
         --cacert ${piaCert} \
-        --data-urlencode "token=$token" \
         "https://$hostname:19999/getSignature")
       unset token
       test "$(jq -r .status <<< "$signature_json")" = OK
@@ -163,12 +180,13 @@ let
     signature=$(jq -er .signature "$state")
     port=$(printf '%s' "$payload" | base64 -d | jq -er .port)
     expires_at=$(printf '%s' "$payload" | base64 -d | jq -er .expires_at)
-    bind_json=$(curl -fsS --max-time 20 -G \
+    bind_json=$({
+      curl_config data-urlencode "payload=$payload"
+      curl_config data-urlencode "signature=$signature"
+    } | curl -fsS --max-time 20 -G -K - \
       --interface pia \
       --connect-to "$hostname::$gateway:" \
       --cacert ${piaCert} \
-      --data-urlencode "payload=$payload" \
-      --data-urlencode "signature=$signature" \
       "https://$hostname:19999/bindPort")
     test "$(jq -r .status <<< "$bind_json")" = OK
     echo "Forwarded port $port refreshed; expires $expires_at"
@@ -242,9 +260,12 @@ in
     };
   };
 
+  # Interface = pia binds the torrent traffic. This also covers qBittorrent's
+  # own HTTP requests (RSS, .torrent URLs), which do not use that binding.
   systemd.services.qbittorrent = {
     wants = [ "pia-wireguard.service" ];
     after = [ "pia-wireguard.service" ];
+    serviceConfig.RestrictNetworkInterfaces = [ "lo" "pia" "tailscale0" ];
   };
 
   systemd.services.prowlarr-vpn-route = {
@@ -260,9 +281,15 @@ in
     };
   };
 
+  # Kill switch. The mark above only works while table 51820 has a route
+  # and only covers IPv4. Anything that would leave through the home
+  # interface instead (tunnel down, startup before the mark, IPv6) is
+  # dropped. Loopback reaches the other apps and DNS; tailscale0 serves the
+  # web pages to the tailnet.
   systemd.services.prowlarr = {
     wants = [ "prowlarr-vpn-route.service" ];
     before = [ "prowlarr-vpn-route.service" ];
+    serviceConfig.RestrictNetworkInterfaces = [ "lo" "pia" "tailscale0" ];
   };
 
   systemd.services.pia-port-forward = {

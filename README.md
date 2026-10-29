@@ -48,7 +48,10 @@ The workstation uses:
 - PipeWire for ALSA and PulseAudio clients
 - KDE Connect
 - Tailscale with manual login and no automatically provisioned auth key
-- Docker, enabled at boot with its default local Unix socket
+- Docker, enabled at boot with its default local Unix socket. Published
+  container ports bind to `127.0.0.1` by default, because Docker's own
+  iptables rules bypass the NixOS firewall. Use `-p 0.0.0.0:PORT:PORT` only
+  for a port that should really be open on the home network.
 - a local DNS proxy on `127.0.0.1:53` that forwards lookups over TLS
 
 The normal user is `rileyt`, with membership in `wheel`, `networkmanager`,
@@ -140,6 +143,20 @@ Prowlarr lookups are marked and sent through the same table. Traffic to
 `127.0.0.1` and to the Tailscale range `100.64.0.0/10` is not marked, so
 the local apps and a browser on the tailnet can still reach Prowlarr.
 Sonarr, Radarr, and Lidarr are not marked.
+
+Prowlarr and qBittorrent may only use `lo`, `pia`, and `tailscale0`
+(systemd `RestrictNetworkInterfaces`). That is the kill switch: when the
+tunnel is down, while a service is starting before its routing is in place,
+or for IPv6, which the IPv4 mark does not cover, traffic that would leave
+through `enp132s0` is dropped instead of using the home address. It also
+covers qBittorrent's own HTTP requests (RSS, `.torrent` URLs), which do not
+follow its `Interface = pia` binding.
+
+The PIA scripts give curl the username, password, and tokens on stdin
+(`curl -K -`), not on its command line, so other local accounts cannot read
+them with `ps`. The connect script checks that PIA's answer is an address, a
+WireGuard key, and a port before writing it into `pia.conf`, whose `PostUp`
+lines `wg-quick` runs as root.
 The forwarded-port keepalive runs every 15 minutes. The listen port in
 `configuration.nix` has to match the port PIA assigned.
 
