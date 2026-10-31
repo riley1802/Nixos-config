@@ -158,11 +158,14 @@
           tailscale0.allowedTCPPorts = [
             22
             8080 # qBittorrent WebUI
-            8096
+            8096 # Jellyfin. The home LAN rule below is also intentional.
           ];
           enp132s0 = {
             allowedTCPPortRanges = kdeConnectPorts;
             allowedUDPPortRanges = kdeConnectPorts;
+            # Home Wi-Fi playback is intentional. Players on the LAN use
+            # http://192.168.50.101:8096. Tailnet clients use tailscale0.
+            # The VPN interface stays closed.
             allowedTCPPorts = [ 8096 ];
           };
           pia = {

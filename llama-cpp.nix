@@ -1,10 +1,18 @@
-{ lib, pkgs, ... }:
+{ config, lib, pkgs, ... }:
 let
   models = "/var/lib/llama-cpp/models";
   # Fastest generation in the 8/12/16/20 sweep was 12 threads
   # (30.9 t/s). 20 threads won the short prefill and lost generation.
   cpuThreads = 12;
   server = "${pkgs.llama-cpp}/bin/llama-server";
+  # The age file is copied into this unit's credential directory. The
+  # script only passes that path, so the key is not in the store or
+  # on the process list.
+  llamaExec = name: args:
+    pkgs.writeShellScript name ''
+      set -euo pipefail
+      exec ${lib.escapeShellArgs args} --api-key-file "''${CREDENTIALS_DIRECTORY}/llama-api-key"
+    '';
 in
 {
   # llama.cpp v0.8.0 from llama-cpp-package.nix. One process cannot be
@@ -27,8 +35,19 @@ in
   # plain HTTP on the tailnet name times out. Tailscale Serve terminates
   # TLS on 8081 and 8082 and proxies to these loopback ports.
   # tailscale-serve.nix installs those routes. Uptime Kuma still probes
-  # loopback. 8080 is qBittorrent.
+  # loopback /health, which stays public. 8080 is qBittorrent.
+  #
+  # Every other route, including /v1, requires the age secret. Both
+  # servers use the same key. Open WebUI sends it. n8n stores its own
+  # copy in the OpenAI credential and does not read this file.
   # https://github.com/ggml-org/llama.cpp/blob/v0.8.0/common/arg.cpp
+  # https://github.com/ggml-org/llama.cpp/blob/v0.8.0/tools/server/server.cpp
+  age.secrets.llama-api-key = {
+    file = ./secrets/llama-api-key.age;
+    mode = "0400";
+    owner = "root";
+    group = "root";
+  };
 
   users.groups.llama = { };
   users.users.llama = {
@@ -74,6 +93,7 @@ in
     description = "llama.cpp server for LFM3-VL-2B";
     after = [ "network.target" ];
     wantedBy = [ "multi-user.target" ];
+    restartTriggers = [ config.age.secrets.llama-api-key.file ];
     # Video input needs ffmpeg on PATH. Image input does not.
     path = [ pkgs.ffmpeg ];
     unitConfig.ConditionPathExists = [
@@ -101,7 +121,10 @@ in
         echo "NVIDIA device nodes are not present" >&2
         exit 1
       '';
-      ExecStart = lib.escapeShellArgs [
+      LoadCredential = [
+        "llama-api-key:${config.age.secrets.llama-api-key.path}"
+      ];
+      ExecStart = llamaExec "llama-cpp-vl" [
         server
         "--host"
         "127.0.0.1"
@@ -155,6 +178,7 @@ in
     description = "llama.cpp server for LFM3-1.7B";
     after = [ "network.target" ];
     wantedBy = [ "multi-user.target" ];
+    restartTriggers = [ config.age.secrets.llama-api-key.file ];
     unitConfig.ConditionPathExists = "${models}/LFM3-1.7B-Q8_0.gguf";
     environment = {
       CUDA_VISIBLE_DEVICES = "";
@@ -164,7 +188,10 @@ in
       User = "llama";
       Group = "llama";
       WorkingDirectory = "/var/lib/llama-cpp";
-      ExecStart = lib.escapeShellArgs [
+      LoadCredential = [
+        "llama-api-key:${config.age.secrets.llama-api-key.path}"
+      ];
+      ExecStart = llamaExec "llama-cpp-1.7b" [
         server
         "--host"
         "127.0.0.1"

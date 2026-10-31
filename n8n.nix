@@ -10,17 +10,18 @@
   # encryption key live in /var/lib/n8n. That directory is not in git.
   #
   # LFM3-1.7B is the OpenAI-compatible server on 127.0.0.1:8082. n8n
-  # cannot take that URL from an environment variable, and a credential
-  # import needs the owner account created on first login. After that
-  # login, add one OpenAI credential:
-  #   API key: local
+  # cannot take that URL or the API key from an environment variable, and
+  # a credential import needs the owner account created on first login.
+  # After that login, add one OpenAI credential:
+  #   API key: the single line in /run/agenix/llama-api-key
+  #            (pkexec cat /run/agenix/llama-api-key)
   #   Base URL: http://127.0.0.1:8082/v1
   #   Organization ID: empty
   # On an OpenAI or OpenAI Chat Model node, the model id is lfm3-1.7b.
-  # Leave "Use Responses API" off. llama-server has no --api-key and
-  # ignores this header. LFM3-VL-2B on 8081 is not connected. The 1.7B server
-  # has one slot and is shared with Open WebUI, so a workflow waits if a
-  # chat is already generating.
+  # Leave "Use Responses API" off. llama-server rejects /v1 without that
+  # key. /health stays open. LFM3-VL-2B on 8081 is not connected. The 1.7B
+  # server has one slot and is shared with Open WebUI, so a workflow waits
+  # if a chat is already generating.
   # https://github.com/NixOS/nixpkgs/blob/6713828a351efa628b025a1adf7f43cbf8597513/nixos/modules/services/misc/n8n.nix
   # https://docs.n8n.io/hosting/configuration/environment-variables/
   services.n8n = {
@@ -36,8 +37,9 @@
       N8N_EDITOR_BASE_URL = "https://nixos.taile9f484.ts.net:5678/";
       # Tailscale Serve sets X-Forwarded-Proto. One hop is that proxy.
       N8N_PROXY_HOPS = 1;
-      # The Secure cookie default blocks a login at http://127.0.0.1:5678.
-      # The process is not reachable off loopback. The tailnet URL is HTTPS.
+      # Stays false so a login at http://127.0.0.1:5678 still works. The
+      # Secure flag would drop that cookie because loopback is HTTP.
+      # Tailnet access is HTTPS through Tailscale Serve.
       N8N_SECURE_COOKIE = false;
     };
   };

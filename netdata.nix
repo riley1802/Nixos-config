@@ -12,7 +12,13 @@
   # NixOS netdata test uses this package and requests the root page.
   # Hydra does not cache it because the dashboard assets are NCUL-1.
   # The agent stays unclaimed. /v3 is the anonymous local dashboard;
-  # the root page is the Cloud sign-in.
+  # the root page is the Cloud sign-in. This agent's bearer-token
+  # protection is a Cloud account token signed to this host, and the
+  # module has no local password that works without a claim, so that
+  # protection stays off. Any device already on the tailnet can open
+  # /v3. The home LAN and the VPN cannot. Homepage's widget calls the
+  # local API with no key. PIA's remote API uses outbound port 19999
+  # from pia-wireguard.nix, which is not this listener.
   #
   # The packaged stock netdata.conf is only a comment header. It has no
   # [cloud] enabled key, so this file does not set one. claimTokenFile

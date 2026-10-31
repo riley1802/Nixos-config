@@ -22,7 +22,8 @@ rest of the desktop stays on the home network.
   keeps a newly created database from being world-readable.
 - `llama-cpp-package.nix` builds llama.cpp 0.8.0 with CUDA. The 26.05 pin
   is build 9190, which cannot load LFM3. `llama-cpp.nix` runs the two
-  servers and publishes them with Tailscale Serve.
+  servers and publishes them with Tailscale Serve. Both servers require
+  the API key in `secrets/llama-api-key.age`.
 - `n8n.nix` runs n8n 2.34.6 from the nixos-26.05 module and publishes it
   with Tailscale Serve. The owner account and workflows stay in
   `/var/lib/n8n`.
@@ -49,8 +50,9 @@ rest of the desktop stays on the home network.
   default build has no dashboard files and the page is
   "File does not exist, or is not accessible:". The dashboard assets
   are NCUL-1 and are built on this computer. Open `/v3` for the
-  anonymous charts. The agent is not claimed to Netdata Cloud. Charts
-  and alarm state stay in `/var/lib/netdata`.
+  charts. This agent has no local password without a Netdata Cloud
+  claim, and the agent is not claimed, so a tailnet device can open
+  `/v3`. Charts and alarm state stay in `/var/lib/netdata`.
 - `flake.lock` fixes the exact input revisions used by builds.
 - `configuration.nix` contains the desktop, qBittorrent, firewall, user,
   vault disk, and DNS configuration.
@@ -71,6 +73,8 @@ rest of the desktop stays on the home network.
   `secrets/homarr-encryption-key.age` is Homarr's
   `SECRET_ENCRYPTION_KEY`. The decrypted file is
   `/run/agenix/homarr-encryption-key`.
+  `secrets/llama-api-key.age` is the llama.cpp API key for both servers
+  and for Open WebUI. The decrypted file is `/run/agenix/llama-api-key`.
 - `pia/ca.rsa.4096.crt` and `pia/pia-servers.json` are public PIA material
   used to reach a server by IP when the VPN hostnames are filtered.
 
@@ -116,9 +120,10 @@ The NixOS firewall stays enabled.
   the VPN.
 - OpenSSH accepts TCP port 22 only on `tailscale0`, and only for `rileyt`,
   using public keys. Password and root logins are disabled.
-- Jellyfin accepts TCP port 8096 on `enp132s0` and `tailscale0`, so a phone
-  on the home Wi-Fi or any device on the tailnet can play video and music.
-  That port is not accepted on the VPN interface.
+- Jellyfin accepts TCP port 8096 on `enp132s0` and `tailscale0` on
+  purpose, so a phone or another player on the home Wi-Fi can use
+  `http://192.168.50.101:8096`, and any device on the tailnet can play
+  video and music. That port is not accepted on the VPN interface.
 - Uptime Kuma accepts TCP port 3001 on `tailscale0` only. The process listens
   on every address so both IPv4 and IPv6 tailnet clients can connect, and
   the firewall is what keeps the home network and the VPN out. This computer
@@ -130,7 +135,8 @@ The NixOS firewall stays enabled.
   name, so plain HTTP on the tailnet hostname times out. Serve presents a
   Let's Encrypt certificate for `nixos.taile9f484.ts.net` and proxies to
   the loopback ports. Uptime Kuma still checks `http://127.0.0.1:8081/health`
-  and `http://127.0.0.1:8082/health`.
+  and `http://127.0.0.1:8082/health`. Those health URLs stay open. Other
+  routes require the API key in `secrets/llama-api-key.age`.
 - n8n accepts TCP port 5678 on `tailscale0` only. The process listens on
   `127.0.0.1`. Tailscale Serve presents HTTPS for
   `nixos.taile9f484.ts.net:5678` and proxies to that port. This computer
@@ -154,16 +160,28 @@ The NixOS firewall stays enabled.
   `nixos.taile9f484.ts.net:7575` and proxies to that port. This computer
   can still open `http://127.0.0.1:7575`. The home network and the VPN
   cannot.
+- Homarr's widget calls to Sonarr, Radarr, Lidarr, and Bazarr come from
+  `172.30.88.2` on the bridge `br-homarr`. The firewall accepts only
+  those four ports from that address. `docker0` is not opened.
+  qBittorrent, Jellyfin, Seerr, Uptime Kuma, and Prowlarr are not
+  reachable from Docker. Homepage still uses `127.0.0.1`.
 - Netdata accepts TCP port 19999 on `tailscale0` only. The process listens
   on `127.0.0.1`. Tailscale Serve presents HTTPS for
   `nixos.taile9f484.ts.net:19999` and proxies to that port. This computer
   uses `http://127.0.0.1:19999/v3`. The home network and the VPN cannot.
-  PIA's remote API also uses port 19999. That is an outbound HTTPS call
-  from `pia-wireguard.nix`, not this listener.
+  `/v3` has no local password. Netdata 2.10.3's bearer protection is a
+  Cloud sign-in, and this agent is not claimed, so any device already on
+  the tailnet can open the charts. PIA's remote API also uses port 19999.
+  That is an outbound HTTPS call from `pia-wireguard.nix`, not this
+  listener.
 - The media web pages and the qBittorrent WebUI accept their ports on
-  `tailscale0` only: 5055, 6767, 7878, 8080, 8686, 8989, and 9696. Each app
-  has its own login. KDE Connect stays on the home network, and the torrent
-  listen port stays on the VPN.
+  `tailscale0` only: 5055 Seerr, 6767 Bazarr, 7878 Radarr, 8080
+  qBittorrent, 8686 Lidarr, 8989 Sonarr, and 9696 Prowlarr. These are
+  admin pages. This repository does not contain a Tailscale ACL or
+  policy file, so tailnet membership is the network limit, and each
+  app still requires its own login. Those passwords are not in git.
+  KDE Connect stays on the home network, and the torrent listen port
+  stays on the VPN.
 - qBittorrent's torrent port is accepted only on the `pia` interface.
 
 The system SSH client maps `ssh laptop` to
@@ -228,10 +246,15 @@ the ntfy topic `uptime`. Neither dashboard replaces that.
 |---|---|---|
 | Homepage | http://127.0.0.1:3010 or https://nixos.taile9f484.ts.net:3010 | The links and widgets are in `homepage.nix`. Sonarr, Radarr, Lidarr, Prowlarr, and Bazarr widgets read API keys from `secrets/homepage-api-keys.age`. |
 | Homarr | http://127.0.0.1:7575 or https://nixos.taile9f484.ts.net:7575 | The container and the encryption key are declared here. Tiles and the admin account are created in the web UI and stay in `/var/lib/homarr`, which is not in git. |
-| Netdata | http://127.0.0.1:19999/v3 or https://nixos.taile9f484.ts.net:19999/v3 | Agent config is in `netdata.nix`. `/v3` is the anonymous local dashboard. The root URL is the Cloud sign-in. Charts and alarm state stay in `/var/lib/netdata`, which is not in git. |
+| Netdata | http://127.0.0.1:19999/v3 or https://nixos.taile9f484.ts.net:19999/v3 | Agent config is in `netdata.nix`. `/v3` has no local password. This agent cannot require one without a Netdata Cloud claim, and it is not claimed, so any tailnet device can open the charts. The root URL is the Cloud sign-in. Charts and alarm state stay in `/var/lib/netdata`, which is not in git. |
 
 The Chrome menu entries open the loopback addresses. The tailnet addresses
-are for the phone. The first visit to Homarr creates the admin account.
+are for the phone. Finish first-run setup on this computer before an
+untrusted device is on the tailnet. Homarr's first visit, at
+`http://127.0.0.1:7575`, creates the admin account. Open WebUI's first
+account, at `http://127.0.0.1:8088`, is the admin. Immich's first visit,
+at `http://127.0.0.1:2283`, creates the admin account, and open
+registration stays disabled.
 
 Homepage links every media app and the services on this computer. The top
 of the page shows CPU, memory, uptime, `/`, and `/vault`. Live count
@@ -241,10 +264,15 @@ qBittorrent's saved password is a hash, and the Jellyfin, Seerr, and
 Uptime Kuma secrets are not in a file this repo can read.
 
 Homarr's board is those same services. Tiles open on this computer.
-Sonarr, Radarr, Lidarr, and Bazarr are also integrations, so Homarr can
-read them from the container over `docker0`. Prowlarr stays off that
-bridge because its service may use only `lo`, `pia`, and `tailscale0`.
-Further tile changes stay in `/var/lib/homarr`.
+Sonarr, Radarr, Lidarr, and Bazarr are also integrations. The container
+is the only member of the Docker network `homarr`, at `172.30.88.2` on
+the bridge `br-homarr`. It calls those four apps at
+`host.docker.internal`. The firewall accepts only that source address,
+and only those ports. `docker0` is not opened, so another container on
+the default bridge cannot reach them. qBittorrent, Jellyfin, Seerr, and
+Uptime Kuma are not on that bridge. Prowlarr stays off it because its
+service may use only `lo`, `pia`, and `tailscale0`. Homepage still uses
+`127.0.0.1`. Further tile changes stay in `/var/lib/homarr`.
 
 ## llama.cpp
 
@@ -259,6 +287,14 @@ process cannot be GPU-only for one model and CPU-only for the other.
 On this computer the same pages are `http://127.0.0.1:8081/` and
 `http://127.0.0.1:8082/`. The `/v1` path is the OpenAI-compatible API. A
 browser opened on `/v1` does not show the chat page.
+
+Both servers require an API key on every route except `/health` and
+`/v1/health`. The key is `secrets/llama-api-key.age`. The decrypted
+file is `/run/agenix/llama-api-key`. It is not in git. Read it with
+`pkexec cat /run/agenix/llama-api-key`. Open WebUI sends that key. The
+llama-server pages need it before a prompt runs. n8n does not read the
+file: its OpenAI credential has to use that same line. Homepage and
+Uptime Kuma still probe `/health`, which does not require the key.
 
 The GGUF files are official Liquid AI Q8_0 weights. They are downloaded to
 `/home/rileyt/llama-models` and copied into `/var/lib/llama-cpp/models`
@@ -315,6 +351,16 @@ tensors are 1.73B parameters. The file's own metadata says
 `general.name = LFM3 Omni 2B`. The vision and audio weights are in the
 mmproj.
 
+## Open WebUI
+
+Open WebUI is the chat page for both llama.cpp servers. On this computer
+it is `http://127.0.0.1:8088`. On the tailnet it is
+`https://nixos.taile9f484.ts.net:8088`. The first account created is the
+admin. Create it at the loopback URL before an untrusted device is on
+the tailnet. The API keys sent to the two llama servers come from
+`/run/agenix/llama-api-key`. Chats stay in `/var/lib/open-webui`, which
+is not in git.
+
 ## n8n
 
 n8n 2.34.6 is the workflow editor. On this computer it is
@@ -327,7 +373,9 @@ LFM3-1.7B is the model n8n calls. The request stays on this computer at
 `http://127.0.0.1:8082/v1`. It does not go out through Tailscale. LFM3-VL-2B
 is not connected. After the owner account exists, add one OpenAI credential:
 
-- API key: `local` (`llama-server` ignores it)
+- API key: the single line in `/run/agenix/llama-api-key`
+  (`pkexec cat /run/agenix/llama-api-key`). Update the saved credential
+  to that line before a workflow calls the model.
 - Base URL: `http://127.0.0.1:8082/v1`
 - Organization ID: empty
 
@@ -419,8 +467,9 @@ module default. Redis is a local unix socket. The server is Immich
 3.3.5 from the nixpkgs-unstable pin. nixos-26.05 packages 2.7.5, which
 is marked insecure.
 
-The first visit in a browser creates the admin account. After that,
-turn off open registration in the server settings.
+The first visit creates the admin account. Do that on this computer at
+`http://127.0.0.1:2283`, before an untrusted device is on the tailnet,
+and leave open registration disabled.
 
 Machine learning for faces and search runs on CPU. The module default
 is one worker. The RTX 3050 is left to the desktop and LFM3-VL.
@@ -434,8 +483,9 @@ On the phone:
    required for ntfy.
 2. Immich from the App Store, Play Store, or F-Droid. Use a 3.3.x app
    so it matches server 3.3.5.
-3. Create the admin user in a browser first, then turn off open
-   registration.
+3. Create the admin user at `http://127.0.0.1:2283` on this computer
+   first, and leave open registration off, before an untrusted device
+   is on the tailnet.
 4. In the app, set the server endpoint to
    `https://nixos.taile9f484.ts.net:2283`, log in, open the cloud icon,
    select the camera album (Android Camera; iOS Recents), and enable

@@ -12,4 +12,5 @@ in
   "ntfy-passwords.age".publicKeys = recipients;
   "homepage-api-keys.age".publicKeys = recipients;
   "homarr-encryption-key.age".publicKeys = recipients;
+  "llama-api-key.age".publicKeys = recipients;
 }

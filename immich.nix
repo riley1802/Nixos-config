@@ -9,7 +9,9 @@
   # mainProgram to "server". Its passthru machine-learning derivation sets
   # mainProgram to "machine-learning", so those calls resolve and both
   # parts stay on 3.3.5. settings stays at the module default, null, so
-  # the first visit creates the admin account in the web UI.
+  # the first visit creates the admin account in the web UI. Do that at
+  # http://127.0.0.1:2283 before an untrusted device is on the tailnet,
+  # and leave open registration disabled.
   #
   # The process listens on 127.0.0.1:2283. Tailscale Serve in
   # tailscale-serve.nix presents HTTPS for nixos.taile9f484.ts.net:2283
