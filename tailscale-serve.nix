@@ -41,13 +41,17 @@
           fi
           "$sleep" 2
         done
+        "$ts" serve --bg --yes --https=2283 http://127.0.0.1:2283
         "$ts" serve --bg --yes --https=2586 http://127.0.0.1:2586
+        "$ts" serve --bg --yes --https=3010 http://127.0.0.1:3010
         "$ts" serve --bg --yes --https=5678 http://127.0.0.1:5678
+        "$ts" serve --bg --yes --https=7575 http://127.0.0.1:7575
         "$ts" serve --bg --yes --https=8081 http://127.0.0.1:8081
         "$ts" serve --bg --yes --https=8082 http://127.0.0.1:8082
         "$ts" serve --bg --yes --https=8088 http://127.0.0.1:8088
+        "$ts" serve --bg --yes --https=19999 http://127.0.0.1:19999
         status=$("$ts" serve status)
-        for port in 2586 5678 8081 8082 8088; do
+        for port in 2283 2586 3010 5678 7575 8081 8082 8088 19999; do
           printf '%s\n' "$status" | ${pkgs.gnugrep}/bin/grep -q ":$port" || {
             echo "missing Tailscale serve route for port $port" >&2
             exit 1

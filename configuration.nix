@@ -10,6 +10,10 @@
     ./open-webui.nix
     ./n8n.nix
     ./ntfy.nix
+    ./immich.nix
+    ./homepage.nix
+    ./homarr.nix
+    ./netdata.nix
     ./tailscale-serve.nix
   ];
 
@@ -337,16 +341,21 @@
   systemd.services.systemd-tmpfiles-setup.after = [ "vault.mount" ];
   systemd.services.systemd-tmpfiles-resetup.after = [ "vault.mount" ];
   # The NixOS module rewrites qBittorrent.conf on every start. Keep the WebUI
-  # password hash beside that file so it is not committed to Git.
+  # username and password hash beside that file so they are not committed
+  # to Git.
   systemd.services.qbittorrent.preStart = ''
     set -euo pipefail
     conf=/var/lib/qBittorrent/qBittorrent/config/qBittorrent.conf
     saved=/var/lib/qBittorrent/qBittorrent/config/webui-password-line
+    saved_user=/var/lib/qBittorrent/qBittorrent/config/webui-username-line
     # The client rewrites its config world-readable. Keep the directory private.
     chmod 700 /var/lib/qBittorrent/qBittorrent /var/lib/qBittorrent/qBittorrent/config
     umask 077
     if [[ -f $conf ]] && grep -q 'Password_PBKDF2=' "$conf"; then
       grep 'Password_PBKDF2=' "$conf" > "$saved"
+    fi
+    if [[ -f $conf ]] && grep -q 'WebUI\Username=' "$conf"; then
+      grep 'WebUI\Username=' "$conf" > "$saved_user"
     fi
   '';
   systemd.services.qbittorrent.serviceConfig.ExecStartPre = pkgs.lib.mkAfter [
@@ -354,9 +363,22 @@
       set -euo pipefail
       conf=/var/lib/qBittorrent/qBittorrent/config/qBittorrent.conf
       saved=/var/lib/qBittorrent/qBittorrent/config/webui-password-line
+      saved_user=/var/lib/qBittorrent/qBittorrent/config/webui-username-line
+      restore=0
       if [[ -s $saved ]] && ! grep -q 'Password_PBKDF2=' "$conf"; then
+        restore=1
+      fi
+      if [[ -s $saved_user ]] && ! grep -q 'WebUI\Username=' "$conf"; then
+        restore=1
+      fi
+      if [[ $restore == 1 ]]; then
         printf '\n[Preferences]\n' >> "$conf"
-        cat "$saved" >> "$conf"
+        if [[ -s $saved ]] && ! grep -q 'Password_PBKDF2=' "$conf"; then
+          cat "$saved" >> "$conf"
+        fi
+        if [[ -s $saved_user ]] && ! grep -q 'WebUI\Username=' "$conf"; then
+          cat "$saved_user" >> "$conf"
+        fi
       fi
     '')
   ];
@@ -381,6 +403,9 @@
     ];
   };
 
+  # Chrome app windows for the two boards. google-chrome-stable is the
+  # package's main program; google-chrome is a symlink to it.
+  # https://github.com/NixOS/nixpkgs/blob/6713828a351efa628b025a1adf7f43cbf8597513/pkgs/by-name/go/google-chrome/package.nix
   environment.systemPackages = with pkgs; [
     code-cursor
     git
@@ -388,6 +413,22 @@
     htop
     llama-cpp
     spotify
+    (makeDesktopItem {
+      name = "homepage";
+      desktopName = "Homepage";
+      comment = "Service board declared in this flake";
+      exec = "google-chrome-stable --app=http://127.0.0.1:3010";
+      icon = "google-chrome";
+      categories = [ "Network" ];
+    })
+    (makeDesktopItem {
+      name = "homarr";
+      desktopName = "Homarr";
+      comment = "Visual service board";
+      exec = "google-chrome-stable --app=http://127.0.0.1:7575";
+      icon = "google-chrome";
+      categories = [ "Network" ];
+    })
   ];
 
   # Keep this at the version used for the first installation.

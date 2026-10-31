@@ -10,4 +10,6 @@ in
   "pia-credentials.age".publicKeys = recipients;
   "ntfy-auth.age".publicKeys = recipients;
   "ntfy-passwords.age".publicKeys = recipients;
+  "homepage-api-keys.age".publicKeys = recipients;
+  "homarr-encryption-key.age".publicKeys = recipients;
 }

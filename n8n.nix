@@ -18,7 +18,7 @@
   #   Organization ID: empty
   # On an OpenAI or OpenAI Chat Model node, the model id is lfm3-1.7b.
   # Leave "Use Responses API" off. llama-server has no --api-key and
-  # ignores this header. Omni on 8081 is not connected. The 1.7B server
+  # ignores this header. LFM3-VL-2B on 8081 is not connected. The 1.7B server
   # has one slot and is shared with Open WebUI, so a workflow waits if a
   # chat is already generating.
   # https://github.com/NixOS/nixpkgs/blob/6713828a351efa628b025a1adf7f43cbf8597513/nixos/modules/services/misc/n8n.nix

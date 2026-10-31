@@ -27,6 +27,13 @@
           # Cursor and Radarr come from unstable. Lidarr's current release is
           # not packaged yet, so use the official build in lidarr-package.nix.
           # Uptime Kuma 2.5.8 is newer than both nixpkgs pins.
+          # Immich comes from unstable because nixos-26.05 has 2.7.5, which
+          # is marked insecure, and phone apps need 3.x. The unstable pin's
+          # package is 3.3.5. machine-learning is passthru on that package,
+          # and both derivations set mainProgram, so the 26.05 module's
+          # lib.getExe calls keep server and ML on the same release.
+          # https://github.com/NixOS/nixpkgs/blob/6713828a351efa628b025a1adf7f43cbf8597513/pkgs/by-name/im/immich/package.nix
+          # https://github.com/NixOS/nixpkgs/blob/31ecbaca1bdefa45dffc409f0250bd8039ea0010/pkgs/by-name/im/immich/package.nix
           nixpkgs.overlays = [
             (final: prev:
               let
@@ -37,10 +44,14 @@
               in
               {
                 lidarr = prev.callPackage ./lidarr-package.nix { };
+                # 1.12.3 rejects qBittorrent 5.2's HTTP 204 login. 1.13.1 accepts it.
+                # nixos-unstable's Homepage is 2.6.0, which is a different board.
+                homepage-dashboard = prev.callPackage ./homepage-package.nix { };
                 # nixos-26.05's llama-cpp is build 9190. LFM3 needs v0.8.0.
                 llama-cpp = prev.callPackage ./llama-cpp-package.nix { };
                 uptime-kuma = prev.callPackage ./uptime-kuma-package.nix { };
                 radarr = unstable.radarr;
+                immich = unstable.immich;
                 code-cursor = unstable.code-cursor.overrideAttrs (old: rec {
                   version = "3.27.22";
                   src = unstable.appimageTools.extract {
