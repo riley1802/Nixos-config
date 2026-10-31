@@ -11,7 +11,6 @@
     ./n8n.nix
     ./ntfy.nix
     ./immich.nix
-    ./homepage.nix
     ./homarr.nix
     ./netdata.nix
     ./tailscale-serve.nix
@@ -29,6 +28,10 @@
     systemd-boot.enable = true;
     efi.canTouchEfiVariables = true;
   };
+  # OpenLogi's udev rule tags /dev/uinput for the seat user. That node is a
+  # static device until the module is loaded, so the ACL is never applied
+  # unless uinput is loaded at boot.
+  boot.kernelModules = [ "uinput" ];
 
   time = {
     timeZone = "America/Chicago";
@@ -126,6 +129,12 @@
   programs = {
     dconf.enable = true;
     kdeconnect.enable = true;
+    # MX Master 4: package, udev rules, and the login agent.
+    # https://openlogi.org/docs/installation
+    openlogi = {
+      enable = true;
+      launchAtLogin = true;
+    };
 
     # `ssh laptop` uses the Linux machine already on this tailnet.
     ssh.extraConfig = ''
@@ -406,7 +415,7 @@
     ];
   };
 
-  # Chrome app windows for the two boards. google-chrome-stable is the
+  # Chrome app window for Homarr. google-chrome-stable is the
   # package's main program; google-chrome is a symlink to it.
   # https://github.com/NixOS/nixpkgs/blob/6713828a351efa628b025a1adf7f43cbf8597513/pkgs/by-name/go/google-chrome/package.nix
   environment.systemPackages = with pkgs; [
@@ -416,14 +425,6 @@
     htop
     llama-cpp
     spotify
-    (makeDesktopItem {
-      name = "homepage";
-      desktopName = "Homepage";
-      comment = "Service board declared in this flake";
-      exec = "google-chrome-stable --app=http://127.0.0.1:3010";
-      icon = "google-chrome";
-      categories = [ "Network" ];
-    })
     (makeDesktopItem {
       name = "homarr";
       desktopName = "Homarr";

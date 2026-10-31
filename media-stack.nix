@@ -1,7 +1,7 @@
 { lib, ... }:
 let
-  # Servarr accepts one bind address. "*" is what lets loopback (Homepage
-  # and this computer), tailscale0 (the phone), and the Homarr bridge in
+  # Servarr accepts one bind address. "*" is what lets loopback (this
+  # computer), tailscale0 (the phone), and the Homarr bridge in
   # homarr.nix reach the same process. The firewall is what keeps every
   # other interface closed. Prowlarr is further limited to lo, pia, and
   # tailscale0 by pia-wireguard.nix.

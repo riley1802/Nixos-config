@@ -9,9 +9,17 @@
       url = "github:ryantm/agenix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    # Local Logitech manager for the MX Master 4. The module installs the
+    # package, udev rules, and the graphical-session agent. The packaging
+    # flake is the real input; the repository root only aliases it.
+    # https://openlogi.org/docs/installation
+    openlogi = {
+      url = "github:AprilNEA/OpenLogi?dir=packaging";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { nixpkgs, nixpkgs-unstable, agenix, ... }: {
+  outputs = { nixpkgs, nixpkgs-unstable, agenix, openlogi, ... }: {
     formatter.x86_64-linux = nixpkgs.legacyPackages.x86_64-linux.nixpkgs-fmt;
 
     nixosConfigurations.nixos = nixpkgs.lib.nixosSystem {
@@ -19,6 +27,7 @@
       modules = [
         ./configuration.nix
         agenix.nixosModules.default
+        openlogi.nixosModules.default
         {
           environment.systemPackages = [
             agenix.packages.x86_64-linux.default
@@ -44,9 +53,6 @@
               in
               {
                 lidarr = prev.callPackage ./lidarr-package.nix { };
-                # 1.12.3 rejects qBittorrent 5.2's HTTP 204 login. 1.13.1 accepts it.
-                # nixos-unstable's Homepage is 2.6.0, which is a different board.
-                homepage-dashboard = prev.callPackage ./homepage-package.nix { };
                 # nixos-26.05's llama-cpp is build 9190. LFM3 needs v0.8.0.
                 llama-cpp = prev.callPackage ./llama-cpp-package.nix { };
                 uptime-kuma = prev.callPackage ./uptime-kuma-package.nix { };

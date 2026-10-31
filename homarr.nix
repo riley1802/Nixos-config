@@ -122,8 +122,8 @@
   # qBittorrent, Jellyfin, Seerr, Uptime Kuma, and Prowlarr are not
   # accepted here. Prowlarr's service may use only lo, pia, and tailscale0.
   # iptables stores the interface name, so the rule can be installed
-  # before br-homarr exists. Homepage and Tailscale Serve use 127.0.0.1,
-  # which never arrives on this bridge.
+  # before br-homarr exists. Tailscale Serve uses 127.0.0.1, which never
+  # arrives on this bridge.
   networking.firewall.extraCommands = ''
     iptables -w -A nixos-fw -i br-homarr -s 172.30.88.2/32 -p tcp -m multiport --dports 6767,7878,8686,8989 -j nixos-fw-accept
   '';
