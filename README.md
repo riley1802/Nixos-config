@@ -532,21 +532,20 @@ The forwarded-port keepalive runs every 15 minutes. The listen port in
 
 ## Apply and validate
 
-Run these commands from `/etc/nixos`. Flakes only see git-tracked files, so
-`git add` a new file before building it. Do not commit unless you mean to
-publish the change.
+Change this computer with `nixctl` after it is installed. `nixctl apply`
+builds the config, activates it as a test, and keeps it only if no new
+service is broken. It also commits the change locally. It does not push.
+
+nixctl is not on the running system until the next switch. Run this once
+from `/etc/nixos`:
 
 ```sh
-nix fmt .
-pkexec nixos-rebuild dry-build --flake /etc/nixos
 pkexec nixos-rebuild switch --flake /etc/nixos
 ```
 
-`dry-build` validates the system without activating it. `switch` is
-reversible with `pkexec nixos-rebuild switch --flake /etc/nixos --rollback`.
-`pkexec` presents the desktop authorization prompt. It resets `PATH`, so a
-tool from `nix shell` has to be passed through as
-`pkexec env "PATH=$PATH" <cmd>`.
+After that, `nixctl status` should print `RESULT: OK`. Later changes are
+`nixctl apply "what changed"`. If a switch misbehaves, `nixctl rollback`
+returns to the previous generation.
 
 ## OpenSSH
 
