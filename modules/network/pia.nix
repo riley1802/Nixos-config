@@ -1,8 +1,10 @@
-{ pkgs, lib, ... }:
+# PIA WireGuard split tunnel for qBittorrent and Prowlarr.
+{ config, pkgs, lib, ... }:
 let
+  cfg = config.my.network.pia;
   # Public PIA material. Credentials stay in the agenix secret.
-  piaCert = ./pia/ca.rsa.4096.crt;
-  piaServers = ./pia/pia-servers.json;
+  piaCert = ../../pia/ca.rsa.4096.crt;
+  piaServers = ../../pia/pia-servers.json;
   # vancouver438: the first Vancouver server was much slower.
   piaRegion = "ca_vancouver";
   piaServer = "vancouver438";
@@ -255,127 +257,140 @@ let
   '';
 in
 {
-  # Torrent replies arrive through pia while normal traffic still uses the
-  # router, so strict reverse-path filtering would drop the torrent replies.
-  networking.firewall.checkReversePath = "loose";
+  options.my.network.pia.enable = lib.mkEnableOption "PIA WireGuard split tunnel";
 
-  systemd.services.pia-wireguard = {
-    description = "PIA WireGuard tunnel for qBittorrent";
-    wantedBy = [ "multi-user.target" ];
-    wants = [ "network-online.target" "pia-client-refresh.service" ];
-    after = [ "network-online.target" ];
-    before = [ "pia-client-refresh.service" ];
-    startLimitIntervalSec = 300;
-    startLimitBurst = 5;
-    serviceConfig = {
-      Type = "oneshot";
-      RemainAfterExit = true;
-      TimeoutStartSec = 90;
-      Restart = "on-failure";
-      RestartSec = "15s";
-      ExecStart = connect;
-      ExecStop = disconnect;
+  config = lib.mkIf cfg.enable {
+    age.secrets."pia-credentials" = {
+      file = ../../secrets/pia-credentials.age;
+      mode = "0400";
+      owner = "root";
+      group = "root";
     };
-  };
 
-  systemd.services.pia-client-refresh = {
-    description = "Restart VPN clients after the pia interface is created";
-    after = [ "pia-wireguard.service" ];
-    requires = [ "pia-wireguard.service" ];
-    serviceConfig = {
-      Type = "oneshot";
-      ExecStart = refreshClients;
+    # Torrent replies arrive through pia while normal traffic still uses the
+    # router, so strict reverse-path filtering would drop the torrent replies.
+    networking.firewall.checkReversePath = "loose";
+
+    systemd.services.pia-wireguard = {
+      description = "PIA WireGuard tunnel for qBittorrent";
+      wantedBy = [ "multi-user.target" ];
+      wants = [ "network-online.target" "pia-client-refresh.service" ];
+      after = [ "network-online.target" ];
+      before = [ "pia-client-refresh.service" ];
+      startLimitIntervalSec = 300;
+      startLimitBurst = 5;
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+        TimeoutStartSec = 90;
+        Restart = "on-failure";
+        RestartSec = "15s";
+        ExecStart = connect;
+        ExecStop = disconnect;
+      };
     };
-  };
 
-  # Interface = pia binds the torrent traffic. This also covers qBittorrent's
-  # own HTTP requests (RSS, .torrent URLs), which do not use that binding.
-  # after pia-client-refresh: that oneshot restarts this service when pia
-  # already existed, then this start records the new interface index.
-  # RestrictNetworkInterfaces resolves names once, at start. tailscale0
-  # has to exist by then or the WebUI is unreachable on the tailnet until
-  # the process is restarted.
-  systemd.services.qbittorrent = {
-    wants = [
-      "pia-wireguard.service"
-      "sys-subsystem-net-devices-tailscale0.device"
-    ];
-    after = [
-      "pia-wireguard.service"
-      "pia-client-refresh.service"
-      "tailscaled.service"
-      "sys-subsystem-net-devices-tailscale0.device"
-    ];
-    serviceConfig = {
-      RestrictNetworkInterfaces = [ "lo" "pia" "tailscale0" ];
-      Restart = "on-failure";
-      RestartSec = "5s";
+    systemd.services.pia-client-refresh = {
+      description = "Restart VPN clients after the pia interface is created";
+      after = [ "pia-wireguard.service" ];
+      requires = [ "pia-wireguard.service" ];
+      serviceConfig = {
+        Type = "oneshot";
+        ExecStart = refreshClients;
+      };
     };
-  };
 
-  systemd.services.prowlarr-vpn-route = {
-    description = "Send Prowlarr lookups through the VPN";
-    after = [ "prowlarr.service" "pia-wireguard.service" "firewall.service" ];
-    wants = [ "pia-wireguard.service" ];
-    partOf = [ "prowlarr.service" ];
-    startLimitIntervalSec = 60;
-    startLimitBurst = 10;
-    serviceConfig = {
-      Type = "oneshot";
-      RemainAfterExit = true;
-      Restart = "on-failure";
-      RestartSec = "2s";
-      ExecStart = prowlarrVpnRoute;
-      ExecStop = prowlarrVpnRouteStop;
+    # Interface = pia binds the torrent traffic. This also covers qBittorrent's
+    # own HTTP requests (RSS, .torrent URLs), which do not use that binding.
+    # after pia-client-refresh: that oneshot restarts this service when pia
+    # already existed, then this start records the new interface index.
+    # RestrictNetworkInterfaces resolves names once, at start. tailscale0
+    # has to exist by then or the WebUI is unreachable on the tailnet until
+    # the process is restarted.
+    # mkAfter keeps these after the media-directory dependency. The unit
+    # file lists that one first, then the tunnel.
+    systemd.services.qbittorrent = {
+      wants = lib.mkAfter [
+        "pia-wireguard.service"
+        "sys-subsystem-net-devices-tailscale0.device"
+      ];
+      after = lib.mkAfter [
+        "pia-wireguard.service"
+        "pia-client-refresh.service"
+        "tailscaled.service"
+        "sys-subsystem-net-devices-tailscale0.device"
+      ];
+      serviceConfig = {
+        RestrictNetworkInterfaces = [ "lo" "pia" "tailscale0" ];
+        Restart = "on-failure";
+        RestartSec = "5s";
+      };
     };
-  };
 
-  # Kill switch. The mark above only works while table 51820 has a route
-  # and only covers IPv4. Anything that would leave through the home
-  # interface instead (tunnel down, startup before the mark, IPv6) is
-  # dropped. Loopback reaches the other apps and DNS; tailscale0 serves the
-  # web pages to the tailnet.
-  # RestrictNetworkInterfaces resolves interface names once, at start. If pia
-  # does not exist yet, systemd omits it for the life of the process, so
-  # this unit waits until the tunnel service has created the interface.
-  # pia-client-refresh restarts the process when that interface is replaced.
-  systemd.services.prowlarr = {
-    wants = [
-      "prowlarr-vpn-route.service"
-      "pia-wireguard.service"
-      "sys-subsystem-net-devices-tailscale0.device"
-    ];
-    after = [
-      "pia-wireguard.service"
-      "pia-client-refresh.service"
-      "tailscaled.service"
-      "sys-subsystem-net-devices-tailscale0.device"
-    ];
-    before = [ "prowlarr-vpn-route.service" ];
-    serviceConfig.RestrictNetworkInterfaces = [ "lo" "pia" "tailscale0" ];
-  };
-
-  systemd.services.pia-port-forward = {
-    description = "Refresh the PIA forwarded-port binding";
-    after = [ "pia-wireguard.service" ];
-    requires = [ "pia-wireguard.service" ];
-    serviceConfig = {
-      Type = "oneshot";
-      # Includes waiting for the tunnel, which retries for a few minutes
-      # when the network is late.
-      TimeoutStartSec = 180;
-      ExecStart = refreshPort;
+    systemd.services.prowlarr-vpn-route = {
+      description = "Send Prowlarr lookups through the VPN";
+      after = [ "prowlarr.service" "pia-wireguard.service" "firewall.service" ];
+      wants = [ "pia-wireguard.service" ];
+      partOf = [ "prowlarr.service" ];
+      startLimitIntervalSec = 60;
+      startLimitBurst = 10;
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+        Restart = "on-failure";
+        RestartSec = "2s";
+        ExecStart = prowlarrVpnRoute;
+        ExecStop = prowlarrVpnRouteStop;
+      };
     };
-  };
 
-  systemd.timers.pia-port-forward = {
-    description = "Refresh the PIA forwarded port every 15 minutes";
-    wantedBy = [ "timers.target" ];
-    timerConfig = {
-      OnBootSec = "30s";
-      OnUnitActiveSec = "15min";
-      AccuracySec = "30s";
-      Persistent = true;
+    # Kill switch. The mark above only works while table 51820 has a route
+    # and only covers IPv4. Anything that would leave through the home
+    # interface instead (tunnel down, startup before the mark, IPv6) is
+    # dropped. Loopback reaches the other apps and DNS; tailscale0 serves the
+    # web pages to the tailnet.
+    # RestrictNetworkInterfaces resolves interface names once, at start. If pia
+    # does not exist yet, systemd omits it for the life of the process, so
+    # this unit waits until the tunnel service has created the interface.
+    # pia-client-refresh restarts the process when that interface is replaced.
+    systemd.services.prowlarr = {
+      wants = [
+        "prowlarr-vpn-route.service"
+        "pia-wireguard.service"
+        "sys-subsystem-net-devices-tailscale0.device"
+      ];
+      after = [
+        "pia-wireguard.service"
+        "pia-client-refresh.service"
+        "tailscaled.service"
+        "sys-subsystem-net-devices-tailscale0.device"
+      ];
+      before = [ "prowlarr-vpn-route.service" ];
+      serviceConfig.RestrictNetworkInterfaces = [ "lo" "pia" "tailscale0" ];
+    };
+
+    systemd.services.pia-port-forward = {
+      description = "Refresh the PIA forwarded-port binding";
+      after = [ "pia-wireguard.service" ];
+      requires = [ "pia-wireguard.service" ];
+      serviceConfig = {
+        Type = "oneshot";
+        # Includes waiting for the tunnel, which retries for a few minutes
+        # when the network is late.
+        TimeoutStartSec = 180;
+        ExecStart = refreshPort;
+      };
+    };
+
+    systemd.timers.pia-port-forward = {
+      description = "Refresh the PIA forwarded port every 15 minutes";
+      wantedBy = [ "timers.target" ];
+      timerConfig = {
+        OnBootSec = "30s";
+        OnUnitActiveSec = "15min";
+        AccuracySec = "30s";
+        Persistent = true;
+      };
     };
   };
 }
