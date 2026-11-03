@@ -39,7 +39,6 @@
   my.services.jellyfin.enable = true;
   my.services.llama.enable = true;
   my.services.n8n.enable = true;
-  my.services.netdata.enable = true;
   my.services.ntfy.enable = true;
   my.services.open-webui.enable = true;
   my.services.uptime-kuma.enable = true;
