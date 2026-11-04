@@ -264,7 +264,7 @@ Taken from the saved Cursor chats on this computer, 2026-06-29 through 2026-11-0
   **Resolved:** The board lives in `/var/lib/homarr`. (2026-10-30, d0cacf4c)
 
 - **Wrong:** Homarr showed Open WebUI, both llama servers, n8n, ntfy, Uptime Kuma, qBittorrent, Prowlarr, Seerr, and Jellyfin offline.
-  **Resolved:** The container was pinging its own loopback, or the bridge firewall was dropping the check. Proxies on `172.30.88.1` cover the loopback apps. The firewall, qBittorrent, and Prowlarr accept the bridge, and Prowlarr's reply to that subnet stays off the VPN. Ping URLs are `http://host.docker.internal:PORT`. (2026-11-03)
+  **Resolved:** The container was pinging its own loopback, or the bridge firewall was dropping the check. Docker's `host-gateway` is `docker0` (`172.17.0.1`), so `host.docker.internal` is pinned to the Homarr gateway `172.30.88.1`. Proxies there cover the loopback apps. The firewall, qBittorrent, and Prowlarr accept the bridge, and Prowlarr's reply to that subnet stays off the VPN. Ping URLs are `http://host.docker.internal:PORT`. (2026-11-03)
 
 - **Wrong:** Uptime Kuma monitors were expected to come only from git.
   **Resolved:** They live in `/var/lib/private/uptime-kuma/kuma.db`. Stop the service before writing the sqlite file. (2026-10-29, 068dc80a)

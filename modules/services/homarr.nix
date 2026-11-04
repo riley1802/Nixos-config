@@ -68,8 +68,9 @@ in
     # 3001 stay on the container network, so they do not collide with Uptime
     # Kuma. Host networking would put 3001 on the host. The container is on
     # its own bridge, not the default docker0 bridge, and it is the only
-    # address on that bridge. 127.0.0.1 inside the container is the container,
-    # so host.docker.internal is that bridge's gateway for widget calls. The
+    # address on that bridge. 127.0.0.1 inside the container is the container.
+    # Docker's host-gateway value is docker0 (172.17.0.1), not this bridge,
+    # so host.docker.internal is pinned to this bridge's gateway. The
     # Docker socket is not mounted, and ENABLE_DOCKER=false hides that page.
     # Docker's daemon IP is already 127.0.0.1. The port mapping repeats it
     # because a published port bypasses the NixOS firewall.
@@ -124,7 +125,7 @@ in
         # Not the default bridge. --ip is only honored on a user-defined network.
         networks = [ "homarr" ];
         extraOptions = [
-          "--add-host=host.docker.internal:host-gateway"
+          "--add-host=host.docker.internal:${bridgeGateway}"
           "--ip=${bridgeAddress}"
         ];
       };
