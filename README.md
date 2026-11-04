@@ -52,6 +52,10 @@ by `nixos-generate-config` and should not be edited by hand.
   is build 9190, which cannot load LFM3. `modules/services/llama.nix` runs
   the two servers and publishes them with Tailscale Serve. Both servers
   require the API key in `secrets/llama-api-key.age`.
+  `modules/services/chatterbox.nix` runs Chatterbox Turbo on the GTX 1660
+  SUPER at `127.0.0.1:8084`. The HTTP handler is
+  `packages/chatterbox-tts-server.nix`; PyTorch and the model weights live
+  in `/var/lib/chatterbox`.
   `modules/services/nemotron.nix` is a third server, Nemotron 3.5 Bolt E4B,
   and it stays off until `nixctl enable services/nemotron`.
 - `modules/services/n8n.nix` runs n8n 2.34.6 from the nixos-26.05 module and
@@ -159,6 +163,15 @@ The NixOS firewall stays enabled.
   the loopback ports. Uptime Kuma still checks `http://127.0.0.1:8081/health`
   and `http://127.0.0.1:8082/health`. Those health URLs stay open. Other
   routes require the API key in `secrets/llama-api-key.age`.
+- Chatterbox Turbo TTS listens on `127.0.0.1:8084` only. There is no
+  Tailscale Serve route and the firewall does not open this port. The
+  service is `modules/services/chatterbox.nix`, model
+  `ResembleAI/chatterbox-turbo`, device GTX 1660 SUPER
+  (`GPU-f2ae9716-6783-f900-4fed-c05b9cb3a6aa`). Check
+  `http://127.0.0.1:8084/health`. Synthesis is `POST /tts` with JSON
+  `{"text":"your words"}` and optional `"audio_prompt_path"` for a
+  different reference clip; the response is 24 kHz WAV. The default voice
+  reference is `/var/lib/chatterbox/ref.wav`.
 - n8n accepts TCP port 5678 on `tailscale0` only. The process listens on
   `127.0.0.1`. Tailscale Serve presents HTTPS for
   `nixos.taile9f484.ts.net:5678` and proxies to that port. This computer
