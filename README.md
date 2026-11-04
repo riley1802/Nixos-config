@@ -20,11 +20,11 @@ modules/hardware/                 NVIDIA driver, vault disk, game drive
 modules/desktop/                  Cinnamon, KDE Connect, Chrome DNS policy
 modules/network/                  Tailscale, DNS, SSH, NetworkManager, PIA, firewall
 modules/services/arr/             Sonarr, Radarr, Lidarr, Bazarr, Prowlarr, Seerr,
-                                  qBittorrent, and the shared media directories
+                                  qBittorrent, Cleanuparr, and the shared media directories
 modules/services/                 Jellyfin, Immich, n8n, ntfy, llama.cpp, Homarr,
                                   Netdata, Uptime Kuma, Docker
 modules/apps/openlogi.nix         MX Master 4
-packages/                         Lidarr, llama.cpp, and Uptime Kuma builds
+packages/                         Lidarr, Cleanuparr, llama.cpp, and Uptime Kuma builds
 secrets/                          agenix recipients and encrypted files
 pia/                              public PIA certificate and server list
 ```
@@ -45,6 +45,9 @@ by `nixos-generate-config` and should not be edited by hand.
   remote-code-execution fix. `packages/uptime-kuma/uptime-kuma-database-permissions.patch`
   keeps a newly created database from being world-readable.
 - `modules/services/uptime-kuma.nix` runs that package.
+- `packages/cleanuparr.nix` is the official Cleanuparr 2.10.12 linux-amd64
+  build. nixpkgs does not have it. `modules/services/arr/cleanuparr.nix`
+  runs it.
 - `packages/llama-cpp.nix` builds llama.cpp 0.8.0 with CUDA. The 26.05 pin
   is build 9190, which cannot load LFM3. `modules/services/llama.nix` runs
   the two servers and publishes them with Tailscale Serve. Both servers
@@ -125,8 +128,8 @@ Cursor, Google Chrome, Git, htop, llama.cpp, OpenLogi, and Spotify are
 installed system-wide. OpenLogi is the local manager for the MX Master 4;
 its agent starts with the graphical session. The `uinput` kernel module is
 loaded at boot so that agent's device node receives a seat ACL. The menu
-also has a Chrome app entry for Homarr.
-That opens `http://127.0.0.1:7575`.
+also has Chrome app entries for Homarr and Cleanuparr.
+Those open `http://127.0.0.1:7575` and `http://127.0.0.1:11011`.
 
 The NixOS firewall stays enabled.
 
@@ -169,6 +172,11 @@ The NixOS firewall stays enabled.
   `127.0.0.1:7575`. Tailscale Serve presents HTTPS for
   `nixos.taile9f484.ts.net:7575` and proxies to that port. This computer
   can still open `http://127.0.0.1:7575`. The home network and the VPN
+  cannot.
+- Cleanuparr accepts TCP port 11011 on `tailscale0` only. The process
+  listens on `127.0.0.1`. Tailscale Serve presents HTTPS for
+  `nixos.taile9f484.ts.net:11011` and proxies to that port. This computer
+  can still open `http://127.0.0.1:11011`. The home network and the VPN
   cannot.
 - Homarr's status checks come from `172.30.88.2` on the bridge
   `br-homarr`. The firewall accepts that address on the app ports.
@@ -216,13 +224,17 @@ are available on the tailnet. Only Jellyfin is also open on the home Wi-Fi.
 | Lidarr | http://127.0.0.1:8686 or http://nixos.taile9f484.ts.net:8686 | Music. Add artists here; Seerr does not request music |
 | Bazarr | http://127.0.0.1:6767 or http://nixos.taile9f484.ts.net:6767 | Subtitles, after a language profile is chosen |
 | qBittorrent | http://127.0.0.1:8080 or http://nixos.taile9f484.ts.net:8080 | Torrent client. Sonarr, Radarr, and Lidarr drive it |
+| Cleanuparr | http://127.0.0.1:11011 or https://nixos.taile9f484.ts.net:11011 | Removes stalled, failed, and blocked downloads. The first visit creates the login. Jobs stay off until enabled in the page |
 | Uptime Kuma | http://127.0.0.1:3001 or http://nixos.taile9f484.ts.net:3001 | Whether the apps above, Pi-hole, and the tailnet path to the Pi are up |
 
 A request in Seerr goes to Sonarr or Radarr. That app asks Prowlarr for a
 torrent. Prowlarr's search leaves through the VPN. The grab goes to
 qBittorrent, which is bound to the `pia` interface, so the download stops if
 the tunnel is down instead of using the home address. Finished files are
-moved into the library and then show up in Jellyfin.
+moved into the library and then show up in Jellyfin. Cleanuparr reads the
+same queue. Its login and the API keys it stores stay in
+`/var/lib/cleanuparr`. Turn on Dry run in its General page before enabling
+a cleaner, or the cleaner deletes downloads.
 
 The vault disk is mounted at `/vault`. Shared directories are mode `2775`
 and group `media`.

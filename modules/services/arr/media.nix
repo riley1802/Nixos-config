@@ -42,7 +42,7 @@ in
           fi
           systemctl start "$(systemd-escape -p --suffix=mount /mnt/game-drive)"
           systemctl start vault-media.service media-directories.service
-          for s in qbittorrent sonarr radarr lidarr bazarr jellyfin; do
+          for s in qbittorrent sonarr radarr lidarr bazarr jellyfin cleanuparr; do
             if systemctl is-enabled --quiet "$s.service" && ! systemctl is-active --quiet "$s.service"; then
               systemctl start "$s.service"
             fi

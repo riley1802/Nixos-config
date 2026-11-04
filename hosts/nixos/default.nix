@@ -26,6 +26,7 @@
   my.network.pia.enable = true;
   my.network.tailscale.enable = true;
   my.services.arr.bazarr.enable = true;
+  my.services.arr.cleanuparr.enable = true;
   my.services.arr.lidarr.enable = true;
   my.services.arr.media.enable = true;
   my.services.arr.prowlarr.enable = true;

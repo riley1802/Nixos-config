@@ -57,6 +57,7 @@ in
           "$ts" serve --bg --yes --https=8081 http://127.0.0.1:8081
           "$ts" serve --bg --yes --https=8082 http://127.0.0.1:8082
           "$ts" serve --bg --yes --https=8088 http://127.0.0.1:8088
+          "$ts" serve --bg --yes --https=11011 http://127.0.0.1:11011
           # Homepage used 3010, Netdata used 19999. tailscaled keeps the last
           # serve config, and `off` errors once that handler is already gone.
           if "$ts" serve status | ${pkgs.gnugrep}/bin/grep -q ':3010'; then
@@ -66,7 +67,7 @@ in
             "$ts" serve --https=19999 --yes off
           fi
           status=$("$ts" serve status)
-          for port in 2283 2586 5678 7575 8081 8082 8088; do
+          for port in 2283 2586 5678 7575 8081 8082 8088 11011; do
             printf '%s\n' "$status" | ${pkgs.gnugrep}/bin/grep -q ":$port" || {
               echo "missing Tailscale serve route for port $port" >&2
               exit 1
