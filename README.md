@@ -178,8 +178,8 @@ The NixOS firewall stays enabled.
   A form post returns raw 24 kHz signed 16-bit PCM. OpenAI-style JSON
   with `"response_format":"wav"` returns WAV. Saved voices live in
   `/var/lib/breeze-tts/voices`. Chatterbox is off. Its weights and venv
-  remain in `/var/lib/chatterbox`. n8n's Discord replies still use
-  LFM3-Omni at `http://127.0.0.1:8081/tts`.
+  remain in `/var/lib/chatterbox`. n8n's Discord replies use Breeze at
+  `http://127.0.0.1:8084/v1/audio/speech`.
 - n8n accepts TCP port 5678 on `tailscale0` only. The process listens on
   `127.0.0.1`. Tailscale Serve presents HTTPS for
   `nixos.taile9f484.ts.net:5678` and proxies to that port. This computer
@@ -434,8 +434,10 @@ Tailscale. LFM3-Omni-2B is on `http://127.0.0.1:8081/v1`, model id
 `http://127.0.0.1:8091/` (POST the audio bytes, the response is 16 kHz
 mono wav) because llama.cpp does not decode Discord's Ogg Opus.
 `http://127.0.0.1:8091/discord-voice` turns speech wav into the Ogg Opus
-file, duration, and waveform Discord uses for a voice memo. After
-the owner account exists, add one OpenAI credential:
+file, duration, and waveform Discord uses for a voice memo. The Discord
+chat workflow asks Breeze for that wav at
+`http://127.0.0.1:8084/v1/audio/speech` with `"response_format":"wav"`.
+After the owner account exists, add one OpenAI credential:
 
 - API key: the single line in `/run/agenix/llama-api-key`
   (`pkexec cat /run/agenix/llama-api-key`). Update the saved credential

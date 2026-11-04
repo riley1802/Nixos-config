@@ -3,8 +3,9 @@
 let
   cfg = config.my.services.n8n;
   # Discord voice messages are Opus in an Ogg file. LFM3-Omni's llama.cpp
-  # audio input accepts wav, mp3, and flac, and /tts returns wav. n8n's
-  # Code node cannot run ffmpeg, so this loopback service converts both ways.
+  # audio input accepts wav, mp3, and flac. Breeze returns wav from
+  # POST /v1/audio/speech. n8n's Code node cannot run ffmpeg, so this
+  # loopback service converts both ways.
   # POST / returns 16 kHz mono wav. POST /discord-voice returns the Ogg Opus
   # file Discord will show as a voice memo, plus duration and waveform.
   audioToWav = pkgs.writeScript "audio-to-wav.py" ''
@@ -140,8 +141,10 @@ in
     # A workflow that hears Discord voice memos posts the audio file to
     # http://127.0.0.1:8091/ and sends the wav to
     # http://127.0.0.1:8081/v1/chat/completions with model id lfm3-omni.
-    # The spoken reply comes from http://127.0.0.1:8081/tts. POST that wav
-    # to http://127.0.0.1:8091/discord-voice for the Discord voice-memo file.
+    # The spoken reply comes from Breeze at
+    # http://127.0.0.1:8084/v1/audio/speech (OpenAI-style JSON,
+    # response_format wav). POST that wav to
+    # http://127.0.0.1:8091/discord-voice for the Discord voice-memo file.
     # The 1.7B server has one slot and is shared with Open WebUI, so a
     # workflow waits if a chat is already generating. The Omni server has
     # one slot too.
