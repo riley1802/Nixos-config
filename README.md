@@ -332,7 +332,9 @@ process cannot be GPU-only for one model and CPU-only for the other.
 
 Nemotron 3.5 Bolt E4B Q4_K_M listens on `127.0.0.1:8083` when
 `my.hardware.gtx1660` is `nemotron`, with model id `nemotron-bolt`, context
-8192, and a q8_0 KV cache. It is pinned to the GTX 1660 SUPER
+8192, a q8_0 KV cache, and the Gemma 4 E4B MTP assistant
+`mtp-gemma-4-E4B-it-Q8_0.gguf` as `--spec-type draft-mtp` with
+`--spec-draft-n-max 1`. It is pinned to the GTX 1660 SUPER
 (`GPU-f2ae9716-6783-f900-4fed-c05b9cb3a6aa`). The official GGUF is
 6,180,446,208 bytes, about 5.76 GiB, so the unit does not set `-ngl` and
 sets `--fit on`. Sampling is `--temp 1.0`, `--top-p 0.95`, and
@@ -342,7 +344,11 @@ as `Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf`. The host line
 starts it immediately and stops Breeze. Tailscale Serve, Open WebUI, and
 the Homarr ping proxy add port 8083 only when the host line is `nemotron`
 and `nixctl apply` has run.
+Measured on 2026-11-04 on this 1660, 128 new tokens, seed 1: 57.4 tok/s
+with no drafter, 74.7 tok/s at draft length 1, 65.4 at 2, 61.4 at 3, and
+53.3 at 4. Draft length 1 is what the unit uses.
 https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Bolt-E4B-4GB
+https://huggingface.co/unsloth/gemma-4-E4B-it-GGUF/blob/main/MTP/README.md
 
 On this computer the running pages are `http://127.0.0.1:8081/` and
 `http://127.0.0.1:8082/`. The `/v1` path is the OpenAI-compatible API. A
