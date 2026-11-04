@@ -40,8 +40,12 @@ in
     #
     # The file is 6,180,446,208 bytes (about 5.76 GiB). The GTX 1660 SUPER
     # has 6 GiB and is otherwise idle, so -ngl all plus a q8_0 KV cache
-    # does not fit. Context is 8192 so the q8_0 KV cache stays small.
-    # -ngl is left unset and --fit on keeps some layers on the CPU.
+    # does not fit. Context is 16384. --fit-ctx keeps that window and
+    # --fit on moves layers to the CPU instead of shrinking it.
+    # Measured 2026-11-04 with this MTP head, n-max 1, q8_0 KV: a 15811
+    # token prompt at 16384 was 186.7 tok/s prefill and 55.9 tok/s
+    # generation; a 32218 token prompt at 32768 was 157.0 and 42.8.
+    # The unit stays at 16384. -ngl is left unset.
     # The RTX 3050 already runs LFM3-Omni and the desktop.
     #
     # Sampling is NVIDIA's: temperature 1.0, top_p 0.95, thinking on.
@@ -109,11 +113,13 @@ in
           "--alias"
           "nemotron-bolt"
           "-c"
-          "8192"
+          "16384"
           "-np"
           "1"
           "--fit"
           "on"
+          "--fit-ctx"
+          "16384"
           "--cache-type-k"
           "q8_0"
           "--cache-type-v"
