@@ -2,7 +2,7 @@
 
 This repository is the NixOS configuration for the `nixos` workstation. It
 defines a Cinnamon desktop, dual-NVIDIA graphics, OpenSSH over the tailnet,
-two llama.cpp servers plus a third that stays off, n8n, ntfy, Immich, Uptime Kuma, Netdata, Homarr, and a
+two llama.cpp servers plus a third that stays off, n8n, ntfy, Immich, Uptime Kuma, Netdata, Homarr, Homelable, and a
 torrent media stack.
 qBittorrent and Prowlarr lookups use a Private Internet Access WireGuard tunnel. The
 rest of the desktop stays on the home network.
@@ -22,7 +22,7 @@ modules/network/                  Tailscale, DNS, SSH, NetworkManager, PIA, fire
 modules/services/arr/             Sonarr, Radarr, Lidarr, Bazarr, Prowlarr, Seerr,
                                   qBittorrent, Cleanuparr, and the shared media directories
 modules/services/                 Jellyfin, Immich, n8n, ntfy, llama.cpp, Homarr,
-                                  Netdata, Uptime Kuma, Docker
+                                  Homelable, Netdata, Uptime Kuma, Docker
 modules/apps/openlogi.nix         MX Master 4
 packages/                         Lidarr, Cleanuparr, llama.cpp, and Uptime Kuma builds
 secrets/                          agenix recipients and encrypted files
@@ -78,6 +78,13 @@ by `nixos-generate-config` and should not be edited by hand.
   computer it is `http://127.0.0.1:7575`. On the tailnet it is
   `https://nixos.taile9f484.ts.net:7575`. The tiles stay in
   `/var/lib/homarr`.
+- `modules/services/homelable.nix` runs the official containers
+  `ghcr.io/pouzor/homelable-backend:3.6.0`,
+  `ghcr.io/pouzor/homelable-frontend:3.6.0`, and
+  `ghcr.io/pouzor/homelable-mcp:3.6.0`. On this computer the diagram is
+  `http://127.0.0.1:3000`. On the tailnet it is
+  `https://nixos.taile9f484.ts.net:3000`. The canvas stays in
+  `/var/lib/homelable`. The login is `pkexec cat /run/agenix/homelable-login`.
 - `modules/services/netdata.nix` runs a local Netdata agent on loopback and
   publishes it with Tailscale Serve. The package is `netdataCloud`, because
   the default build has no dashboard files and the page is
@@ -100,6 +107,10 @@ by `nixos-generate-config` and should not be edited by hand.
   `/run/agenix/homarr-encryption-key`.
   `secrets/llama-api-key.age` is the llama.cpp API key for the servers
   and for Open WebUI. The decrypted file is `/run/agenix/llama-api-key`.
+  `secrets/homelable-env.age` is Homelable's `SECRET_KEY`, admin password
+  hash, and MCP keys. `secrets/homelable-login.age` is the admin username
+  and password. Decrypted copies are `/run/agenix/homelable-env` and
+  `/run/agenix/homelable-login`.
 - `pia/ca.rsa.4096.crt` and `pia/pia-servers.json` are public PIA material
   used to reach a server by IP when the VPN hostnames are filtered.
 
@@ -297,6 +308,7 @@ replace that.
 | App | Address | What is stored where |
 |---|---|---|
 | Homarr | http://127.0.0.1:7575 or https://nixos.taile9f484.ts.net:7575 | The container and the encryption key are declared here. Tiles and the admin account are created in the web UI and stay in `/var/lib/homarr`, which is not in git. |
+| Homelable | http://127.0.0.1:3000 or https://nixos.taile9f484.ts.net:3000 | The containers and the login are declared here. The canvas stays in `/var/lib/homelable`, which is not in git. Login: `pkexec cat /run/agenix/homelable-login`. |
 | Netdata | http://127.0.0.1:19999/v3 or https://nixos.taile9f484.ts.net:19999/v3 | Agent config is in `modules/services/netdata.nix`. `/v3` has no local password. This agent cannot require one without a Netdata Cloud claim, and it is not claimed, so any tailnet device can open the charts. The root URL is the Cloud sign-in. Charts and alarm state stay in `/var/lib/netdata`, which is not in git. |
 
 The Chrome menu entries open the loopback addresses. The tailnet addresses

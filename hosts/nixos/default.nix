@@ -42,6 +42,7 @@
   my.services.d1.enable = true;
   my.services.docker.enable = true;
   my.services.homarr.enable = true;
+  my.services.homelable.enable = true;
   my.services.immich.enable = true;
   my.services.jellyfin.enable = true;
   my.services.llama.enable = true;

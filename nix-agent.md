@@ -74,6 +74,7 @@ These rules come from the chats on this machine (2026-06-29 through 2026-11-03).
 
 ## Services worth remembering
 
+- Homelable is the network diagram at `127.0.0.1:3000`. Tailscale Serve publishes `https://nixos.taile9f484.ts.net:3000`. Login: `pkexec cat /run/agenix/homelable-login`. The canvas is `/var/lib/homelable`. The scanner covers `192.168.50.0/24` from the `br-homelable` bridge and does not see MAC addresses. MCP is `127.0.0.1:8001` only; its key is in `/run/agenix/homelable-env`.
 - Homepage was removed. Homarr on port 7575 is the board. Its tiles are in `/var/lib/homarr`, not in the Nix file. A ping URL there has to be `http://host.docker.internal:PORT`. That name is `172.30.88.1`, not Docker's `host-gateway` (`172.17.0.1`). Loopback apps are proxied on that gateway. The click URL stays `http://127.0.0.1:PORT`.
 - Netdata's default package has no dashboard files, so `/` returns "File does not exist". This machine uses `netdataCloud` and the charts are under `/v3`.
 - ntfy's `base-url` cannot contain a path. n8n 2.x serves its assets at `/`, so an `N8N_PATH` or an nginx `/n8n/` prefix returns HTML where the browser expects JavaScript.

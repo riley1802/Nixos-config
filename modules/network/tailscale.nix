@@ -55,6 +55,9 @@ in
           done
           "$ts" serve --bg --yes --https=2283 http://127.0.0.1:2283
           "$ts" serve --bg --yes --https=2586 http://127.0.0.1:2586
+          ${lib.optionalString config.my.services.homelable.enable ''
+            "$ts" serve --bg --yes --https=3000 http://127.0.0.1:3000
+          ''}
           "$ts" serve --bg --yes --https=5678 http://127.0.0.1:5678
           "$ts" serve --bg --yes --https=7575 http://127.0.0.1:7575
           "$ts" serve --bg --yes --https=8081 http://127.0.0.1:8081
@@ -76,8 +79,13 @@ in
           if "$ts" serve status | ${pkgs.gnugrep}/bin/grep -q ':19999'; then
             "$ts" serve --https=19999 --yes off
           fi
+          ${lib.optionalString (!config.my.services.homelable.enable) ''
+            if "$ts" serve status | ${pkgs.gnugrep}/bin/grep -q ':3000'; then
+              "$ts" serve --https=3000 --yes off
+            fi
+          ''}
           status=$("$ts" serve status)
-          for port in 2283 2586 5678 7575 8081 8082${lib.optionalString (config.my.services.nemotron.enable && config.my.hardware.gtx1660 == "nemotron") " 8083"}${lib.optionalString (config.my.services.breeze-tts.enable && config.my.hardware.gtx1660 == "breeze-tts") " 8084 8085"} 8088 11011; do
+          for port in 2283 2586${lib.optionalString config.my.services.homelable.enable " 3000"} 5678 7575 8081 8082${lib.optionalString (config.my.services.nemotron.enable && config.my.hardware.gtx1660 == "nemotron") " 8083"}${lib.optionalString (config.my.services.breeze-tts.enable && config.my.hardware.gtx1660 == "breeze-tts") " 8084 8085"} 8088 11011; do
             printf '%s\n' "$status" | ${pkgs.gnugrep}/bin/grep -q ":$port" || {
               echo "missing Tailscale serve route for port $port" >&2
               exit 1
