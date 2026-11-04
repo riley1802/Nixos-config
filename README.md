@@ -57,8 +57,11 @@ by `nixos-generate-config` and should not be edited by hand.
   process listens on `127.0.0.1:8084` and `127.0.0.1:8085`, and Tailscale
   Serve publishes both. The Q8_0 weights download into `/var/lib/breeze-tts`
   on first start. Chatterbox is off; its files remain in `/var/lib/chatterbox`.
-  `modules/services/nemotron.nix` is a third server, Nemotron 3.5 Bolt E4B,
-  and it stays off until `nixctl enable services/nemotron`.
+  `modules/services/nemotron.nix` is a third server, Nemotron 3.5 Bolt E4B.
+  `my.hardware.gtx1660` in the host file chooses Breeze or Nemotron for the
+  1660. The other unit stays installed and stopped. `gtx1660 breeze` or
+  `gtx1660 nemotron` flips the running process; the host line is the boot
+  default and what the tailnet publishes.
 - `modules/services/n8n.nix` runs n8n 2.34.6 from the nixos-26.05 module and
   publishes it with Tailscale Serve. The owner account and workflows stay in
   `/var/lib/n8n`.
@@ -155,17 +158,18 @@ The NixOS firewall stays enabled.
   can still open `http://127.0.0.1:3001` through the trusted loopback
   interface.
 - llama.cpp is reached through Tailscale Serve on TCP 8081 and 8082.
-  Those two ports are accepted on `tailscale0`. Port 8083 is the Nemotron
-  server, which is configured and left off, so Serve does not publish it
-  and the firewall does not open it yet. The llama processes themselves
+  Those two ports are accepted on `tailscale0`. Port 8083 is Nemotron.
+  Serve and the firewall publish it only while `my.hardware.gtx1660` is
+  `nemotron`. The llama processes themselves
   listen on `127.0.0.1` only. Chrome forces HTTPS for every `*.ts.net`
   name, so plain HTTP on the tailnet hostname times out. Serve presents a
   Let's Encrypt certificate for `nixos.taile9f484.ts.net` and proxies to
   the loopback ports. Uptime Kuma still checks `http://127.0.0.1:8081/health`
   and `http://127.0.0.1:8082/health`. Those health URLs stay open. Other
   routes require the API key in `secrets/llama-api-key.age`.
-- Breeze TTS 2 Q8 accepts TCP 8084 and 8085 on `tailscale0` only. The
-  process listens on `127.0.0.1`. Tailscale Serve presents HTTPS for
+- Breeze TTS 2 Q8 accepts TCP 8084 and 8085 on `tailscale0` only while
+  `my.hardware.gtx1660` is `breeze-tts`. The process listens on
+  `127.0.0.1`. Tailscale Serve presents HTTPS for
   `nixos.taile9f484.ts.net:8084` (the page and the HTTP API) and
   `:8085` (the WebSocket the page opens when it speaks) and proxies to
   those ports. This computer can still open `http://127.0.0.1:8084`. The
@@ -326,16 +330,18 @@ process cannot be GPU-only for one model and CPU-only for the other.
 | LFM3-Omni-2B Q8_0 | RTX 3050 | 32768 | q8_0 | https://nixos.taile9f484.ts.net:8081/ | https://nixos.taile9f484.ts.net:8081/v1 |
 | LFM3-1.7B Q8_0 | CPU, 12 threads | 32768 | q8_0 | https://nixos.taile9f484.ts.net:8082/ | https://nixos.taile9f484.ts.net:8082/v1 |
 
-A third server is written and left off. Nemotron 3.5 Bolt E4B Q4_K_M
-would listen on `127.0.0.1:8083`, with model id `nemotron-bolt`, context
+Nemotron 3.5 Bolt E4B Q4_K_M listens on `127.0.0.1:8083` when
+`my.hardware.gtx1660` is `nemotron`, with model id `nemotron-bolt`, context
 8192, and a q8_0 KV cache. It is pinned to the GTX 1660 SUPER
 (`GPU-f2ae9716-6783-f900-4fed-c05b9cb3a6aa`). The official GGUF is
 6,180,446,208 bytes, about 5.76 GiB, so the unit does not set `-ngl` and
 sets `--fit on`. Sampling is `--temp 1.0`, `--top-p 0.95`, and
 `--reasoning on`. The weight file belongs in `/home/rileyt/llama-models`
-as `Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf`. Turn the server on with
-`nixctl enable services/nemotron`, then `nixctl apply`. Tailscale Serve,
-Open WebUI, and the Homarr ping proxy add port 8083 only then.
+as `Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf`. The host line
+`my.hardware.gtx1660` chooses this server or Breeze. `gtx1660 nemotron`
+starts it immediately and stops Breeze. Tailscale Serve, Open WebUI, and
+the Homarr ping proxy add port 8083 only when the host line is `nemotron`
+and `nixctl apply` has run.
 https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Bolt-E4B-4GB
 
 On this computer the running pages are `http://127.0.0.1:8081/` and
@@ -362,8 +368,8 @@ id on port 8081 is `lfm3-omni`. Omni does not reason, so the server uses
 
 The Omni server is pinned to the RTX 3050 by GPU UUID
 `GPU-d80211d0-ecb1-e279-4f4d-34c53d278895`. That card has 6GB and also
-drives the desktop. The GTX 1660 SUPER is reserved for the Nemotron
-server in `modules/services/nemotron.nix`, which stays off until enabled.
+drives the desktop. The GTX 1660 SUPER runs whichever
+`my.hardware.gtx1660` names, Breeze TTS or Nemotron.
 The package builds CUDA for compute capabilities 7.5 and 8.6, which
 covers both cards, and CPU backends for runtime dispatch. The 1.7B server sets
 `CUDA_VISIBLE_DEVICES` empty, `--device none`, and `-ngl 0`. A thread

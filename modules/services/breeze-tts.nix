@@ -1,4 +1,4 @@
-# Breeze TTS 2 Q8 on the GTX 1660 SUPER. Web page on port 8084.
+# Breeze TTS 2 Q8 on the GTX 1660 SUPER. Web page on port 8084. Runs when the 1660 switch is breeze-tts.
 { config, lib, pkgs, ... }:
 let
   cfg = config.my.services.breeze-tts;
@@ -18,10 +18,6 @@ in
       {
         assertion = !config.my.services.chatterbox.enable;
         message = "services/breeze-tts needs services/chatterbox off (nixctl disable services/chatterbox); both want the 1660 SUPER and port 8084";
-      }
-      {
-        assertion = !config.my.services.nemotron.enable;
-        message = "services/breeze-tts needs services/nemotron off (nixctl disable services/nemotron); both want the 1660 SUPER";
       }
     ];
 
@@ -61,7 +57,12 @@ in
       '';
     };
 
+    # The upstream unit is wanted by multi-user. The 1660 switch replaces
+    # that. Starting this unit stops Nemotron, and the reverse.
+    # https://www.freedesktop.org/software/systemd/man/latest/systemd.unit.html#Conflicts=
     systemd.services.breeze-tts = {
+      wantedBy = lib.mkForce (lib.optional (config.my.hardware.gtx1660 == "breeze-tts") "multi-user.target");
+      conflicts = [ "llama-cpp-nemotron.service" ];
       serviceConfig = {
         User = "breeze";
         Group = "breeze";
@@ -95,7 +96,7 @@ in
       };
     };
 
-    networking.firewall.interfaces.tailscale0.allowedTCPPorts = [
+    networking.firewall.interfaces.tailscale0.allowedTCPPorts = lib.optionals (config.my.hardware.gtx1660 == "breeze-tts") [
       8084 # Breeze TTS HTTP and web UI
       8085 # Breeze TTS WebSocket
     ];

@@ -1,4 +1,4 @@
-# Nemotron 3.5 Bolt E4B llama.cpp server. Web page on port 8083. Off until enabled.
+# Nemotron 3.5 Bolt E4B llama.cpp server. Web page on port 8083. Runs when the 1660 switch is nemotron.
 { config, lib, pkgs, ... }:
 let
   cfg = config.my.services.nemotron;
@@ -57,13 +57,15 @@ in
     systemd.services.llama-cpp-nemotron = {
       description = "llama.cpp server for Nemotron 3.5 Bolt E4B";
       after = [ "network.target" ];
-      wantedBy = [ "multi-user.target" ];
+      wantedBy = lib.optional (config.my.hardware.gtx1660 == "nemotron") "multi-user.target";
+      # https://www.freedesktop.org/software/systemd/man/latest/systemd.unit.html#Conflicts=
+      conflicts = [ "breeze-tts.service" ];
       restartTriggers = [ config.age.secrets.llama-api-key.file ];
       unitConfig.ConditionPathExists = "${models}/${modelFile}";
       environment = {
         # GTX 1660 SUPER, from `nvidia-smi -L` on this machine.
-        # services/breeze-tts uses this card while it is on, and refuses
-        # to evaluate if both modules are enabled.
+        # my.hardware.gtx1660 picks the process that boots. Conflicts stops
+        # Breeze when this unit starts.
         CUDA_VISIBLE_DEVICES = "GPU-f2ae9716-6783-f900-4fed-c05b9cb3a6aa";
         LLAMA_CACHE = "/var/lib/llama-cpp/cache";
       };
@@ -127,7 +129,7 @@ in
       };
     };
 
-    networking.firewall.interfaces.tailscale0.allowedTCPPorts = [
+    networking.firewall.interfaces.tailscale0.allowedTCPPorts = lib.optionals (config.my.hardware.gtx1660 == "nemotron") [
       8083 # Nemotron 3.5 Bolt E4B
     ];
   };

@@ -2,6 +2,9 @@
 { config, lib, pkgs, ... }:
 let
   cfg = config.my.services.open-webui;
+  # The 1660 switch publishes Nemotron only while that process is the one
+  # that boots. The unit can be installed and stopped.
+  nemotronUp = config.my.services.nemotron.enable && config.my.hardware.gtx1660 == "nemotron";
 in
 {
   options.my.services.open-webui.enable = lib.mkEnableOption "Open WebUI";
@@ -42,7 +45,7 @@ in
         # and tag generation would queue in front of the reply.
         ENABLE_OLLAMA_API = "False";
         ENABLE_OPENAI_API = "True";
-        OPENAI_API_BASE_URLS = "http://127.0.0.1:8081/v1;http://127.0.0.1:8082/v1${lib.optionalString config.my.services.nemotron.enable ";http://127.0.0.1:8083/v1"}";
+        OPENAI_API_BASE_URLS = "http://127.0.0.1:8081/v1;http://127.0.0.1:8082/v1${lib.optionalString nemotronUp ";http://127.0.0.1:8083/v1"}";
         # OPENAI_API_KEYS is not set here. The oneshot below writes it from
         # the age secret, one copy per URL, so the key stays out of the store.
         # Persistent config is off, so this file is what the process sends.
@@ -74,7 +77,7 @@ in
         key=$(${pkgs.coreutils}/bin/tr -d '\n' < ${config.age.secrets.llama-api-key.path})
         test -n "''$key"
         umask 077
-        printf 'OPENAI_API_KEYS=%s;%s${lib.optionalString config.my.services.nemotron.enable ";%s"}\n' "''$key" "''$key"${lib.optionalString config.my.services.nemotron.enable '' "''$key"''} > /run/open-webui-llama/env
+        printf 'OPENAI_API_KEYS=%s;%s${lib.optionalString nemotronUp ";%s"}\n' "''$key" "''$key"${lib.optionalString nemotronUp '' "''$key"''} > /run/open-webui-llama/env
         unset key
       '';
     };

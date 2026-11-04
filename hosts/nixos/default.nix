@@ -11,6 +11,10 @@
   my.user = "rileyt";
   my.tailnetHost = "nixos.taile9f484.ts.net";
   my.lanInterface = "enp132s0";
+  # GTX 1660 SUPER. The other unit stays installed and stopped.
+  # `gtx1660 nemotron` or `gtx1660 breeze` flips the running process.
+  # This line is what boots, and what the tailnet publishes.
+  my.hardware.gtx1660 = "breeze-tts";
 
   # nixctl: modules (one line per module that is on; nixctl enable/disable edit these lines)
   my.apps.openlogi.enable = true;
@@ -42,6 +46,7 @@
   my.services.jellyfin.enable = true;
   my.services.llama.enable = true;
   my.services.n8n.enable = true;
+  my.services.nemotron.enable = true;
   my.services.ntfy.enable = true;
   my.services.open-webui.enable = true;
   my.services.uptime-kuma.enable = true;
