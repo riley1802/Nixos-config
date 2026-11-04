@@ -45,7 +45,6 @@
   my.services.homelable.enable = true;
   my.services.immich.enable = true;
   my.services.jellyfin.enable = true;
-  my.services.kokoro.enable = true;
   my.services.llama.enable = true;
   my.services.n8n.enable = true;
   my.services.nemotron.enable = true;

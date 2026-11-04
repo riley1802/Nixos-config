@@ -69,9 +69,6 @@ in
             "$ts" serve --bg --yes --https=8084 http://127.0.0.1:8084
             "$ts" serve --bg --yes --https=8085 http://127.0.0.1:8085
           ''}
-          ${lib.optionalString config.my.services.kokoro.enable ''
-            "$ts" serve --bg --yes --https=8087 http://127.0.0.1:8087
-          ''}
           "$ts" serve --bg --yes --https=8088 http://127.0.0.1:8088
           "$ts" serve --bg --yes --https=11011 http://127.0.0.1:11011
           # Homepage used 3010, Netdata used 19999. tailscaled keeps the last
@@ -82,13 +79,17 @@ in
           if "$ts" serve status | ${pkgs.gnugrep}/bin/grep -q ':19999'; then
             "$ts" serve --https=19999 --yes off
           fi
+          # Kokoro used 8087. tailscaled keeps the last serve config.
+          if "$ts" serve status | ${pkgs.gnugrep}/bin/grep -q ':8087'; then
+            "$ts" serve --https=8087 --yes off
+          fi
           ${lib.optionalString (!config.my.services.homelable.enable) ''
             if "$ts" serve status | ${pkgs.gnugrep}/bin/grep -q ':3000'; then
               "$ts" serve --https=3000 --yes off
             fi
           ''}
           status=$("$ts" serve status)
-          for port in 2283 2586${lib.optionalString config.my.services.homelable.enable " 3000"} 5678 7575 8081 8082${lib.optionalString (config.my.services.nemotron.enable && config.my.hardware.gtx1660 == "nemotron") " 8083"}${lib.optionalString (config.my.services.breeze-tts.enable && config.my.hardware.gtx1660 == "breeze-tts") " 8084 8085"}${lib.optionalString config.my.services.kokoro.enable " 8087"} 8088 11011; do
+          for port in 2283 2586${lib.optionalString config.my.services.homelable.enable " 3000"} 5678 7575 8081 8082${lib.optionalString (config.my.services.nemotron.enable && config.my.hardware.gtx1660 == "nemotron") " 8083"}${lib.optionalString (config.my.services.breeze-tts.enable && config.my.hardware.gtx1660 == "breeze-tts") " 8084 8085"} 8088 11011; do
             printf '%s\n' "$status" | ${pkgs.gnugrep}/bin/grep -q ":$port" || {
               echo "missing Tailscale serve route for port $port" >&2
               exit 1

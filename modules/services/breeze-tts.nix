@@ -14,13 +14,6 @@ in
   options.my.services.breeze-tts.enable = lib.mkEnableOption "Breeze TTS 2 Q8 (1660 SUPER)";
 
   config = lib.mkIf cfg.enable {
-    assertions = [
-      {
-        assertion = !config.my.services.chatterbox.enable;
-        message = "services/breeze-tts needs services/chatterbox off (nixctl disable services/chatterbox); both want the 1660 SUPER and port 8084";
-      }
-    ];
-
     # Q8_0 is about 3.3 GB on disk and about 4 GB of VRAM, which fits the
     # 6 GB 1660. The upstream unit downloads breeze-tts-2-q8_0.gguf on first
     # start and checks the sha256 pinned in that module. The weights are

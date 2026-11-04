@@ -21,8 +21,8 @@ modules/desktop/                  Cinnamon, KDE Connect, Chrome DNS policy
 modules/network/                  Tailscale, DNS, SSH, NetworkManager, PIA, firewall
 modules/services/arr/             Sonarr, Radarr, Lidarr, Bazarr, Prowlarr, Seerr,
                                   qBittorrent, Cleanuparr, and the shared media directories
-modules/services/                 Jellyfin, Immich, n8n, ntfy, llama.cpp, Kokoro,
-                                  Homarr, Homelable, Netdata, Uptime Kuma, Docker
+modules/services/                 Jellyfin, Immich, n8n, ntfy, llama.cpp, Homarr,
+                                  Homelable, Netdata, Uptime Kuma, Docker
 modules/apps/openlogi.nix         MX Master 4
 packages/                         Lidarr, Cleanuparr, llama.cpp, and Uptime Kuma builds
 secrets/                          agenix recipients and encrypted files
@@ -56,15 +56,12 @@ by `nixos-generate-config` and should not be edited by hand.
   SUPER. The package is the `breeze-tts` flake input, tag v0.1.6. The
   process listens on `127.0.0.1:8084` and `127.0.0.1:8085`, and Tailscale
   Serve publishes both. The Q8_0 weights download into `/var/lib/breeze-tts`
-  on first start. Chatterbox is off; its files remain in `/var/lib/chatterbox`.
+  on first start.
   `modules/services/nemotron.nix` is a third server, Nemotron 3.5 Bolt E4B.
   `my.hardware.gtx1660` in the host file chooses Breeze or Nemotron for the
-  1660. The other unit stays installed and stopped.   `gtx1660 breeze` or
+  1660. The other unit stays installed and stopped. `gtx1660 breeze` or
   `gtx1660 nemotron` flips the running process; the host line is the boot
   default and what the tailnet publishes.
-  `modules/services/kokoro.nix` runs Kokoro-82M on the CPU, separate from
-  Breeze. It listens on `127.0.0.1:8087`. Tailscale Serve publishes that
-  port. The weights are `hexgrad/Kokoro-82M` in `/var/lib/kokoro`.
 - `modules/services/n8n.nix` runs n8n 2.34.6 from the nixos-26.05 module and
   publishes it with Tailscale Serve. The owner account and workflows stay in
   `/var/lib/n8n`.
@@ -195,26 +192,8 @@ The NixOS firewall stays enabled.
   `http://127.0.0.1:8084/health`. Synthesis is `POST /v1/audio/speech`.
   A form post returns raw 24 kHz signed 16-bit PCM. OpenAI-style JSON
   with `"response_format":"wav"` returns WAV. Saved voices live in
-  `/var/lib/breeze-tts/voices`. Chatterbox is off. Its weights and venv
-  remain in `/var/lib/chatterbox`. n8n's Discord replies use Breeze at
+  `/var/lib/breeze-tts/voices`. n8n's Discord replies use Breeze at
   `http://127.0.0.1:8084/v1/audio/speech`.
-- Kokoro-82M accepts TCP 8087 on `tailscale0` only. The process listens on
-  `127.0.0.1`. Tailscale Serve presents HTTPS for
-  `nixos.taile9f484.ts.net:8087` and proxies to that port. This computer
-  can still open `http://127.0.0.1:8087`. The home network and the VPN
-  cannot. The server does not authenticate; the tailnet is the access
-  boundary. The service is `modules/services/kokoro.nix`. It uses the
-  nixpkgs `kokoro` package, CPU torch, and 16 threads. Check
-  `http://127.0.0.1:8087/health`. Synthesis is
-  `POST /v1/audio/speech` with JSON `input`, optional `voice` (default
-  `af_heart`; a name starting with `b` is British English), and
-  `response_format` `wav`. The response is 24 kHz mono WAV. On 2026-11-04,
-  after one discarded warmup, the median of three runs for a 46-character
-  sentence was 0.424 seconds (3.275 seconds of audio, real-time factor
-  7.73). A 1015-character passage produced 59.7 seconds of audio in 9.34
-  seconds (real-time factor 6.39). First audio of that passage arrived at
-  4.33 seconds. Peak RSS was 1968 MiB. 4, 8, 12, and 20 threads were
-  slower, and pinning 8 threads to performance cores 0–7 was slower too.
 - n8n accepts TCP port 5678 on `tailscale0` only. The process listens on
   `127.0.0.1`. Tailscale Serve presents HTTPS for
   `nixos.taile9f484.ts.net:5678` and proxies to that port. This computer
