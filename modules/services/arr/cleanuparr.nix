@@ -20,11 +20,11 @@ in
     #
     # The process listens on loopback. Chrome forces HTTPS for *.ts.net,
     # so Tailscale Serve terminates TLS on 11011 and proxies here.
-    # The first visit creates the login. Queue Cleaner, Malware Blocker,
-    # and the other jobs stay off until they are enabled in the page.
-    # Dry run is also off, so turn that on before enabling a job or it
-    # will delete downloads. The login, API keys, and job settings stay
-    # in /var/lib/cleanuparr and are not committed.
+    # The first visit creates the login. The cleaners stay off until
+    # they are enabled in the page. Dry run is also off, so turn that
+    # on before enabling one or it will delete downloads. Replacement
+    # search is allowed once an app is connected. Proactive search for
+    # missing items stays off.
     #
     # qBittorrent saves to /vault/media/downloads. Cleanuparr is in the
     # media group and sees that same path, so the download-directory

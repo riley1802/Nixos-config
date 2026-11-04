@@ -224,7 +224,7 @@ are available on the tailnet. Only Jellyfin is also open on the home Wi-Fi.
 | Lidarr | http://127.0.0.1:8686 or http://nixos.taile9f484.ts.net:8686 | Music. Add artists here; Seerr does not request music |
 | Bazarr | http://127.0.0.1:6767 or http://nixos.taile9f484.ts.net:6767 | Subtitles, after a language profile is chosen |
 | qBittorrent | http://127.0.0.1:8080 or http://nixos.taile9f484.ts.net:8080 | Torrent client. Sonarr, Radarr, and Lidarr drive it |
-| Cleanuparr | http://127.0.0.1:11011 or https://nixos.taile9f484.ts.net:11011 | Removes stalled, failed, and blocked downloads. The first visit creates the login. Jobs stay off until enabled in the page |
+| Cleanuparr | http://127.0.0.1:11011 or https://nixos.taile9f484.ts.net:11011 | Removes stalled, failed, and blocked downloads. The first visit creates the login. Cleaners stay off until enabled. Turn Dry run on first |
 | Uptime Kuma | http://127.0.0.1:3001 or http://nixos.taile9f484.ts.net:3001 | Whether the apps above, Pi-hole, and the tailnet path to the Pi are up |
 
 A request in Seerr goes to Sonarr or Radarr. That app asks Prowlarr for a
