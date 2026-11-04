@@ -17,8 +17,9 @@ in
     # Servarr accepts one bind address. "*" is what lets loopback (this
     # computer), tailscale0 (the phone), and the Homarr bridge in
     # homarr.nix reach the same process. The firewall is what keeps every
-    # other interface closed. Prowlarr is further limited to lo, pia, and
-    # tailscale0 by network/pia.nix.
+    # other interface closed. network/pia.nix limits the process to lo,
+    # pia, and tailscale0. homarr.nix adds br-homarr, and pia.nix leaves
+    # replies to that bridge off the VPN.
     # https://wiki.servarr.com/sonarr/settings#bind-address
     services.prowlarr = {
       enable = true;

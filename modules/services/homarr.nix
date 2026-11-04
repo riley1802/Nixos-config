@@ -1,16 +1,57 @@
 # Homarr service board. Web page on port 7575.
-{ config, lib, ... }:
+{ config, lib, pkgs, ... }:
 let
   cfg = config.my.services.homarr;
+  # Outside Docker's default pools. .1 is the gateway (host.docker.internal).
+  # .2 is this container. The bridge name is stable so the firewall can name it.
+  bridgeSubnet = "172.30.88.0/29";
+  bridgeGateway = "172.30.88.1";
+  bridgeAddress = "172.30.88.2";
+  bridgeName = "br-homarr";
+  # These listen on every interface. Homarr reaches them on the gateway.
+  directPorts = [
+    3001 # Uptime Kuma
+    5055 # Seerr
+    6767 # Bazarr
+    7878 # Radarr
+    8080 # qBittorrent
+    8096 # Jellyfin
+    8686 # Lidarr
+    8989 # Sonarr
+    9696 # Prowlarr
+  ];
+  # These listen on loopback. A proxy on the gateway forwards the ping.
+  # Tailscale Serve keeps using 127.0.0.1.
+  proxyPorts = {
+    ntfy = 2586;
+    n8n = 5678;
+    llama-vl = 8081;
+    llama-1_7b = 8082;
+    open-webui = 8088;
+  };
+  # iptables multiport accepts at most 15 ports.
+  homarrPorts = directPorts ++ lib.attrValues proxyPorts;
 in
 {
-  options.my.services.homarr.enable = lib.mkEnableOption "Homarr";
+  options.my.services.homarr = {
+    enable = lib.mkEnableOption "Homarr";
+    bridgeSubnet = lib.mkOption {
+      type = lib.types.str;
+      default = bridgeSubnet;
+      readOnly = true;
+      description = "Docker bridge subnet for Homarr. Prowlarr keeps replies to this subnet off the VPN.";
+    };
+  };
 
   config = lib.mkIf cfg.enable {
     assertions = [
       {
         assertion = config.my.services.docker.enable;
         message = "services/homarr needs services/docker (nixctl enable services/docker)";
+      }
+      {
+        assertion = builtins.length homarrPorts <= 15;
+        message = "services/homarr firewall rule uses iptables multiport, which allows at most 15 ports";
       }
     ];
 
@@ -84,7 +125,7 @@ in
         networks = [ "homarr" ];
         extraOptions = [
           "--add-host=host.docker.internal:host-gateway"
-          "--ip=172.30.88.2"
+          "--ip=${bridgeAddress}"
         ];
       };
     };
@@ -93,54 +134,91 @@ in
       7575 # Homarr
     ];
 
-    # 172.30.88.0/29 is outside Docker's default pools. .1 is the gateway,
-    # which host.docker.internal uses. .2 is this container. The bridge name
-    # is stable so the firewall can name it. An existing network with a
-    # different subnet is left in place and this unit fails, instead of
-    # silently pointing --ip at the wrong range.
-    systemd.services.docker-homarr-network = {
-      description = "Docker network for Homarr widget calls";
-      after = [ "docker.service" ];
-      requires = [ "docker.service" ];
-      requiredBy = [ "docker-homarr.service" ];
-      before = [ "docker-homarr.service" ];
-      serviceConfig = {
-        Type = "oneshot";
-        RemainAfterExit = true;
-      };
-      script = ''
-        set -euo pipefail
-        docker=${config.virtualisation.docker.package}/bin/docker
-        if "''$docker" network inspect homarr >/dev/null 2>&1; then
-          bridge=''$("''$docker" network inspect homarr --format '{{ index .Options "com.docker.network.bridge.name" }}')
-          subnet=''$("''$docker" network inspect homarr --format '{{ range .IPAM.Config }}{{ .Subnet }}{{ end }}')
-          if [[ "''$bridge" != br-homarr || "''$subnet" != 172.30.88.0/29 ]]; then
-            echo "docker network homarr exists but is not br-homarr on 172.30.88.0/29" >&2
-            exit 1
-          fi
-        else
-          "''$docker" network create \
-            --driver bridge \
-            --subnet 172.30.88.0/29 \
-            --gateway 172.30.88.1 \
-            --opt com.docker.network.bridge.name=br-homarr \
-            homarr
-        fi
-      '';
-    };
-
-    # Sonarr, Radarr, Lidarr, and Bazarr still listen on every interface:
-    # each of those programs takes one bind address, and loopback, tailscale0,
-    # and this bridge all have to reach them. The firewall is the limit.
-    # Only Homarr's address is accepted, and only for the four integrations.
-    # qBittorrent, Jellyfin, Seerr, Uptime Kuma, and Prowlarr are not
-    # accepted here. Prowlarr's service may use only lo, pia, and tailscale0.
+    # Homarr pings from the container. host.docker.internal is the bridge
+    # gateway, so the check arrives on br-homarr from the container address.
+    # Anything under HTTP 500 counts as online, including a login redirect.
     # iptables stores the interface name, so the rule can be installed
     # before br-homarr exists. Tailscale Serve uses 127.0.0.1, which never
-    # arrives on this bridge.
+    # arrives on this bridge. docker0 is not opened.
     networking.firewall.extraCommands = ''
-      iptables -w -A nixos-fw -i br-homarr -s 172.30.88.2/32 -p tcp -m multiport --dports 6767,7878,8686,8989 -j nixos-fw-accept
+      iptables -w -A nixos-fw -i ${bridgeName} -s ${bridgeAddress}/32 -p tcp -m multiport --dports ${
+        lib.concatMapStringsSep "," toString (builtins.sort builtins.lessThan homarrPorts)
+      } -j nixos-fw-accept
     '';
+
+    # An existing network with a different subnet is left in place and this
+    # unit fails, instead of silently pointing --ip at the wrong range.
+    # Loopback apps stay on 127.0.0.1. The ping proxies listen only on the
+    # gateway and connect back to loopback, so the LAN and the tailnet do
+    # not gain a second listener.
+    systemd.services = lib.mkMerge [
+      {
+        docker-homarr-network = {
+          description = "Docker network for Homarr widget calls";
+          after = [ "docker.service" ];
+          requires = [ "docker.service" ];
+          requiredBy = [ "docker-homarr.service" ];
+          before = [ "docker-homarr.service" ];
+          serviceConfig = {
+            Type = "oneshot";
+            RemainAfterExit = true;
+          };
+          script = ''
+            set -euo pipefail
+            docker=${config.virtualisation.docker.package}/bin/docker
+            if "''$docker" network inspect homarr >/dev/null 2>&1; then
+              bridge=''$("''$docker" network inspect homarr --format '{{ index .Options "com.docker.network.bridge.name" }}')
+              subnet=''$("''$docker" network inspect homarr --format '{{ range .IPAM.Config }}{{ .Subnet }}{{ end }}')
+              if [[ "''$bridge" != ${bridgeName} || "''$subnet" != ${bridgeSubnet} ]]; then
+                echo "docker network homarr exists but is not ${bridgeName} on ${bridgeSubnet}" >&2
+                exit 1
+              fi
+            else
+              "''$docker" network create \
+                --driver bridge \
+                --subnet ${bridgeSubnet} \
+                --gateway ${bridgeGateway} \
+                --opt com.docker.network.bridge.name=${bridgeName} \
+                homarr
+            fi
+          '';
+        };
+      }
+      (lib.mapAttrs'
+        (
+          name: port:
+            lib.nameValuePair "homarr-ping-${name}" {
+              description = "Homarr ping proxy to ${name}";
+              after = [ "docker-homarr-network.service" ];
+              wants = [ "docker-homarr-network.service" ];
+              wantedBy = [ "multi-user.target" ];
+              serviceConfig = {
+                ExecStart = "${pkgs.socat}/bin/socat TCP4-LISTEN:${toString port},bind=${bridgeGateway},fork,reuseaddr TCP4:127.0.0.1:${toString port}";
+                Restart = "on-failure";
+                RestartSec = "2s";
+                DynamicUser = true;
+              };
+            }
+        )
+        proxyPorts)
+      # RestrictNetworkInterfaces records the index at start. pia.nix names
+      # lo, pia, and tailscale0. The bridge has to exist first or this name
+      # is dropped for the life of the process.
+      (lib.mkIf config.my.services.arr.qbittorrent.enable {
+        qbittorrent = {
+          after = [ "docker-homarr-network.service" ];
+          wants = [ "docker-homarr-network.service" ];
+          serviceConfig.RestrictNetworkInterfaces = [ bridgeName ];
+        };
+      })
+      (lib.mkIf config.my.services.arr.prowlarr.enable {
+        prowlarr = {
+          after = [ "docker-homarr-network.service" ];
+          wants = [ "docker-homarr-network.service" ];
+          serviceConfig.RestrictNetworkInterfaces = [ bridgeName ];
+        };
+      })
+    ];
 
   };
 }

@@ -170,11 +170,12 @@ The NixOS firewall stays enabled.
   `nixos.taile9f484.ts.net:7575` and proxies to that port. This computer
   can still open `http://127.0.0.1:7575`. The home network and the VPN
   cannot.
-- Homarr's widget calls to Sonarr, Radarr, Lidarr, and Bazarr come from
-  `172.30.88.2` on the bridge `br-homarr`. The firewall accepts only
-  those four ports from that address. `docker0` is not opened.
-  qBittorrent, Jellyfin, Seerr, Uptime Kuma, and Prowlarr are not
-  reachable from Docker.
+- Homarr's status checks come from `172.30.88.2` on the bridge
+  `br-homarr`. The firewall accepts that address on the app ports.
+  `docker0` is not opened. Open WebUI, both llama servers, n8n, and ntfy
+  stay on `127.0.0.1`. A proxy on the bridge gateway,
+  `172.30.88.1`, forwards those five pings. qBittorrent and Prowlarr
+  also accept the bridge, and Prowlarr's reply to it stays off the VPN.
 - Netdata accepts TCP port 19999 on `tailscale0` only. The process listens
   on `127.0.0.1`. Tailscale Serve presents HTTPS for
   `nixos.taile9f484.ts.net:19999` and proxies to that port. This computer
@@ -267,15 +268,16 @@ registration stays disabled.
 
 Homarr's board is the media apps and the services on this computer.
 Tiles open on this computer.
-Sonarr, Radarr, Lidarr, and Bazarr are also integrations. The container
-is the only member of the Docker network `homarr`, at `172.30.88.2` on
-the bridge `br-homarr`. It calls those four apps at
-`host.docker.internal`. The firewall accepts only that source address,
-and only those ports. `docker0` is not opened, so another container on
-the default bridge cannot reach them. qBittorrent, Jellyfin, Seerr, and
-Uptime Kuma are not on that bridge. Prowlarr stays off it because its
-service may use only `lo`, `pia`, and `tailscale0`. Further tile changes
-stay in `/var/lib/homarr`.
+Sonarr, Radarr, Lidarr, Bazarr, Jellyfin, and Seerr are also integrations.
+The container is the only member of the Docker network `homarr`, at
+`172.30.88.2` on the bridge `br-homarr`. Status checks use
+`http://host.docker.internal:PORT`, stored on each app in
+`/var/lib/homarr`. The firewall accepts only that source address.
+`docker0` is not opened, so another container on the default bridge
+cannot reach them. Open WebUI, both llama servers, n8n, and ntfy stay on
+loopback; Homarr reaches them through a proxy on `172.30.88.1`.
+qBittorrent and Prowlarr accept the bridge in addition to `lo`, `pia`,
+and `tailscale0`. Further tile changes stay in `/var/lib/homarr`.
 
 ## llama.cpp
 

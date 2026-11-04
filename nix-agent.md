@@ -72,7 +72,7 @@ These rules come from the chats on this machine (2026-06-29 through 2026-11-03).
 
 ## Services worth remembering
 
-- Homepage was removed. Homarr on port 7575 is the board. Its tiles are in `/var/lib/homarr`, not in the Nix file.
+- Homepage was removed. Homarr on port 7575 is the board. Its tiles are in `/var/lib/homarr`, not in the Nix file. A ping URL there has to be `http://host.docker.internal:PORT`. Loopback apps are proxied on `172.30.88.1`. The click URL stays `http://127.0.0.1:PORT`.
 - Netdata's default package has no dashboard files, so `/` returns "File does not exist". This machine uses `netdataCloud` and the charts are under `/v3`.
 - ntfy's `base-url` cannot contain a path. n8n 2.x serves its assets at `/`, so an `N8N_PATH` or an nginx `/n8n/` prefix returns HTML where the browser expects JavaScript.
 - An oci-container `extraOptions` of `--restart=…` conflicts with Nix's `--rm`. systemd restarts the container.
