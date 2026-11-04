@@ -62,8 +62,13 @@ in
 
     # bindfs publishes only the media directory to the media group.
     # "old stuff" stays on the NTFS mount, outside this view.
-    # Setgid bits do not work on FUSE, so new files are forced into the
-    # media group here instead.
+    # The volume itself is rileyt:users mode 0700, and ntfs-3g ignores chmod.
+    # mirror-only=@media left that group in place and then cleared every
+    # permission bit for accounts it did not treat as members. Sonarr and
+    # Lidarr got EACCES on the category folders and reported that they
+    # could not see them. force-group makes the view group media, mode
+    # 0770, which is the group those services already run as. Setgid does
+    # not work on FUSE, so new files are put in the media group here.
     # https://bindfs.org/docs/bindfs.1.html
     systemd.services.vault-media = {
       description = "Media group view of the game drive";
@@ -74,7 +79,7 @@ in
       serviceConfig = {
         Type = "simple";
         ExecStartPre = "${pkgs.coreutils}/bin/mkdir -p /vault/media";
-        ExecStart = "${pkgs.bindfs}/bin/bindfs -f -o mirror-only=@media,perms=u=rwX:g=rwX:o=,create-for-user=rileyt,create-for-group=media,create-with-perms=u=rwX:g=rwX:o=,chown-ignore,chgrp-ignore,chmod-ignore,multithreaded /mnt/game-drive/media /vault/media";
+        ExecStart = "${pkgs.bindfs}/bin/bindfs -f -o force-group=media,perms=u=rwX:g=rwX:o=,create-for-user=rileyt,create-for-group=media,create-with-perms=u=rwX:g=rwX:o=,chown-ignore,chgrp-ignore,chmod-ignore,multithreaded /mnt/game-drive/media /vault/media";
         Restart = "on-failure";
         RestartSec = "3s";
       };
@@ -96,6 +101,9 @@ in
         install -d -m 0775 -o root -g media \
           /vault/media/downloads \
           /vault/media/downloads/incomplete \
+          /vault/media/downloads/tv \
+          /vault/media/downloads/movies \
+          /vault/media/downloads/music \
           /vault/media/library \
           /vault/media/library/tv \
           /vault/media/library/movies \

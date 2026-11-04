@@ -7,8 +7,11 @@ let
   };
 in
 {
-  # Cursor and Radarr come from unstable. Lidarr's current release is
-  # not packaged yet, so use the official build in packages/lidarr.nix.
+  # Cursor, Radarr, and Sonarr come from unstable. nixos-26.05 Sonarr is
+  # 4.0.19.2979, and the app was warning that 4.0.20.3014 was out. That
+  # version is the sonarr package on this unstable pin. Lidarr's current
+  # release is not packaged yet, so use the official build in
+  # packages/lidarr.nix.
   # Uptime Kuma 2.5.8 is newer than both nixpkgs pins.
   # Immich comes from unstable because nixos-26.05 has 2.7.5, which
   # is marked insecure, and phone apps need 3.x. The unstable pin's
@@ -25,7 +28,7 @@ in
           directory = ../../packages;
         }
       // {
-        inherit (unstable) radarr immich;
+        inherit (unstable) radarr sonarr immich;
         code-cursor = unstable.code-cursor.overrideAttrs (
           old:
           let

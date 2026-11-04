@@ -45,7 +45,7 @@ These rules come from the chats on this machine (2026-06-29 through 2026-11-03).
 
 ## Disks
 
-- `/vault` is the ext4 disk labeled vault. Its mount parent stays `root:root`. systemd tmpfiles refuse to create directories there otherwise ("unsafe path transition"). Media directories are `2775` and group `media`, with the setgid bit, so new files stay in the group.
+- `/vault` is the ext4 disk labeled vault. Its mount parent stays `root:root`. systemd tmpfiles refuse to create directories there otherwise ("unsafe path transition"). `/vault/media` is a bindfs view of the game drive, group `media`, mode `0770`. `mirror-only=@media` left the group as `users` and Sonarr and Lidarr could not see the download folders.
 - "0 B free" on `/vault` has meant the filesystem was full, with the last free blocks inside ext4's reserved space, which non-root services cannot use. Check `df` and reserved blocks before treating it as an unmounted disk.
 - Sonarr and Radarr hardlink imports. A download and a library file can be one inode. Adding the two directory sizes double-counts.
 - The 4 TB game drive is NTFS at `/mnt/game-drive`, mounted with ntfs-3g so the existing "old stuff" directory stays rileyt-only. Apps keep using `/vault/media/…`, which is a view onto the game drive. The unit name for that mount is escaped: `mnt-game\x2ddrive.mount`.

@@ -123,6 +123,9 @@ Taken from the saved Cursor chats on this computer, 2026-06-29 through 2026-11-0
 - **Wrong:** The kernel ntfs3 mount of the game drive, with one uid for the volume, let the arr users read `/mnt/game-drive/old stuff`.
   **Resolved:** ntfs-3g mounted so the volume looks rileyt-only, and a bindfs view exposes only the media tree at the paths the apps already had. (2026-10-31, 861b5676)
 
+- **Wrong:** Sonarr warned that qBittorrent's `/vault/media/downloads/tv` was invisible, and Lidarr said the same about `/vault/media/downloads/music`. Imports failed with EACCES. Sonarr also offered an update to 4.0.20.3014.
+  **Resolved:** `mirror-only=@media` kept the on-disk group `users` and cleared permissions for the service accounts. `force-group=media` makes the view mode `0770` and group `media`, which is the group those services run as. Sonarr comes from the unstable pin, where the package is 4.0.20.3014. (2026-11-04)
+
 - **Wrong:** Ordering a unit on `mnt-game-drive.mount` left the media stack down.
   **Resolved:** The hyphen in the path is escaped: `mnt-game\x2ddrive.mount`. (2026-10-31, 861b5676)
 

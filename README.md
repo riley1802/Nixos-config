@@ -276,8 +276,10 @@ same queue. Its login and the API keys it stores stay in
 `/var/lib/cleanuparr`. Turn on Dry run in its General page before enabling
 a cleaner, or the cleaner deletes downloads.
 
-The vault disk is mounted at `/vault`. Shared directories are mode `2775`
-and group `media`.
+The vault disk is mounted at `/vault`. `/vault/media` is a bindfs view of
+the game drive. Files there show as group `media`, mode `0770`, so Sonarr,
+Radarr, Lidarr, and the other media apps can read and write them. The NTFS
+volume underneath stays rileyt-only, which is what keeps `old stuff` private.
 
 - Incomplete downloads: `/vault/media/downloads/incomplete`
 - TV, movies, and music downloads: `/vault/media/downloads/tv`, `movies`, and `music`
