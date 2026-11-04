@@ -62,11 +62,18 @@ in
     system.activationScripts.chatterbox-bootstrap.text = ''
       install -d -m 0755 ${data} ${data}/huggingface
       chown chatterbox:chatterbox ${data} ${data}/huggingface
-      if [[ ! -f ${data}/ref.wav ]]; then
-        ${pkgs.curl}/bin/curl -fsSL -o ${data}/ref.wav \
-          "https://storage.googleapis.com/chatterbox-demo-samples/prompts/female_random_podcast.wav"
-        chown chatterbox:chatterbox ${data}/ref.wav
-        chmod 644 ${data}/ref.wav
+      # Resemble's published radio-host clip. A man's voice, not the
+      # female podcast sample this service started with.
+      ref_id=male_old_movie
+      if [[ ! -f ${data}/ref.id ]] || [[ $(tr -d '\n' < ${data}/ref.id) != $ref_id ]]; then
+        ${pkgs.curl}/bin/curl -fsSL -o ${data}/ref-src.flac \
+          "https://storage.googleapis.com/chatterbox-demo-samples/prompts/male_old_movie.flac"
+        ${pkgs.ffmpeg}/bin/ffmpeg -y -hide_banner -loglevel error \
+          -i ${data}/ref-src.flac -ac 1 -ar 24000 -c:a pcm_s16le ${data}/ref.wav
+        rm -f ${data}/ref-src.flac
+        printf '%s\n' "$ref_id" > ${data}/ref.id
+        chown chatterbox:chatterbox ${data}/ref.wav ${data}/ref.id
+        chmod 644 ${data}/ref.wav ${data}/ref.id
       fi
       src_hf=/home/${config.my.user}/.cache/huggingface
       if [[ -d "$src_hf/hub" ]] && [[ ! -d ${data}/huggingface/hub ]]; then

@@ -171,7 +171,8 @@ The NixOS firewall stays enabled.
   `http://127.0.0.1:8084/health`. Synthesis is `POST /tts` with JSON
   `{"text":"your words"}` and optional `"audio_prompt_path"` for a
   different reference clip; the response is 24 kHz WAV. The default voice
-  reference is `/var/lib/chatterbox/ref.wav`.
+  reference is `/var/lib/chatterbox/ref.wav`, Resemble's male radio-host
+  clip (`male_old_movie`).
 - n8n accepts TCP port 5678 on `tailscale0` only. The process listens on
   `127.0.0.1`. Tailscale Serve presents HTTPS for
   `nixos.taile9f484.ts.net:5678` and proxies to that port. This computer
