@@ -9,55 +9,74 @@ rest of the desktop stays on the home network.
 
 ## Repository layout
 
-- `flake.nix` pins NixOS to the `nixos-26.05` branch and exposes the
-  `nixosConfigurations.nixos` system. Cursor, Radarr, and Immich come from
-  `nixpkgs-unstable`. Cursor and Radarr are there because 26.05 lags
-  behind. Immich is 3.3.5 on that pin because 26.05 has 2.7.5, which is
-  marked insecure, and phone apps need 3.x. Lidarr 3.1.6.5079 is the
-  official release in `lidarr-package.nix`, because nixpkgs does not have it
-  yet. Uptime Kuma 2.5.8 is built by `uptime-kuma-package.nix` for the same
-  reason: 26.05 has 2.5.3 and the unstable pin has 2.5.7. 2.5.8 is the
-  current release and includes its admin-only remote-code-execution fix.
-- `uptime-kuma.nix` runs that package. `uptime-kuma-database-permissions.patch`
+```
+flake.nix                         inputs and one host
+flake.lock                        exact input revisions
+hosts/nixos/default.nix           hostname, shared settings, which modules are on
+hosts/nixos/packages.nix          programs installed by name
+hosts/nixos/hardware-configuration.nix
+modules/core/                     nix, boot, time, user, package overlays
+modules/hardware/                 NVIDIA driver, vault disk, game drive
+modules/desktop/                  Cinnamon, KDE Connect, Chrome DNS policy
+modules/network/                  Tailscale, DNS, SSH, NetworkManager, PIA, firewall
+modules/services/arr/             Sonarr, Radarr, Lidarr, Bazarr, Prowlarr, Seerr,
+                                  qBittorrent, and the shared media directories
+modules/services/                 Jellyfin, Immich, n8n, ntfy, llama.cpp, Homarr,
+                                  Netdata, Uptime Kuma, Docker
+modules/apps/openlogi.nix         MX Master 4
+packages/                         Lidarr, llama.cpp, and Uptime Kuma builds
+secrets/                          agenix recipients and encrypted files
+pia/                              public PIA certificate and server list
+```
+
+`hosts/nixos/default.nix` is the control panel. Feature settings stay in the
+module that owns them. `hosts/nixos/hardware-configuration.nix` is generated
+by `nixos-generate-config` and should not be edited by hand.
+
+- `flake.nix` pins NixOS to the `nixos-26.05` branch. Cursor, Radarr, and
+  Immich come from `nixpkgs-unstable`. Cursor and Radarr are there because
+  26.05 lags behind. Immich is 3.3.5 on that pin because 26.05 has 2.7.5,
+  which is marked insecure, and phone apps need 3.x. The overlays live in
+  `modules/core/overlays.nix`.
+- `packages/lidarr.nix` is the official Lidarr 3.1.6.5079 release, because
+  nixpkgs does not have it yet. `packages/uptime-kuma/package.nix` builds
+  Uptime Kuma 2.5.8 for the same reason: 26.05 has 2.5.3 and the unstable
+  pin has 2.5.7. 2.5.8 is the current release and includes its admin-only
+  remote-code-execution fix. `packages/uptime-kuma/uptime-kuma-database-permissions.patch`
   keeps a newly created database from being world-readable.
-- `llama-cpp-package.nix` builds llama.cpp 0.8.0 with CUDA. The 26.05 pin
-  is build 9190, which cannot load LFM3. `llama-cpp.nix` runs the two
-  servers and publishes them with Tailscale Serve. Both servers require
-  the API key in `secrets/llama-api-key.age`.
-- `n8n.nix` runs n8n 2.34.6 from the nixos-26.05 module and publishes it
-  with Tailscale Serve. The owner account and workflows stay in
+- `modules/services/uptime-kuma.nix` runs that package.
+- `packages/llama-cpp.nix` builds llama.cpp 0.8.0 with CUDA. The 26.05 pin
+  is build 9190, which cannot load LFM3. `modules/services/llama.nix` runs
+  the two servers and publishes them with Tailscale Serve. Both servers
+  require the API key in `secrets/llama-api-key.age`.
+- `modules/services/n8n.nix` runs n8n 2.34.6 from the nixos-26.05 module and
+  publishes it with Tailscale Serve. The owner account and workflows stay in
   `/var/lib/n8n`.
-- `ntfy.nix` runs ntfy 2.26.0 from the nixos-26.05 module and publishes it
-  with Tailscale Serve. The phone password and the publisher token are
-  age secrets. `secrets/ntfy-auth.age` is what the server reads.
-  `secrets/ntfy-passwords.age` is the copy for the phone app.
-- `immich.nix` runs Immich 3.3.5 from nixpkgs-unstable because 26.05 has
-  2.7.5. The nixos-26.05 `services.immich` module still provides
-  PostgreSQL, Redis, pgvector, and VectorChord. Photos are stored in
-  `/vault/immich`.
-- `homarr.nix` runs the official container
+- `modules/services/ntfy.nix` runs ntfy 2.26.0 from the nixos-26.05 module
+  and publishes it with Tailscale Serve. The phone password and the
+  publisher token are age secrets. `secrets/ntfy-auth.age` is what the
+  server reads. `secrets/ntfy-passwords.age` is the copy for the phone app.
+- `modules/services/immich.nix` runs Immich 3.3.5 from nixpkgs-unstable
+  because 26.05 has 2.7.5. The nixos-26.05 `services.immich` module still
+  provides PostgreSQL, Redis, pgvector, and VectorChord. Photos are stored
+  in `/vault/immich`.
+- `modules/services/homarr.nix` runs the official container
   `ghcr.io/homarr-labs/homarr:v2.10.1`, which is not in nixpkgs. On this
   computer it is `http://127.0.0.1:7575`. On the tailnet it is
   `https://nixos.taile9f484.ts.net:7575`. The tiles stay in
   `/var/lib/homarr`.
-- `netdata.nix` runs a local Netdata agent on loopback and publishes it
-  with Tailscale Serve. The package is `netdataCloud`, because the
-  default build has no dashboard files and the page is
+- `modules/services/netdata.nix` runs a local Netdata agent on loopback and
+  publishes it with Tailscale Serve. The package is `netdataCloud`, because
+  the default build has no dashboard files and the page is
   "File does not exist, or is not accessible:". The dashboard assets
   are NCUL-1 and are built on this computer. Open `/v3` for the
   charts. This agent has no local password without a Netdata Cloud
   claim, and the agent is not claimed, so a tailnet device can open
   `/v3`. Charts and alarm state stay in `/var/lib/netdata`.
-- `flake.lock` fixes the exact input revisions used by builds.
-- `configuration.nix` contains the desktop, qBittorrent, firewall, user,
-  vault disk, and DNS configuration.
-- `media-stack.nix` enables Sonarr, Radarr, Prowlarr, Lidarr, Bazarr,
-  Jellyfin, and Seerr.
-- `pia-wireguard.nix` builds the split tunnel and routes Prowlarr lookups
-  through it.
-- `hardware-configuration.nix` contains generated disk, boot, CPU, and
-  machine-detection settings. It is generated by `nixos-generate-config` and
-  should not be edited manually.
+- `modules/services/jellyfin.nix` runs Jellyfin. The arr apps and
+  qBittorrent are the files in `modules/services/arr/`.
+- `modules/network/pia.nix` builds the split tunnel and routes Prowlarr
+  lookups through it.
 - `secrets/secrets.nix` lists the age recipients. `secrets/pia-credentials.age`
   is the encrypted PIA username and password. The decrypted file is
   `/run/agenix/pia-credentials` and is not in git. `secrets/ntfy-auth.age`
@@ -151,11 +170,12 @@ The NixOS firewall stays enabled.
   `nixos.taile9f484.ts.net:7575` and proxies to that port. This computer
   can still open `http://127.0.0.1:7575`. The home network and the VPN
   cannot.
-- Homarr's widget calls to Sonarr, Radarr, Lidarr, and Bazarr come from
-  `172.30.88.2` on the bridge `br-homarr`. The firewall accepts only
-  those four ports from that address. `docker0` is not opened.
-  qBittorrent, Jellyfin, Seerr, Uptime Kuma, and Prowlarr are not
-  reachable from Docker.
+- Homarr's status checks come from `172.30.88.2` on the bridge
+  `br-homarr`. The firewall accepts that address on the app ports.
+  `docker0` is not opened. Open WebUI, both llama servers, n8n, and ntfy
+  stay on `127.0.0.1`. A proxy on the bridge gateway,
+  `172.30.88.1`, forwards those five pings. qBittorrent and Prowlarr
+  also accept the bridge, and Prowlarr's reply to it stays off the VPN.
 - Netdata accepts TCP port 19999 on `tailscale0` only. The process listens
   on `127.0.0.1`. Tailscale Serve presents HTTPS for
   `nixos.taile9f484.ts.net:19999` and proxies to that port. This computer
@@ -163,7 +183,7 @@ The NixOS firewall stays enabled.
   `/v3` has no local password. Netdata 2.10.3's bearer protection is a
   Cloud sign-in, and this agent is not claimed, so any device already on
   the tailnet can open the charts. PIA's remote API also uses port 19999.
-  That is an outbound HTTPS call from `pia-wireguard.nix`, not this
+  That is an outbound HTTPS call from `modules/network/pia.nix`, not this
   listener.
 - The media web pages and the qBittorrent WebUI accept their ports on
   `tailscale0` only: 5055 Seerr, 6767 Bazarr, 7878 Radarr, 8080
@@ -236,7 +256,7 @@ replace that.
 | App | Address | What is stored where |
 |---|---|---|
 | Homarr | http://127.0.0.1:7575 or https://nixos.taile9f484.ts.net:7575 | The container and the encryption key are declared here. Tiles and the admin account are created in the web UI and stay in `/var/lib/homarr`, which is not in git. |
-| Netdata | http://127.0.0.1:19999/v3 or https://nixos.taile9f484.ts.net:19999/v3 | Agent config is in `netdata.nix`. `/v3` has no local password. This agent cannot require one without a Netdata Cloud claim, and it is not claimed, so any tailnet device can open the charts. The root URL is the Cloud sign-in. Charts and alarm state stay in `/var/lib/netdata`, which is not in git. |
+| Netdata | http://127.0.0.1:19999/v3 or https://nixos.taile9f484.ts.net:19999/v3 | Agent config is in `modules/services/netdata.nix`. `/v3` has no local password. This agent cannot require one without a Netdata Cloud claim, and it is not claimed, so any tailnet device can open the charts. The root URL is the Cloud sign-in. Charts and alarm state stay in `/var/lib/netdata`, which is not in git. |
 
 The Chrome menu entries open the loopback addresses. The tailnet addresses
 are for the phone. Finish first-run setup on this computer before an
@@ -248,15 +268,16 @@ registration stays disabled.
 
 Homarr's board is the media apps and the services on this computer.
 Tiles open on this computer.
-Sonarr, Radarr, Lidarr, and Bazarr are also integrations. The container
-is the only member of the Docker network `homarr`, at `172.30.88.2` on
-the bridge `br-homarr`. It calls those four apps at
-`host.docker.internal`. The firewall accepts only that source address,
-and only those ports. `docker0` is not opened, so another container on
-the default bridge cannot reach them. qBittorrent, Jellyfin, Seerr, and
-Uptime Kuma are not on that bridge. Prowlarr stays off it because its
-service may use only `lo`, `pia`, and `tailscale0`. Further tile changes
-stay in `/var/lib/homarr`.
+Sonarr, Radarr, Lidarr, Bazarr, Jellyfin, and Seerr are also integrations.
+The container is the only member of the Docker network `homarr`, at
+`172.30.88.2` on the bridge `br-homarr`. Status checks use
+`http://host.docker.internal:PORT`, stored on each app in
+`/var/lib/homarr`. The firewall accepts only that source address.
+`docker0` is not opened, so another container on the default bridge
+cannot reach them. Open WebUI, both llama servers, n8n, and ntfy stay on
+loopback; Homarr reaches them through a proxy on `172.30.88.1`.
+qBittorrent and Prowlarr accept the bridge in addition to `lo`, `pia`,
+and `tailscale0`. Further tile changes stay in `/var/lib/homarr`.
 
 ## llama.cpp
 
@@ -484,7 +505,7 @@ https://docs.immich.app/features/mobile-backup
 
 ## VPN
 
-`pia-wireguard.nix` logs in with the age secret and writes
+`modules/network/pia.nix` logs in with the age secret and writes
 `/etc/wireguard/pia.conf` at start. That file is mode `0600` and is not in
 git. The tunnel uses routing table `51820`. qBittorrent traffic sourced from
 the tunnel address uses that table. The desktop default route stays on
@@ -509,25 +530,24 @@ them with `ps`. The connect script checks that PIA's answer is an address, a
 WireGuard key, and a port before writing it into `pia.conf`, whose `PostUp`
 lines `wg-quick` runs as root.
 The forwarded-port keepalive runs every 15 minutes. The listen port in
-`configuration.nix` has to match the port PIA assigned.
+`modules/services/arr/qbittorrent.nix` has to match the port PIA assigned.
 
 ## Apply and validate
 
-Run these commands from `/etc/nixos`. Flakes only see git-tracked files, so
-`git add` a new file before building it. Do not commit unless you mean to
-publish the change.
+Change this computer with `nixctl` after it is installed. `nixctl apply`
+builds the config, activates it as a test, and keeps it only if no new
+service is broken. It also commits the change locally. It does not push.
+
+nixctl is not on the running system until the next switch. Run this once
+from `/etc/nixos`:
 
 ```sh
-nix fmt .
-pkexec nixos-rebuild dry-build --flake /etc/nixos
 pkexec nixos-rebuild switch --flake /etc/nixos
 ```
 
-`dry-build` validates the system without activating it. `switch` is
-reversible with `pkexec nixos-rebuild switch --flake /etc/nixos --rollback`.
-`pkexec` presents the desktop authorization prompt. It resets `PATH`, so a
-tool from `nix shell` has to be passed through as
-`pkexec env "PATH=$PATH" <cmd>`.
+After that, `nixctl status` should print `RESULT: OK`. Later changes are
+`nixctl apply "what changed"`. If a switch misbehaves, `nixctl rollback`
+returns to the previous generation.
 
 ## OpenSSH
 
@@ -579,7 +599,7 @@ tailscale status
 
 ## Hardware configuration
 
-`hardware-configuration.nix` records the current root, EFI, and swap UUIDs,
+`hosts/nixos/hardware-configuration.nix` records the current root, EFI, and swap UUIDs,
 the detected initrd modules, Intel CPU microcode, KVM support, and Intel NPU
 support. Re-run `nixos-generate-config` after disk or platform changes and
 review the generated diff instead of hand-editing this file.
