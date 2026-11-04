@@ -298,7 +298,7 @@ process cannot be GPU-only for one model and CPU-only for the other.
 
 | Model | Where it runs | Context | KV cache | Browser | API base |
 |---|---|---|---|---|---|
-| LFM3-VL-2B Q8_0 | RTX 3050 | 32768 | q8_0 | https://nixos.taile9f484.ts.net:8081/ | https://nixos.taile9f484.ts.net:8081/v1 |
+| LFM3-Omni-2B Q8_0 | RTX 3050 | 32768 | q8_0 | https://nixos.taile9f484.ts.net:8081/ | https://nixos.taile9f484.ts.net:8081/v1 |
 | LFM3-1.7B Q8_0 | CPU, 12 threads | 32768 | q8_0 | https://nixos.taile9f484.ts.net:8082/ | https://nixos.taile9f484.ts.net:8082/v1 |
 
 On this computer the same pages are `http://127.0.0.1:8081/` and
@@ -315,13 +315,15 @@ still probes `/health`, which does not require the key.
 
 The GGUF files are official Liquid AI Q8_0 weights. They are downloaded to
 `/home/rileyt/llama-models` and copied into `/var/lib/llama-cpp/models`
-when the system activates. The weights are not in git. LFM3-VL-2B replaced
-LFM3-Omni-2B. Activation removes the Omni files from the service directory.
-The copies in the home directory are left in place. VL loads
-`mmproj-LFM3-VL-2B-Q8_0.gguf` so image input works. `ffmpeg` is on that
-service's `PATH` for video input. The model id on port 8081 is `lfm3-vl`.
+when the system activates. The weights are not in git. LFM3-Omni-2B is
+loaded on port 8081. LFM3-VL-2B used that slot before. Activation copies
+both, and the VL files stay in the service directory unloaded. Omni loads
+`mmproj-LFM3-Omni-2B-Q8_0.gguf`, which carries the audio and vision
+weights. `ffmpeg` is on that service's `PATH` for video input. The model
+id on port 8081 is `lfm3-omni`. Omni does not reason, so the server uses
+`--reasoning off` and `--temp 0`.
 
-The VL server is pinned to the RTX 3050 by GPU UUID
+The Omni server is pinned to the RTX 3050 by GPU UUID
 `GPU-d80211d0-ecb1-e279-4f4d-34c53d278895`. That card has 6GB and also
 drives the desktop. The GTX 1660 SUPER is left idle. The package builds
 CUDA for compute capabilities 7.5 and 8.6, which covers both cards, and
@@ -331,13 +333,14 @@ sweep at 8, 12, 16, and 20 chose 12 because that count had the fastest
 generation. 20 was fastest on a 512-token prefill. Both servers set
 `--cache-type-k q8_0`, `--cache-type-v q8_0`, and `--flash-attn on`.
 
-VL thinks before it answers. Its server uses Liquid's published sampling:
-`--temp 0.1`, `--top-p 1.0`, `--top-k 50`, `--min-p 0.0`, and
-`--repeat-penalty 1.1`, plus `--no-reasoning-preserve`. The 1.7B server
-uses `--temp 0.1`, `--top-k 50`, and `--repeat-penalty 1.1`. Both keep a
-reasoning trace in `reasoning_content`, so a very small `max_tokens` can
-come back with an empty answer. VL's thinking can run long, so a client
-should allow up to 16384 new tokens.
+Omni answers in text or speech and does not think. Its server uses
+`--reasoning off` and `--temp 0`. Speech sampling stays in the GGUF.
+The 1.7B server uses `--temp 0.1`, `--top-k 50`, and `--repeat-penalty 1.1`.
+That model thinks before it answers and keeps the trace in
+`reasoning_content`, so a very small `max_tokens` can come back with an
+empty answer. A client of the 1.7B server should allow up to 16384 new
+tokens. Omni has reasoning turned off, so a short reply does not need
+that budget.
 
 Measured on 2026-10-28 with `llama-bench`, three runs each, before the
 servers moved. Those runs used an f16 KV cache, with Omni on the RTX 3050
@@ -386,9 +389,13 @@ n8n 2.34.6 is the workflow editor. On this computer it is
 account. That account, the workflows, the SQLite database, and the
 encryption key live in `/var/lib/n8n` and are not in git.
 
-LFM3-1.7B is the model n8n calls. The request stays on this computer at
-`http://127.0.0.1:8082/v1`. It does not go out through Tailscale. LFM3-VL-2B
-is not connected. After the owner account exists, add one OpenAI credential:
+LFM3-1.7B is the model n8n calls for ordinary text. The request stays on
+this computer at `http://127.0.0.1:8082/v1`. It does not go out through
+Tailscale. LFM3-Omni-2B is on `http://127.0.0.1:8081/v1`, model id
+`lfm3-omni`. Discord voice messages are converted at
+`http://127.0.0.1:8091/` (POST the audio bytes, the response is 16 kHz
+mono wav) because llama.cpp does not decode Discord's Ogg Opus. After
+the owner account exists, add one OpenAI credential:
 
 - API key: the single line in `/run/agenix/llama-api-key`
   (`pkexec cat /run/agenix/llama-api-key`). Update the saved credential
@@ -489,7 +496,7 @@ The first visit creates the admin account. Do that on this computer at
 and leave open registration disabled.
 
 Machine learning for faces and search runs on CPU. The module default
-is one worker. The RTX 3050 is left to the desktop and LFM3-VL.
+is one worker. The RTX 3050 is left to the desktop and LFM3-Omni.
 
 The Homarr tile is added in the Homarr web UI and
 stored in `/var/lib/homarr`.

@@ -1,7 +1,77 @@
 # n8n workflow editor. Web page on port 5678.
-{ config, lib, ... }:
+{ config, lib, pkgs, ... }:
 let
   cfg = config.my.services.n8n;
+  # Discord voice messages are Opus in an Ogg file. LFM3-Omni's llama.cpp
+  # audio input accepts wav, mp3, and flac. n8n's Code node cannot run
+  # ffmpeg, so this loopback service does the conversion.
+  audioToWav = pkgs.writeScript "audio-to-wav.py" ''
+    #!${pkgs.python3}/bin/python3
+    import subprocess
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+    FFMPEG = "${pkgs.ffmpeg}/bin/ffmpeg"
+    MAX_BYTES = 25 * 1024 * 1024
+
+    class Handler(BaseHTTPRequestHandler):
+        protocol_version = "HTTP/1.1"
+
+        def do_POST(self):
+            raw = self.headers.get("Content-Length")
+            if raw is None:
+                self.send_error(411, "Content-Length required")
+                return
+            try:
+                size = int(raw)
+            except ValueError:
+                self.send_error(400, "Bad Content-Length")
+                return
+            if size <= 0 or size > MAX_BYTES:
+                self.send_error(413, "Audio is empty or larger than 25 MB")
+                return
+            data = self.rfile.read(size)
+            try:
+                result = subprocess.run(
+                    [
+                        FFMPEG, "-hide_banner", "-loglevel", "error",
+                        "-i", "pipe:0",
+                        "-ar", "16000", "-ac", "1",
+                        "-c:a", "pcm_s16le", "-f", "wav", "pipe:1",
+                    ],
+                    input=data,
+                    capture_output=True,
+                    timeout=60,
+                    check=False,
+                )
+            except subprocess.TimeoutExpired:
+                self.send_error(408, "Conversion timed out")
+                return
+            if result.returncode != 0 or not result.stdout:
+                self.send_error(422, "Could not convert that audio to wav")
+                return
+            body = result.stdout
+            self.send_response(200)
+            self.send_header("Content-Type", "audio/wav")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def do_GET(self):
+            if self.path != "/health":
+                self.send_error(404)
+                return
+            body = b"ok\n"
+            self.send_response(200)
+            self.send_header("Content-Type", "text/plain")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, fmt, *args):
+            return
+
+    ThreadingHTTPServer(("127.0.0.1", 8091), Handler).serve_forever()
+  '';
 in
 {
   options.my.services.n8n.enable = lib.mkEnableOption "n8n";
@@ -26,9 +96,13 @@ in
     #   Organization ID: empty
     # On an OpenAI or OpenAI Chat Model node, the model id is lfm3-1.7b.
     # Leave "Use Responses API" off. llama-server rejects /v1 without that
-    # key. /health stays open. LFM3-VL-2B on 8081 is not connected. The 1.7B
-    # server has one slot and is shared with Open WebUI, so a workflow waits
-    # if a chat is already generating.
+    # key. /health stays open. LFM3-Omni-2B on 8081 is the voice model.
+    # A workflow that hears Discord voice memos posts the audio file to
+    # http://127.0.0.1:8091/ and sends the wav to
+    # http://127.0.0.1:8081/v1/chat/completions with model id lfm3-omni.
+    # The 1.7B server has one slot and is shared with Open WebUI, so a
+    # workflow waits if a chat is already generating. The Omni server has
+    # one slot too.
     # https://github.com/NixOS/nixpkgs/blob/6713828a351efa628b025a1adf7f43cbf8597513/nixos/modules/services/misc/n8n.nix
     # https://docs.n8n.io/hosting/configuration/environment-variables/
     services.n8n = {
@@ -61,9 +135,33 @@ in
 
     # Start after the model when it is present. Do not require it, so n8n
     # still comes up if the GGUF is missing.
+    systemd.services.audio-to-wav = {
+      description = "Convert posted audio to 16 kHz mono WAV";
+      after = [ "network.target" ];
+      wantedBy = [ "multi-user.target" ];
+      serviceConfig = {
+        ExecStart = audioToWav;
+        DynamicUser = true;
+        Restart = "on-failure";
+        RestartSec = 2;
+        NoNewPrivileges = true;
+        PrivateTmp = true;
+        ProtectSystem = "strict";
+        ProtectHome = true;
+      };
+    };
+
     systemd.services.n8n = {
-      after = [ "llama-cpp-1.7b.service" ];
-      wants = [ "llama-cpp-1.7b.service" ];
+      after = [
+        "llama-cpp-1.7b.service"
+        "llama-cpp-omni.service"
+        "audio-to-wav.service"
+      ];
+      wants = [
+        "llama-cpp-1.7b.service"
+        "llama-cpp-omni.service"
+        "audio-to-wav.service"
+      ];
     };
 
     networking.firewall.interfaces.tailscale0.allowedTCPPorts = [

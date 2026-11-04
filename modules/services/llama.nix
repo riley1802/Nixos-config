@@ -24,17 +24,18 @@ in
     # GPU-only for one model and CPU-only for the other, so these are two
     # services.
     #
-    # LFM3-VL-2B replaced LFM3-Omni-2B. The VL server is pinned to the RTX
-    # 3050 by GPU UUID, so a change in nvidia-smi order cannot move it onto
-    # the 1660 SUPER. The 3050 has 6GB and also drives the desktop, so the
-    # 1.7B server is refused every GPU. The 1660 SUPER stays idle. Both
-    # servers use Q8_0 weights and a q8_0 KV cache. Quantized KV needs flash
-    # attention.
+    # LFM3-Omni-2B is on the RTX 3050 so Discord voice memos can be heard.
+    # LFM3-VL-2B used this slot before. Its weights stay on disk and are
+    # not loaded. The server is pinned to the 3050 by GPU UUID, so a change
+    # in nvidia-smi order cannot move it onto the 1660 SUPER. The 3050 has
+    # 6GB and also drives the desktop, so the 1.7B server is refused every
+    # GPU. The 1660 SUPER stays idle. Both servers use Q8_0 weights and a
+    # q8_0 KV cache. Quantized KV needs flash attention.
     #
-    # VL thinks before it answers. Liquid's llama.cpp sampling is
-    # --temp 0.1 --top-p 1.0 --top-k 50 --min-p 0.0 --repeat-penalty 1.1
-    # and --no-reasoning-preserve.
-    # https://docs.liquid.ai/lfm/models/lfm3-vl-2b
+    # Omni does not reason. Liquid's llama.cpp command is --reasoning off
+    # and --temp 0. Speech sampling is stored in the GGUF. The context
+    # window on the card is 32K, which is this model's limit.
+    # https://huggingface.co/LiquidAI/LFM3-Omni-2B-GGUF
     #
     # The servers listen on loopback. Chrome forces HTTPS for *.ts.net, so
     # plain HTTP on the tailnet name times out. Tailscale Serve terminates
@@ -67,10 +68,10 @@ in
     system.activationScripts.llama-cpp-models.text = ''
       install -d -m 0755 /var/lib/llama-cpp/models /var/lib/llama-cpp/cache
       src=/home/${config.my.user}/llama-models
-      rm -f \
-        /var/lib/llama-cpp/models/LFM3-Omni-2B-Q8_0.gguf \
-        /var/lib/llama-cpp/models/mmproj-LFM3-Omni-2B-Q8_0.gguf
-      for f in LFM3-1.7B-Q8_0.gguf LFM3-VL-2B-Q8_0.gguf mmproj-LFM3-VL-2B-Q8_0.gguf; do
+      for f in \
+        LFM3-1.7B-Q8_0.gguf \
+        LFM3-Omni-2B-Q8_0.gguf mmproj-LFM3-Omni-2B-Q8_0.gguf \
+        LFM3-VL-2B-Q8_0.gguf mmproj-LFM3-VL-2B-Q8_0.gguf; do
         if [[ -f $src/$f ]]; then
           # cmp is diffutils, which is not on the activation PATH.
           if [[ ! -f /var/lib/llama-cpp/models/$f ]] || ! ${pkgs.diffutils}/bin/cmp -s "$src/$f" "/var/lib/llama-cpp/models/$f"; then
@@ -94,16 +95,16 @@ in
       };
     };
 
-    systemd.services.llama-cpp-vl = {
-      description = "llama.cpp server for LFM3-VL-2B";
+    systemd.services.llama-cpp-omni = {
+      description = "llama.cpp server for LFM3-Omni-2B";
       after = [ "network.target" ];
       wantedBy = [ "multi-user.target" ];
       restartTriggers = [ config.age.secrets.llama-api-key.file ];
-      # Video input needs ffmpeg on PATH. Image input does not.
+      # Video input needs ffmpeg on PATH. Image and audio input do not.
       path = [ pkgs.ffmpeg ];
       unitConfig.ConditionPathExists = [
-        "${models}/LFM3-VL-2B-Q8_0.gguf"
-        "${models}/mmproj-LFM3-VL-2B-Q8_0.gguf"
+        "${models}/LFM3-Omni-2B-Q8_0.gguf"
+        "${models}/mmproj-LFM3-Omni-2B-Q8_0.gguf"
       ];
       environment = {
         # RTX 3050, from `nvidia-smi -L` on this machine.
@@ -129,18 +130,20 @@ in
         LoadCredential = [
           "llama-api-key:${config.age.secrets.llama-api-key.path}"
         ];
-        ExecStart = llamaExec "llama-cpp-vl" [
+        ExecStart = llamaExec "llama-cpp-omni" [
           server
           "--host"
           "127.0.0.1"
           "--port"
           "8081"
           "-m"
-          "${models}/LFM3-VL-2B-Q8_0.gguf"
+          "${models}/LFM3-Omni-2B-Q8_0.gguf"
           "--alias"
-          "lfm3-vl"
+          "lfm3-omni"
           "--mmproj"
-          "${models}/mmproj-LFM3-VL-2B-Q8_0.gguf"
+          "${models}/mmproj-LFM3-Omni-2B-Q8_0.gguf"
+          "--reasoning"
+          "off"
           "-c"
           "32768"
           "-np"
@@ -156,16 +159,7 @@ in
           "--flash-attn"
           "on"
           "--temp"
-          "0.1"
-          "--top-p"
-          "1.0"
-          "--top-k"
-          "50"
-          "--min-p"
-          "0.0"
-          "--repeat-penalty"
-          "1.1"
-          "--no-reasoning-preserve"
+          "0"
           "--jinja"
         ];
         Restart = "on-failure";
@@ -242,7 +236,7 @@ in
     };
 
     networking.firewall.interfaces.tailscale0.allowedTCPPorts = [
-      8081 # LFM3-VL-2B
+      8081 # LFM3-Omni-2B
       8082 # LFM3-1.7B
     ];
   };

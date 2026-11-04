@@ -55,7 +55,7 @@ These rules come from the chats on this machine (2026-06-29 through 2026-11-03).
 ## llama.cpp
 
 - The package is the CUDA build in `packages/llama-cpp.nix` (v0.8.0). The 26.05 llama.cpp cannot load LFM3. The stock module's sandbox also blocks CUDA (`MemoryDenyWriteExecute`, `PrivateUsers`).
-- Two servers: VL on the 3050 at `127.0.0.1:8081`, 1.7B on CPU at `127.0.0.1:8082`. The 1660 stays idle. Both need the API key in `secrets/llama-api-key.age`. Health on loopback stays open. Everything else needs the bearer token.
+- Two servers: LFM3-Omni-2B on the 3050 at `127.0.0.1:8081` (model id `lfm3-omni`), 1.7B on CPU at `127.0.0.1:8082`. The 1660 stays idle. Omni replaced VL on that port so voice input works. VL weights stay on disk and are not loaded. Both servers need the API key in `secrets/llama-api-key.age`. Health on loopback stays open. Everything else needs the bearer token. Omni is non-reasoning: the server uses `--reasoning off` and `--temp 0`.
 - `--parallel` above 1 splits the context across slots, so a configured 64k is not 64k per request. Pin `--parallel 1` when measuring context.
 - A context that fits the weight file can still CUDA-OOM once the KV cache and the desktop are on the same 6 GB card. Raise context in small steps and watch memory.
 - Hugging Face XET downloads have stalled as `.incomplete` files on this machine, so the server then fails to load the model. Set `HF_HUB_DISABLE_XET=1` for those downloads.

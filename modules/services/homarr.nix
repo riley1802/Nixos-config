@@ -25,7 +25,7 @@ let
   proxyPorts = {
     ntfy = 2586;
     n8n = 5678;
-    llama-vl = 8081;
+    llama-omni = 8081;
     llama-1_7b = 8082;
     open-webui = 8088;
   };
