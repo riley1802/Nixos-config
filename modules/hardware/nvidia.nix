@@ -33,7 +33,9 @@ in
             "$systemctl" start llama-cpp-nemotron.service
             ;;
           status)
-            "$systemctl" is-active breeze-tts.service llama-cpp-nemotron.service || true
+            for unit in breeze-tts llama-cpp-nemotron; do
+              printf '%s %s\n' "$unit" "$("$systemctl" is-active "$unit.service" || true)"
+            done
             exit 0
             ;;
           *)
