@@ -3,15 +3,55 @@
 let
   cfg = config.my.services.n8n;
   # Discord voice messages are Opus in an Ogg file. LFM3-Omni's llama.cpp
-  # audio input accepts wav, mp3, and flac. n8n's Code node cannot run
-  # ffmpeg, so this loopback service does the conversion.
+  # audio input accepts wav, mp3, and flac, and /tts returns wav. n8n's
+  # Code node cannot run ffmpeg, so this loopback service converts both ways.
+  # POST / returns 16 kHz mono wav. POST /discord-voice returns the Ogg Opus
+  # file Discord will show as a voice memo, plus duration and waveform.
   audioToWav = pkgs.writeScript "audio-to-wav.py" ''
     #!${pkgs.python3}/bin/python3
+    import base64
+    import json
+    import struct
     import subprocess
     from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
     FFMPEG = "${pkgs.ffmpeg}/bin/ffmpeg"
     MAX_BYTES = 25 * 1024 * 1024
+
+    def ffmpeg(data, args):
+        return subprocess.run(
+            [FFMPEG, "-hide_banner", "-loglevel", "error", "-i", "pipe:0"] + args,
+            input=data,
+            capture_output=True,
+            timeout=120,
+            check=False,
+        )
+
+    def discord_voice(data):
+        pcm = ffmpeg(data, ["-ar", "48000", "-ac", "1", "-f", "s16le", "pipe:1"])
+        ogg = ffmpeg(data, [
+            "-ar", "48000", "-ac", "1", "-c:a", "libopus", "-b:a", "48k",
+            "-application", "voip", "-frame_duration", "20", "-f", "ogg", "pipe:1",
+        ])
+        if pcm.returncode != 0 or ogg.returncode != 0 or not ogg.stdout:
+            return None
+        raw = pcm.stdout
+        count = len(raw) // 2
+        samples = struct.unpack("<" + ("h" * count), raw[:count * 2]) if count else ()
+        buckets = 256
+        wave = bytearray(buckets)
+        if samples:
+            size = max(1, len(samples) // buckets)
+            for index in range(buckets):
+                chunk = samples[index * size:(index + 1) * size] or (0,)
+                peak = max(abs(sample) for sample in chunk)
+                wave[index] = min(255, int(peak * 255 / 32768))
+        body = json.dumps({
+            "ogg_base64": base64.b64encode(ogg.stdout).decode("ascii"),
+            "duration_secs": round(len(samples) / 48000.0, 3),
+            "waveform": base64.b64encode(wave).decode("ascii"),
+        }).encode("utf-8")
+        return body
 
     class Handler(BaseHTTPRequestHandler):
         protocol_version = "HTTP/1.1"
@@ -30,28 +70,28 @@ let
                 self.send_error(413, "Audio is empty or larger than 25 MB")
                 return
             data = self.rfile.read(size)
+            path = self.path.split("?", 1)[0]
             try:
-                result = subprocess.run(
-                    [
-                        FFMPEG, "-hide_banner", "-loglevel", "error",
-                        "-i", "pipe:0",
-                        "-ar", "16000", "-ac", "1",
-                        "-c:a", "pcm_s16le", "-f", "wav", "pipe:1",
-                    ],
-                    input=data,
-                    capture_output=True,
-                    timeout=60,
-                    check=False,
-                )
+                if path == "/discord-voice":
+                    body = discord_voice(data)
+                    if body is None:
+                        self.send_error(422, "Could not make a Discord voice memo")
+                        return
+                    content_type = "application/json"
+                else:
+                    result = ffmpeg(data, [
+                        "-ar", "16000", "-ac", "1", "-c:a", "pcm_s16le", "-f", "wav", "pipe:1",
+                    ])
+                    if result.returncode != 0 or not result.stdout:
+                        self.send_error(422, "Could not convert that audio to wav")
+                        return
+                    body = result.stdout
+                    content_type = "audio/wav"
             except subprocess.TimeoutExpired:
                 self.send_error(408, "Conversion timed out")
                 return
-            if result.returncode != 0 or not result.stdout:
-                self.send_error(422, "Could not convert that audio to wav")
-                return
-            body = result.stdout
             self.send_response(200)
-            self.send_header("Content-Type", "audio/wav")
+            self.send_header("Content-Type", content_type)
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             self.wfile.write(body)
@@ -100,6 +140,8 @@ in
     # A workflow that hears Discord voice memos posts the audio file to
     # http://127.0.0.1:8091/ and sends the wav to
     # http://127.0.0.1:8081/v1/chat/completions with model id lfm3-omni.
+    # The spoken reply comes from http://127.0.0.1:8081/tts. POST that wav
+    # to http://127.0.0.1:8091/discord-voice for the Discord voice-memo file.
     # The 1.7B server has one slot and is shared with Open WebUI, so a
     # workflow waits if a chat is already generating. The Omni server has
     # one slot too.

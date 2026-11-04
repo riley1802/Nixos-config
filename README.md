@@ -2,7 +2,7 @@
 
 This repository is the NixOS configuration for the `nixos` workstation. It
 defines a Cinnamon desktop, dual-NVIDIA graphics, OpenSSH over the tailnet,
-two llama.cpp servers, n8n, ntfy, Immich, Uptime Kuma, Netdata, Homarr, and a
+two llama.cpp servers plus a third that stays off, n8n, ntfy, Immich, Uptime Kuma, Netdata, Homarr, and a
 torrent media stack.
 qBittorrent and Prowlarr lookups use a Private Internet Access WireGuard tunnel. The
 rest of the desktop stays on the home network.
@@ -52,6 +52,8 @@ by `nixos-generate-config` and should not be edited by hand.
   is build 9190, which cannot load LFM3. `modules/services/llama.nix` runs
   the two servers and publishes them with Tailscale Serve. Both servers
   require the API key in `secrets/llama-api-key.age`.
+  `modules/services/nemotron.nix` is a third server, Nemotron 3.5 Bolt E4B,
+  and it stays off until `nixctl enable services/nemotron`.
 - `modules/services/n8n.nix` runs n8n 2.34.6 from the nixos-26.05 module and
   publishes it with Tailscale Serve. The owner account and workflows stay in
   `/var/lib/n8n`.
@@ -88,7 +90,7 @@ by `nixos-generate-config` and should not be edited by hand.
   `secrets/homarr-encryption-key.age` is Homarr's
   `SECRET_ENCRYPTION_KEY`. The decrypted file is
   `/run/agenix/homarr-encryption-key`.
-  `secrets/llama-api-key.age` is the llama.cpp API key for both servers
+  `secrets/llama-api-key.age` is the llama.cpp API key for the servers
   and for Open WebUI. The decrypted file is `/run/agenix/llama-api-key`.
 - `pia/ca.rsa.4096.crt` and `pia/pia-servers.json` are public PIA material
   used to reach a server by IP when the VPN hostnames are filtered.
@@ -148,7 +150,9 @@ The NixOS firewall stays enabled.
   can still open `http://127.0.0.1:3001` through the trusted loopback
   interface.
 - llama.cpp is reached through Tailscale Serve on TCP 8081 and 8082.
-  Those ports are accepted on `tailscale0`. The llama processes themselves
+  Those two ports are accepted on `tailscale0`. Port 8083 is the Nemotron
+  server, which is configured and left off, so Serve does not publish it
+  and the firewall does not open it yet. The llama processes themselves
   listen on `127.0.0.1` only. Chrome forces HTTPS for every `*.ts.net`
   name, so plain HTTP on the tailnet hostname times out. Serve presents a
   Let's Encrypt certificate for `nixos.taile9f484.ts.net` and proxies to
@@ -301,7 +305,19 @@ process cannot be GPU-only for one model and CPU-only for the other.
 | LFM3-Omni-2B Q8_0 | RTX 3050 | 32768 | q8_0 | https://nixos.taile9f484.ts.net:8081/ | https://nixos.taile9f484.ts.net:8081/v1 |
 | LFM3-1.7B Q8_0 | CPU, 12 threads | 32768 | q8_0 | https://nixos.taile9f484.ts.net:8082/ | https://nixos.taile9f484.ts.net:8082/v1 |
 
-On this computer the same pages are `http://127.0.0.1:8081/` and
+A third server is written and left off. Nemotron 3.5 Bolt E4B Q4_K_M
+would listen on `127.0.0.1:8083`, with model id `nemotron-bolt`, context
+8192, and a q8_0 KV cache. It is pinned to the GTX 1660 SUPER
+(`GPU-f2ae9716-6783-f900-4fed-c05b9cb3a6aa`). The official GGUF is
+6,180,446,208 bytes, about 5.76 GiB, so the unit does not set `-ngl` and
+sets `--fit on`. Sampling is `--temp 1.0`, `--top-p 0.95`, and
+`--reasoning on`. The weight file belongs in `/home/rileyt/llama-models`
+as `Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf`. Turn the server on with
+`nixctl enable services/nemotron`, then `nixctl apply`. Tailscale Serve,
+Open WebUI, and the Homarr ping proxy add port 8083 only then.
+https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Bolt-E4B-4GB
+
+On this computer the running pages are `http://127.0.0.1:8081/` and
 `http://127.0.0.1:8082/`. The `/v1` path is the OpenAI-compatible API. A
 browser opened on `/v1` does not show the chat page.
 
@@ -325,9 +341,10 @@ id on port 8081 is `lfm3-omni`. Omni does not reason, so the server uses
 
 The Omni server is pinned to the RTX 3050 by GPU UUID
 `GPU-d80211d0-ecb1-e279-4f4d-34c53d278895`. That card has 6GB and also
-drives the desktop. The GTX 1660 SUPER is left idle. The package builds
-CUDA for compute capabilities 7.5 and 8.6, which covers both cards, and
-CPU backends for runtime dispatch. The 1.7B server sets
+drives the desktop. The GTX 1660 SUPER is reserved for the Nemotron
+server in `modules/services/nemotron.nix`, which stays off until enabled.
+The package builds CUDA for compute capabilities 7.5 and 8.6, which
+covers both cards, and CPU backends for runtime dispatch. The 1.7B server sets
 `CUDA_VISIBLE_DEVICES` empty, `--device none`, and `-ngl 0`. A thread
 sweep at 8, 12, 16, and 20 chose 12 because that count had the fastest
 generation. 20 was fastest on a 512-token prefill. Both servers set
@@ -373,11 +390,11 @@ mmproj.
 
 ## Open WebUI
 
-Open WebUI is the chat page for both llama.cpp servers. On this computer
+Open WebUI is the chat page for the running llama.cpp servers. On this computer
 it is `http://127.0.0.1:8088`. On the tailnet it is
 `https://nixos.taile9f484.ts.net:8088`. The first account created is the
 admin. Create it at the loopback URL before an untrusted device is on
-the tailnet. The API keys sent to the two llama servers come from
+the tailnet. The API keys sent to the llama servers come from
 `/run/agenix/llama-api-key`. Chats stay in `/var/lib/open-webui`, which
 is not in git.
 
@@ -394,7 +411,9 @@ this computer at `http://127.0.0.1:8082/v1`. It does not go out through
 Tailscale. LFM3-Omni-2B is on `http://127.0.0.1:8081/v1`, model id
 `lfm3-omni`. Discord voice messages are converted at
 `http://127.0.0.1:8091/` (POST the audio bytes, the response is 16 kHz
-mono wav) because llama.cpp does not decode Discord's Ogg Opus. After
+mono wav) because llama.cpp does not decode Discord's Ogg Opus.
+`http://127.0.0.1:8091/discord-voice` turns speech wav into the Ogg Opus
+file, duration, and waveform Discord uses for a voice memo. After
 the owner account exists, add one OpenAI credential:
 
 - API key: the single line in `/run/agenix/llama-api-key`

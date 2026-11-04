@@ -42,7 +42,7 @@ in
         # and tag generation would queue in front of the reply.
         ENABLE_OLLAMA_API = "False";
         ENABLE_OPENAI_API = "True";
-        OPENAI_API_BASE_URLS = "http://127.0.0.1:8081/v1;http://127.0.0.1:8082/v1";
+        OPENAI_API_BASE_URLS = "http://127.0.0.1:8081/v1;http://127.0.0.1:8082/v1${lib.optionalString config.my.services.nemotron.enable ";http://127.0.0.1:8083/v1"}";
         # OPENAI_API_KEYS is not set here. The oneshot below writes it from
         # the age secret, one copy per URL, so the key stays out of the store.
         # Persistent config is off, so this file is what the process sends.
@@ -57,8 +57,8 @@ in
     };
 
     # EnvironmentFile is read before ExecStartPre, so the file has to exist
-    # already. The age secret is one line. Open WebUI wants that key twice,
-    # once for each llama-server URL.
+    # already. The age secret is one line. Open WebUI wants that key once
+    # per URL. Nemotron adds a third copy of the key when it is on.
     systemd.services.open-webui-llama-key = {
       description = "Open WebUI llama.cpp API key";
       requiredBy = [ "open-webui.service" ];
@@ -74,7 +74,7 @@ in
         key=$(${pkgs.coreutils}/bin/tr -d '\n' < ${config.age.secrets.llama-api-key.path})
         test -n "''$key"
         umask 077
-        printf 'OPENAI_API_KEYS=%s;%s\n' "''$key" "''$key" > /run/open-webui-llama/env
+        printf 'OPENAI_API_KEYS=%s;%s${lib.optionalString config.my.services.nemotron.enable ";%s"}\n' "''$key" "''$key"${lib.optionalString config.my.services.nemotron.enable '' "''$key"''} > /run/open-webui-llama/env
         unset key
       '';
     };

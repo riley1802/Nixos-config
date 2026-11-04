@@ -29,7 +29,8 @@ in
     # not loaded. The server is pinned to the 3050 by GPU UUID, so a change
     # in nvidia-smi order cannot move it onto the 1660 SUPER. The 3050 has
     # 6GB and also drives the desktop, so the 1.7B server is refused every
-    # GPU. The 1660 SUPER stays idle. Both servers use Q8_0 weights and a
+    # GPU. The 1660 SUPER is reserved for services/nemotron.nix, which stays
+    # off until enabled. Both servers use Q8_0 weights and a
     # q8_0 KV cache. Quantized KV needs flash attention.
     #
     # Omni does not reason. Liquid's llama.cpp command is --reasoning off

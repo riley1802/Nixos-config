@@ -28,6 +28,8 @@ let
     llama-omni = 8081;
     llama-1_7b = 8082;
     open-webui = 8088;
+  } // lib.optionalAttrs config.my.services.nemotron.enable {
+    llama-nemotron = 8083;
   };
   # iptables multiport accepts at most 15 ports.
   homarrPorts = directPorts ++ lib.attrValues proxyPorts;
