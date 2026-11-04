@@ -32,9 +32,18 @@ let
     llama-nemotron = 8083;
   } // lib.optionalAttrs (config.my.services.breeze-tts.enable && config.my.hardware.gtx1660 == "breeze-tts") {
     breeze-tts = 8084;
+  } // lib.optionalAttrs config.my.services.kokoro.enable {
+    kokoro = 8087;
   };
-  # iptables multiport accepts at most 15 ports.
+  # iptables multiport accepts at most 15 ports. Kokoro makes this list
+  # longer than that while Breeze is also published, so the rule is split.
   homarrPorts = directPorts ++ lib.attrValues proxyPorts;
+  portGroups =
+    let
+      sorted = builtins.sort builtins.lessThan homarrPorts;
+      groups = xs: if xs == [ ] then [ ] else [ (lib.take 15 xs) ] ++ groups (lib.drop 15 xs);
+    in
+    groups sorted;
 in
 {
   options.my.services.homarr = {
@@ -52,10 +61,6 @@ in
       {
         assertion = config.my.services.docker.enable;
         message = "services/homarr needs services/docker (nixctl enable services/docker)";
-      }
-      {
-        assertion = builtins.length homarrPorts <= 15;
-        message = "services/homarr firewall rule uses iptables multiport, which allows at most 15 ports";
       }
     ];
 
@@ -145,11 +150,13 @@ in
     # iptables stores the interface name, so the rule can be installed
     # before br-homarr exists. Tailscale Serve uses 127.0.0.1, which never
     # arrives on this bridge. docker0 is not opened.
-    networking.firewall.extraCommands = ''
-      iptables -w -A nixos-fw -i ${bridgeName} -s ${bridgeAddress}/32 -p tcp -m multiport --dports ${
-        lib.concatMapStringsSep "," toString (builtins.sort builtins.lessThan homarrPorts)
-      } -j nixos-fw-accept
-    '';
+    networking.firewall.extraCommands = lib.concatMapStrings
+      (ports: ''
+        iptables -w -A nixos-fw -i ${bridgeName} -s ${bridgeAddress}/32 -p tcp -m multiport --dports ${
+          lib.concatMapStringsSep "," toString ports
+        } -j nixos-fw-accept
+      '')
+      portGroups;
 
     # An existing network with a different subnet is left in place and this
     # unit fails, instead of silently pointing --ip at the wrong range.
