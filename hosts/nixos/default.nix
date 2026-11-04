@@ -34,7 +34,7 @@
   my.services.arr.radarr.enable = true;
   my.services.arr.seerr.enable = true;
   my.services.arr.sonarr.enable = true;
-  my.services.chatterbox.enable = true;
+  my.services.breeze-tts.enable = true;
   my.services.docker.enable = true;
   my.services.homarr.enable = true;
   my.services.immich.enable = true;

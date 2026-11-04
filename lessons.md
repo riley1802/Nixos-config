@@ -24,6 +24,9 @@ Taken from the saved Cursor chats on this computer, 2026-06-29 through 2026-11-0
 - **Wrong:** `nix fmt` turned a valid file into a syntax error by rewriting a `''` string that contained another `''`.
   **Resolved:** Keep shell snippets from containing the Nix string delimiter. Evaluate again after formatting. (2026-07-18, 21701a1f)
 
+- **Wrong:** Splicing `${lib.optionalString ... '' "$cmd" ''}` onto the end of a shell line made `tailscale serve` fail with "invalid number of arguments", and `nixctl apply` rolled the generation back.
+  **Resolved:** A `''` string drops its first newline, so the next command was glued to the previous one. Put each optional command on its own line. (2026-11-04)
+
 - **Wrong:** A config was built and the service still did not exist. The browser got connection refused.
   **Resolved:** Build and eval do not switch the running system. Apply (`nixctl apply`, or the one-time `pkexec nixos-rebuild switch` before nixctl existed). (2026-06-29, 6a459f87)
 

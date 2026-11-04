@@ -17,12 +17,21 @@
       url = "github:AprilNEA/OpenLogi?dir=packaging";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    # Breeze TTS 2. The package and the systemd module live in this repo.
+    # Pinned to the v0.1.6 tag. nixpkgs follows this flake so the Vulkan
+    # build does not evaluate a second nixpkgs.
+    # https://github.com/HoppouAI/Breeze-TTS-2.cpp/tree/v0.1.6/nix
+    breeze-tts = {
+      url = "github:HoppouAI/Breeze-TTS-2.cpp/v0.1.6";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
     inputs@{ nixpkgs
     , agenix
     , openlogi
+    , breeze-tts
     , ...
     }:
     let
@@ -39,6 +48,7 @@
             ./modules
             agenix.nixosModules.default
             openlogi.nixosModules.default
+            breeze-tts.nixosModules.default
           ];
         };
     in

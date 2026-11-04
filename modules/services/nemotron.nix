@@ -62,6 +62,8 @@ in
       unitConfig.ConditionPathExists = "${models}/${modelFile}";
       environment = {
         # GTX 1660 SUPER, from `nvidia-smi -L` on this machine.
+        # services/breeze-tts uses this card while it is on, and refuses
+        # to evaluate if both modules are enabled.
         CUDA_VISIBLE_DEVICES = "GPU-f2ae9716-6783-f900-4fed-c05b9cb3a6aa";
         LLAMA_CACHE = "/var/lib/llama-cpp/cache";
       };

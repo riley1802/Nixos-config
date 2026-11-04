@@ -37,6 +37,9 @@ in
         Restart = "on-failure";
         RestartSec = "10s";
         TimeoutStartSec = 150;
+        # Optional routes are their own statements. A Nix indented string
+        # drops its opening newline, so appending one to the previous
+        # command glues the two tailscale invocations into one line.
         ExecStart = pkgs.writeShellScript "tailscale-serve" ''
           set -euo pipefail
           ts=${pkgs.tailscale}/bin/tailscale
@@ -55,8 +58,14 @@ in
           "$ts" serve --bg --yes --https=5678 http://127.0.0.1:5678
           "$ts" serve --bg --yes --https=7575 http://127.0.0.1:7575
           "$ts" serve --bg --yes --https=8081 http://127.0.0.1:8081
-          "$ts" serve --bg --yes --https=8082 http://127.0.0.1:8082${lib.optionalString config.my.services.nemotron.enable ''
-          "$ts" serve --bg --yes --https=8083 http://127.0.0.1:8083''}
+          "$ts" serve --bg --yes --https=8082 http://127.0.0.1:8082
+          ${lib.optionalString config.my.services.nemotron.enable ''
+            "$ts" serve --bg --yes --https=8083 http://127.0.0.1:8083
+          ''}
+          ${lib.optionalString config.my.services.breeze-tts.enable ''
+            "$ts" serve --bg --yes --https=8084 http://127.0.0.1:8084
+            "$ts" serve --bg --yes --https=8085 http://127.0.0.1:8085
+          ''}
           "$ts" serve --bg --yes --https=8088 http://127.0.0.1:8088
           "$ts" serve --bg --yes --https=11011 http://127.0.0.1:11011
           # Homepage used 3010, Netdata used 19999. tailscaled keeps the last
@@ -68,7 +77,7 @@ in
             "$ts" serve --https=19999 --yes off
           fi
           status=$("$ts" serve status)
-          for port in 2283 2586 5678 7575 8081 8082${lib.optionalString config.my.services.nemotron.enable " 8083"} 8088 11011; do
+          for port in 2283 2586 5678 7575 8081 8082${lib.optionalString config.my.services.nemotron.enable " 8083"}${lib.optionalString config.my.services.breeze-tts.enable " 8084 8085"} 8088 11011; do
             printf '%s\n' "$status" | ${pkgs.gnugrep}/bin/grep -q ":$port" || {
               echo "missing Tailscale serve route for port $port" >&2
               exit 1
@@ -79,3 +88,5 @@ in
     };
   };
 }
+
+
