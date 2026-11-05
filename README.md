@@ -466,13 +466,17 @@ mmproj.
 
 ## Open WebUI
 
-Open WebUI is the chat page for the running llama.cpp servers. On this computer
-it is `http://127.0.0.1:8088`. On the tailnet it is
+Open WebUI 0.13.0 is the chat page for the running llama.cpp servers. It is
+the official image `ghcr.io/open-webui/open-webui:v0.13.0`, on the host
+network so it can call llama.cpp on `127.0.0.1`. On this computer it is
+`http://127.0.0.1:8088`. On the tailnet it is
 `https://nixos.taile9f484.ts.net:8088`. The first account created is the
 admin. Create it at the loopback URL before an untrusted device is on
 the tailnet. The API keys sent to the llama servers come from
-`/run/agenix/llama-api-key`. Chats stay in `/var/lib/open-webui`, which
-is not in git.
+`/run/agenix/llama-api-key`. Chats stay in `/var/lib/open-webui/data`, which
+is not in git. v0.13.0 changes the database schema. The first switch to
+that version saves `/var/lib/open-webui/data/webui.db.bak-before-0.13.0`.
+Going back to 0.11.1 means restoring that file.
 
 ## n8n
 
