@@ -51,6 +51,7 @@
   my.services.n8n.enable = true;
   my.services.nemotron.enable = true;
   my.services.ntfy.enable = true;
+  my.services.open-terminal.enable = true;
   my.services.open-webui.enable = true;
   my.services.searxng.enable = true;
   my.services.uptime-kuma.enable = true;
