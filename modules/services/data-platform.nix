@@ -209,6 +209,71 @@ let
     updated_at timestamptz NOT NULL DEFAULT now()
     );
 
+    -- Version 2: workflow-level idempotency and persisted search results.
+    ALTER TABLE research.research_run
+      ADD COLUMN IF NOT EXISTS idempotency_key text;
+    UPDATE research.research_run
+      SET idempotency_key = 'legacy:' || id::text
+      WHERE idempotency_key IS NULL;
+    ALTER TABLE research.research_run
+      ALTER COLUMN idempotency_key SET NOT NULL;
+    CREATE UNIQUE INDEX IF NOT EXISTS research_run_idempotency_key_idx
+      ON research.research_run (idempotency_key);
+
+    ALTER TABLE research.subtopic
+      ADD COLUMN IF NOT EXISTS error_summary text;
+
+    ALTER TABLE catalog.information_item
+      ADD COLUMN IF NOT EXISTS canonical_key text;
+    CREATE UNIQUE INDEX IF NOT EXISTS information_item_canonical_key_idx
+      ON catalog.information_item (canonical_key)
+      WHERE canonical_key IS NOT NULL;
+
+    ALTER TABLE research.search_query
+      ADD COLUMN IF NOT EXISTS query_hash text;
+    UPDATE research.search_query
+      SET query_hash = 'legacy:' || id::text
+      WHERE query_hash IS NULL;
+    ALTER TABLE research.search_query
+      ALTER COLUMN query_hash SET NOT NULL;
+    ALTER TABLE research.search_query
+      DROP CONSTRAINT IF EXISTS search_query_subtopic_id_provider_query_text_key;
+    CREATE UNIQUE INDEX IF NOT EXISTS search_query_identity_idx
+      ON research.search_query (subtopic_id, provider, query_hash);
+
+    CREATE TABLE IF NOT EXISTS research.search_hit (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      search_query_id uuid NOT NULL REFERENCES research.search_query(id) ON DELETE CASCADE,
+      rank integer NOT NULL CHECK (rank >= 0),
+      requested_url text NOT NULL,
+      canonical_key text NOT NULL,
+      title text,
+      snippet text,
+      information_item_id uuid REFERENCES catalog.information_item(id),
+      item_snapshot_id uuid REFERENCES catalog.item_snapshot(id),
+      status text NOT NULL DEFAULT 'seen' CHECK (
+        status IN ('seen', 'captured', 'skipped', 'failed')
+      ),
+      error_summary text,
+      UNIQUE (search_query_id, canonical_key)
+    );
+    CREATE INDEX IF NOT EXISTS search_hit_item_idx
+      ON research.search_hit (information_item_id);
+
+    ALTER TABLE research.artifact_revision
+      ADD COLUMN IF NOT EXISTS evidence_hash text,
+      ADD COLUMN IF NOT EXISTS export_path text,
+      ADD COLUMN IF NOT EXISTS exported_at timestamptz;
+    UPDATE research.artifact_revision
+      SET evidence_hash = 'legacy:' || id::text
+      WHERE evidence_hash IS NULL;
+    ALTER TABLE research.artifact_revision
+      ALTER COLUMN evidence_hash SET NOT NULL;
+    ALTER TABLE research.artifact_revision
+      DROP CONSTRAINT IF EXISTS artifact_revision_artifact_id_markdown_hash_key;
+    CREATE UNIQUE INDEX IF NOT EXISTS artifact_revision_evidence_idx
+      ON research.artifact_revision (artifact_id, evidence_hash);
+
     CREATE INDEX IF NOT EXISTS item_snapshot_item_fetched_idx
     ON catalog.item_snapshot (information_item_id, fetched_at DESC);
     CREATE INDEX IF NOT EXISTS item_snapshot_text_search_idx
@@ -228,14 +293,17 @@ let
 
     GRANT CONNECT ON DATABASE information TO n8n;
     GRANT USAGE ON SCHEMA catalog, research TO n8n;
-    GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA catalog, research TO n8n;
+    GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA catalog, research TO n8n;
+    REVOKE DELETE ON ALL TABLES IN SCHEMA catalog, research FROM n8n;
     GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA catalog, research TO n8n;
     ALTER DEFAULT PRIVILEGES FOR ROLE information IN SCHEMA catalog, research
-    GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO n8n;
+    GRANT SELECT, INSERT, UPDATE ON TABLES TO n8n;
+    ALTER DEFAULT PRIVILEGES FOR ROLE information IN SCHEMA catalog, research
+    REVOKE DELETE ON TABLES FROM n8n;
     ALTER DEFAULT PRIVILEGES FOR ROLE information IN SCHEMA catalog, research
     GRANT USAGE, SELECT ON SEQUENCES TO n8n;
 
-    INSERT INTO catalog.schema_version (version) VALUES (1)
+    INSERT INTO catalog.schema_version (version) VALUES (1), (2)
     ON CONFLICT (version) DO NOTHING;
   '';
 
