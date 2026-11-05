@@ -22,13 +22,13 @@ These rules come from the chats on this machine (2026-06-29 through 2026-11-03).
 - Bare `nix fmt` with no path has hung this repo for many minutes. Format with `nix fmt .` or an explicit path. `nix fmt` can also break a Nix `''` string that contains another `''`. Check again after formatting.
 - `nixctl apply` builds, tests, and keeps the generation only if no new unit is broken. Read the last lines. `RESULT: FAIL` means stop and follow `NEXT:`.
 - A `switch` that errors while reloading the live NTFS game drive is not a failed generation. ntfs-3g cannot remount a volume that is already mounted.
-- Cinnamon can block `reboot` with a logind inhibitor. The menu reboot works. From a shell, `pkexec systemctl reboot -i`.
+- The graphical session can block `reboot` with a logind inhibitor. The menu reboot works. From a shell, `pkexec systemctl reboot -i`.
 - The agent shell often has no `python3` or `jq` on `PATH`. Use `/run/current-system/sw/bin` or a store path.
 
 ## This computer
 
 - Host `nixos`, user `rileyt`, timezone `America/Chicago`. The laptop on the tailnet is `rileys-minty`, account `riley`. `ssh laptop` is that account, not `rileyt`.
-- Desktop is Cinnamon on X11 with LightDM. GNOME was the first desktop and was replaced. There is no Pi host in this repo.
+- Desktop is KDE Plasma 6 on Wayland with SDDM, pinned to the RTX 3050 with `KWIN_DRM_DEVICES` (`/dev/dri/by-path/pci-0000:02:00.0-card`). Plasma (X11) is in the SDDM menu. Cinnamon remains in `modules/desktop/cinnamon.nix` and is off; do not enable it while Plasma is on, because each one starts its own display manager. GNOME was the first desktop. There is no Pi host in this repo.
 - Two NVIDIA cards, 6 GB each. The RTX 3050 drives the displays. The GTX 1660 SUPER is the second card. A model that needs both cards cannot run next to another model. The 3050 also compositing the desktop is why a big context OOMs even when the weights look small.
 - Monitors are dual 2560×1440 and can sit at 60 Hz while the panel is 144 Hz. Pointer stutter has also been a USB receiver dongle, and a burst stall when Jellyfin transcode plus the USB game drive saturated the bus. Check the dongle, refresh rates, and disk stalls before changing the compositor.
 - Chrome's secure DNS stays off. With it on, Chrome asks Cloudflare and cannot resolve `nixos.taile9f484.ts.net`. MagicDNS names for `taile9f484.ts.net` go through dnsproxy to `100.100.100.100`. Tailscale's own DNS client stays off so it does not replace that forwarder.
@@ -49,7 +49,7 @@ These rules come from the chats on this machine (2026-06-29 through 2026-11-03).
 - "0 B free" on `/vault` has meant the filesystem was full, with the last free blocks inside ext4's reserved space, which non-root services cannot use. Check `df` and reserved blocks before treating it as an unmounted disk.
 - Sonarr and Radarr hardlink imports. A download and a library file can be one inode. Adding the two directory sizes double-counts.
 - The 4 TB game drive is NTFS at `/mnt/game-drive`, mounted with ntfs-3g so the existing "old stuff" directory stays rileyt-only. Apps keep using `/vault/media/…`, which is a view onto the game drive. The unit name for that mount is escaped: `mnt-game\x2ddrive.mount`.
-- Immich photos stay on `/vault/immich` (ext4). Dropping files into the upload directory does not show them. An external library is a scan of a directory the `immich` user can read. Copying onto NTFS and chmodding it does not do that.
+- Immich photos stay on `/vault/immich` (ext4). Dropping files into the upload directory does not show them. An external library only indexes a directory the `immich` user can read; it does not copy the files into `/vault/immich`. Putting an on-disk folder into the library is an upload through the API. Copying onto NTFS and chmodding it does not make the files readable. `/vault/immich-import` was uploaded into the library on 2026-11-04 and the folder was deleted the same night. The library copies stayed.
 - ntfs-3g shows one mode for the whole volume. chmod on it is a no-op.
 
 ## llama.cpp

@@ -132,6 +132,12 @@ Taken from the saved Cursor chats on this computer, 2026-06-29 through 2026-11-0
 - **Wrong:** Immich was pointed at the NTFS game drive, and files dropped into `/vault/immich` did not show up in the app.
   **Resolved:** The library stays on ext4 `/vault/immich`. Files the app should see are an external library scan of a directory owned by `immich`, after a copy, not a chmod on NTFS (ntfs-3g ignores chmod). (2026-10-31, b40e7bbb, 861b5676)
 
+- **Wrong:** An external library on `/vault/immich-import` was treated as the files being inside `/vault/immich`.
+  **Resolved:** Upload through the Immich API. 5,750 files were offered, 2,845 new copies landed under `/vault/immich`, and 2,905 were already the same bytes. The external library entry was removed afterward. `$RECYCLE.BIN` was left out. Riley then had `/vault/immich-import` deleted; the library copies stayed. (2026-11-04)
+
+- **Wrong:** The Photos page was opened to check that an import had worked.
+  **Resolved:** Count files and paths. Do not open picture or video files, thumbnails, or the Photos page. Ask first. (2026-11-04)
+
 - **Wrong:** Steam games lived under the Nix store and vanished across rebuilds.
   **Resolved:** A persistent `/games/steam-library` via tmpfiles, then add that path in Steam's storage settings. (2026-06-29, 72c2d78c)
 
