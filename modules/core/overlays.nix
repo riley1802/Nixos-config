@@ -29,6 +29,10 @@ in
         }
       // {
         inherit (unstable) radarr sonarr immich;
+        # n8n 2.34.6 ships generated runtime schemas, but its MCP resolver
+        # looks for matching .ts filenames. Keep the package version and
+        # expose compatibility links so workflow node types can be queried.
+        n8n = prev.callPackage ../../packages/n8n-mcp.nix { n8n = prev.n8n; };
         code-cursor = unstable.code-cursor.overrideAttrs (
           old:
           let
