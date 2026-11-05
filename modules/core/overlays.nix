@@ -33,6 +33,14 @@ in
           old:
           let
             version = "3.27.22";
+            # Unstable's patchelf 0.19.2 rewrites this binary with overlapping
+            # LOAD segments, so ld.so dies in dl_main (SEGV) before main.
+            # Canvas compiles with this helper (`esbuild --service --ping`).
+            # patchelf 0.15.2 from nixos-26.05 leaves the ELF loadable.
+            nodeRpath = lib.makeLibraryPath [
+              unstable.stdenv.cc.cc.lib
+              unstable.stdenv.cc.cc.libgcc
+            ];
           in
           {
             inherit version;
@@ -45,6 +53,20 @@ in
               };
             };
             sourceRoot = "cursor-${version}-extracted/usr/share/cursor";
+            postFixup =
+              (old.postFixup or "")
+              + ''
+                node="$out/lib/cursor/resources/app/resources/helpers/node"
+                cp -f "$src/usr/share/cursor/resources/app/resources/helpers/node" "$node"
+                chmod u+w "$node"
+                ${prev.patchelf}/bin/patchelf \
+                  --set-interpreter "$(< "$NIX_CC/nix-support/dynamic-linker")" \
+                  "$node"
+                ${prev.patchelf}/bin/patchelf \
+                  --set-rpath "${nodeRpath}" \
+                  "$node"
+                "$node" --version
+              '';
           }
         );
       })
