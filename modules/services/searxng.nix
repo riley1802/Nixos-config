@@ -9,15 +9,17 @@ let
       "html"
       "json"
     ];
-    # Brave, DuckDuckGo, and Startpage all challenged this host on the
-    # first live test. Bing returned results, with Wikipedia as a fallback.
+    # Brave, DuckDuckGo, and Startpage challenged this host. Bing's scraper
+    # reduced multi-word queries to their first word on 2026-11-05, returning
+    # dictionaries and unrelated sites. Google handles the complete query;
+    # Wikipedia remains a fallback for reference topics.
     use_default_settings.engines.keep_only = [
-      "bing"
+      "google"
       "wikipedia"
     ];
     engines = [
       {
-        name = "bing";
+        name = "google";
         disabled = false;
       }
       {
