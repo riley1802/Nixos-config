@@ -9,21 +9,59 @@ let
       "html"
       "json"
     ];
-    # Brave, DuckDuckGo, Google, Mojeek, and Startpage challenged this host.
-    # Bing's scraper reduced multi-word queries to their first word on
-    # 2026-11-05, returning dictionaries and unrelated sites. Yahoo handles
-    # the complete query; Wikipedia remains a fallback for reference topics.
+    # No-key engines can throttle or change their HTML without warning, so
+    # use independent indexes plus direct technical sources. A failed engine
+    # then reduces coverage instead of making Open WebUI's search empty.
+    # Bing is excluded because its scraper reduced queries to the first word
+    # on 2026-11-05. Google, Brave, DuckDuckGo, Mojeek, and Startpage blocked
+    # this host during live tests.
     use_default_settings.engines.keep_only = [
+      "crowdview"
+      "github"
+      "huggingface"
+      "mwmbl"
+      "wiby"
       "yahoo"
+      "yep"
       "wikipedia"
     ];
     engines = [
+      {
+        name = "crowdview";
+        disabled = false;
+        weight = 0.5;
+      }
+      {
+        name = "github";
+        disabled = false;
+        weight = 1.5;
+      }
+      {
+        name = "huggingface";
+        disabled = false;
+        weight = 2.0;
+      }
+      {
+        name = "mwmbl";
+        disabled = false;
+        weight = 0.8;
+      }
+      {
+        name = "wiby";
+        disabled = false;
+        weight = 0.3;
+      }
       {
         name = "yahoo";
         disabled = false;
       }
       {
+        name = "yep";
+        disabled = false;
+      }
+      {
         name = "wikipedia";
+        weight = 0.5;
         display_type = [
           "infobox"
           "list"
