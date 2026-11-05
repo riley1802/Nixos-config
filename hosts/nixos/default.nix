@@ -14,7 +14,7 @@
   # GTX 1660 SUPER. The other unit stays installed and stopped.
   # `gtx1660 nemotron` or `gtx1660 breeze` flips the running process.
   # This line is what boots, and what the tailnet publishes.
-  my.hardware.gtx1660 = "breeze-tts";
+  my.hardware.gtx1660 = "nemotron";
 
   # nixctl: modules (one line per module that is on; nixctl enable/disable edit these lines)
   my.apps.openlogi.enable = true;
