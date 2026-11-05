@@ -29,7 +29,9 @@ let
         # the directory must be writable before the link can be created.
         chmod u+w "$(dirname "$source")"
         target="''${source%.schema.js}.ts"
-        ln -s "$(basename "$source")" "$target"
+        # A hard link is a regular file. The MCP resolver ignores symlinks
+        # when it lists version and mode files.
+        ln "$source" "$target"
       done < <(
         find "$out/lib/n8n" \
           -type f \
