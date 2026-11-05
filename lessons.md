@@ -199,6 +199,9 @@ Taken from the saved Cursor chats on this computer, 2026-06-29 through 2026-11-0
 - **Wrong:** A whisper service called `ffmpeg` and got "command not found" even with a systemd `Path=`.
   **Resolved:** The shell did not see `Path=`. Put ffmpeg on the unit's `Environment` PATH. (2026-07-04, bcef5447)
 
+- **Wrong:** Kokoro was pointed at `python3Packages.torch-bin` to time the RTX 3050. That build compiles NCCL from source for every CUDA architecture and pegs the CPU for a long time. Loading Kokoro on the 3050 next to LFM3-Omni then died with `CUDA out of memory` (Kokoro wanted about 1.1 GiB reserved, Omni held about 3.6 GiB, the desktop about 0.9 GiB, the card is 6 GiB).
+  **Resolved:** Time the card with the PyTorch cu128 wheel (`LD_LIBRARY_PATH` needs the Nix `libstdc++` and `/run/opengl-driver/lib`), and stop Omni only for that run. The always-on service stays on 16 CPU threads. (2026-11-04)
+
 ## Media stack and PIA
 
 - **Wrong:** The whole desktop was put on the VPN. Throughput dropped from ~28 MB/s to ~1.1 MB/s, and PIA's hostname scripts failed because DNS was reset.

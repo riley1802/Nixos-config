@@ -21,8 +21,8 @@ modules/desktop/                  Cinnamon, KDE Connect, Chrome DNS policy
 modules/network/                  Tailscale, DNS, SSH, NetworkManager, PIA, firewall
 modules/services/arr/             Sonarr, Radarr, Lidarr, Bazarr, Prowlarr, Seerr,
                                   qBittorrent, Cleanuparr, and the shared media directories
-modules/services/                 Jellyfin, Immich, n8n, ntfy, llama.cpp, Homarr,
-                                  Homelable, Netdata, Uptime Kuma, Docker
+modules/services/                 Jellyfin, Immich, n8n, ntfy, llama.cpp, Kokoro,
+                                  Homarr, Homelable, Netdata, Uptime Kuma, Docker
 modules/apps/openlogi.nix         MX Master 4
 packages/                         Lidarr, Cleanuparr, llama.cpp, and Uptime Kuma builds
 secrets/                          agenix recipients and encrypted files
@@ -62,6 +62,9 @@ by `nixos-generate-config` and should not be edited by hand.
   1660. The other unit stays installed and stopped. `gtx1660 breeze` or
   `gtx1660 nemotron` flips the running process; the host line is the boot
   default and what the tailnet publishes.
+  `modules/services/kokoro.nix` runs Kokoro-82M on the CPU, separate from
+  Breeze. It listens on `127.0.0.1:8087`. Tailscale Serve publishes that
+  port. The weights are `hexgrad/Kokoro-82M` in `/var/lib/kokoro`.
 - `modules/services/n8n.nix` runs n8n 2.34.6 from the nixos-26.05 module and
   publishes it with Tailscale Serve. The owner account and workflows stay in
   `/var/lib/n8n`.
@@ -194,6 +197,26 @@ The NixOS firewall stays enabled.
   with `"response_format":"wav"` returns WAV. Saved voices live in
   `/var/lib/breeze-tts/voices`. n8n's Discord replies use Breeze at
   `http://127.0.0.1:8084/v1/audio/speech`.
+- Kokoro-82M accepts TCP 8087 on `tailscale0` only. The process listens on
+  `127.0.0.1`. Tailscale Serve presents HTTPS for
+  `nixos.taile9f484.ts.net:8087` and proxies to that port. This computer
+  can still open `http://127.0.0.1:8087`. The home network and the VPN
+  cannot. The server does not authenticate; the tailnet is the access
+  boundary. The service is `modules/services/kokoro.nix`. It uses the
+  nixpkgs `kokoro` package, CPU torch, and 16 threads. Check
+  `http://127.0.0.1:8087/health`. Synthesis is
+  `POST /v1/audio/speech` with JSON `input`, optional `voice` (default
+  `af_heart`; a name starting with `b` is British English), and
+  `response_format` `wav`. The response is 24 kHz mono WAV. On 2026-11-04,
+  voice `af_heart`, one warmup discarded, median of three runs: 16 CPU
+  threads spoke a 46-character sentence in 0.453 seconds (3.275 seconds of
+  audio, real-time factor 7.22) and a 1016-character passage in 9.667
+  seconds (59.7 seconds of audio, first audio at 4.424 seconds, real-time
+  factor 6.18). The RTX 3050, with the desktop still on the card and Omni
+  stopped, did the same clips in 0.136 seconds (real-time factor 24.1) and
+  1.990 seconds (first audio at 0.876 seconds, real-time factor 30.0).
+  Peak GPU allocation was 1027 MiB. That does not fit beside Omni, so the
+  service stays on the CPU.
 - n8n accepts TCP port 5678 on `tailscale0` only. The process listens on
   `127.0.0.1`. Tailscale Serve presents HTTPS for
   `nixos.taile9f484.ts.net:5678` and proxies to that port. This computer
