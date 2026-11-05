@@ -554,6 +554,13 @@ in
         ];
       };
     };
+
+    # n8n defaults N8N_RESTRICT_FILE_ACCESS_TO to ~/.n8n-files. A Read Write
+    # File node outside that directory fails with "Access to the file is
+    # not allowed" even when systemd can write the path. Keep the default
+    # directory and add the vault trees this module opens.
+    # https://docs.n8n.io/hosting/configuration/environment-variables/security/
+    services.n8n.environment.N8N_RESTRICT_FILE_ACCESS_TO = "~/.n8n-files;${researchExports};${researchBlobs}";
   };
 }
 
