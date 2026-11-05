@@ -83,7 +83,9 @@ in
         ENABLE_WEB_SEARCH = "True";
         WEB_SEARCH_ENGINE = "searxng";
         SEARXNG_QUERY_URL = "http://127.0.0.1:8089/search";
-        WEB_SEARCH_RESULT_COUNT = "3";
+        # Give the embedding reranker enough candidates to discard broad or
+        # weakly matched pages from the metasearch results.
+        WEB_SEARCH_RESULT_COUNT = "8";
         WEB_SEARCH_CONCURRENT_REQUESTS = "1";
         WEB_LOADER_CONCURRENT_REQUESTS = "3";
         RAG_EMBEDDING_ENGINE = "openai";
