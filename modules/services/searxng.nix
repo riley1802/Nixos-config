@@ -20,7 +20,6 @@ let
       "github"
       "huggingface"
       "mwmbl"
-      "wiby"
       "yahoo"
       "yep"
       "wikipedia"
@@ -45,11 +44,6 @@ let
         name = "mwmbl";
         disabled = false;
         weight = 0.8;
-      }
-      {
-        name = "wiby";
-        disabled = false;
-        weight = 0.3;
       }
       {
         name = "yahoo";
