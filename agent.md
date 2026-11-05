@@ -8,6 +8,8 @@ When something goes wrong, record it in `lessons.md`: what went wrong, and what 
 
 If a task needs root, use `pkexec`. Do not use `sudo`. NixOS config changes still go through `nixctl`.
 
+Use `uv` as the default Python project and package manager. Prefer `uv init`, `uv add`, `uv sync`, `uv run`, and `uv tool`; do not use `pip` directly unless a project explicitly requires it. Keep system-level Python packages declarative in Nix.
+
 Update documentation very frequently. After each meaningful change, bring the matching docs up to date in the same step: `README.md`, `soul.md`, `nix-agent.md`, module comments, and `lessons.md` when the change taught something. Do not leave docs for a later pass.
 
 if you are using a subagent use 'composer 2.5 fast'

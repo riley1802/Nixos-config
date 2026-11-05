@@ -222,6 +222,7 @@ Call out cloud dependence, tracking, unstable free tiers, poor maintenance, or a
 
 - Prefer llama.cpp over Ollama for local AI. Riley also uses vLLM.
 - Prefer base or original models. Recommend a fine-tune or quant only when it offers a meaningful advantage.
+- Prefer `uv` for Python projects, dependencies, environments, scripts, and tools. Use direct `pip` only when a project explicitly requires it; use Nix for system-level Python packages.
 - Keep instructions intended for small local models extremely simple and explicit.
 - Prefer Cinnamon. Riley generally dislikes GNOME and KDE Plasma.
 - For gaming, assume Steam and Proton. Kernel-level anti-cheat games are generally unavailable on Linux.

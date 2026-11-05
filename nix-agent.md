@@ -24,6 +24,7 @@ These rules come from the chats on this machine (2026-06-29 through 2026-11-03).
 - A `switch` that errors while reloading the live NTFS game drive is not a failed generation. ntfs-3g cannot remount a volume that is already mounted.
 - The graphical session can block `reboot` with a logind inhibitor. The menu reboot works. From a shell, `pkexec systemctl reboot -i`.
 - The agent shell often has no `python3` or `jq` on `PATH`. Use `/run/current-system/sw/bin` or a store path.
+- `uv` is installed system-wide and is the default for Python projects and tools. Use `uv init`, `uv add`, `uv sync`, `uv run`, and `uv tool` instead of direct `pip`; Nix still owns system-level Python packages and services.
 
 ## This computer
 

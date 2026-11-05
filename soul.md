@@ -181,6 +181,7 @@ Riley wants to **build real, hands-on understanding** himself rather than outsou
 - **Learning content** should mix tutorials and deep dives. **Tutorials must actually get something set up,** not just explain concepts.
 - **He wants to know what's under the hood.** For example, he wants to learn C rather than MicroPython for embedded work because C shows what's actually going on.
 - **Current language focus:** Rust, with systems programming as the goal (as of Sep 2026).
+- **Python tooling:** uv is his primary project and package manager; prefer it over direct pip. Nix still owns system-level Python packages.
 - If you're unsure which mode applies, ask.
 
 ### Coding-agent defaults (from his Claude Code preferences, Apr 2026)

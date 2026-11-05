@@ -152,12 +152,17 @@ The normal user is `rileyt`, with membership in `wheel`, `networkmanager`,
 `docker`, and `media`. Docker group membership is effectively root-equivalent
 and should only be granted to trusted users.
 
-Cursor, Google Chrome, Git, htop, llama.cpp, OpenLogi, and Spotify are
+Cursor, Google Chrome, Git, htop, llama.cpp, OpenLogi, Spotify, and uv are
 installed system-wide. OpenLogi is the local manager for the MX Master 4;
 its agent starts with the graphical session. The `uinput` kernel module is
 loaded at boot so that agent's device node receives a seat ACL. The menu
 also has Chrome app entries for Homarr and Cleanuparr.
 Those open `http://127.0.0.1:7575` and `http://127.0.0.1:11011`.
+
+For Python development, uv is the default project and package manager:
+use `uv init`, `uv add`, `uv sync`, `uv run`, and `uv tool` rather than
+calling `pip` directly. Nix remains responsible for system-level Python
+packages and service environments.
 
 The NixOS firewall stays enabled.
 

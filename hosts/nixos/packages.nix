@@ -10,6 +10,7 @@ lib.mkMerge [
       htop
       llama-cpp
       spotify
+      uv
     ];
   }
   {
