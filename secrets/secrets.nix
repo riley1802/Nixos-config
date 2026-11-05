@@ -14,4 +14,5 @@ in
   "homelable-env.age".publicKeys = recipients;
   "homelable-login.age".publicKeys = recipients;
   "llama-api-key.age".publicKeys = recipients;
+  "searxng-env.age".publicKeys = recipients;
 }

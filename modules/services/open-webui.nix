@@ -15,7 +15,8 @@ let
     key=$(${pkgs.coreutils}/bin/tr -d '\n' < ${config.age.secrets.llama-api-key.path})
     test -n "$key"
     umask 077
-    printf 'OPENAI_API_KEYS=%s;%s${lib.optionalString nemotronUp ";%s"}\n' "$key" "$key" ${lib.optionalString nemotronUp ''"$key"''} > /run/open-webui-llama/env
+    printf 'OPENAI_API_KEYS=%s;%s${lib.optionalString nemotronUp ";%s"}\nRAG_OPENAI_API_KEY=%s\n' \
+      "$key" "$key" ${lib.optionalString nemotronUp ''"$key"''} "$key" > /run/open-webui-llama/env
     unset key
   '';
   image = "ghcr.io/open-webui/open-webui:v0.13.0@sha256:2272b0fb7c8783a016bcc179abb467cfa34590c99c5e6560fe0e9155b4820a09";
@@ -32,6 +33,14 @@ in
       {
         assertion = config.my.services.llama.enable;
         message = "services/open-webui needs services/llama (nixctl enable services/llama)";
+      }
+      {
+        assertion = config.my.services.searxng.enable;
+        message = "services/open-webui needs services/searxng (nixctl enable services/searxng)";
+      }
+      {
+        assertion = config.my.services.embeddinggemma.enable;
+        message = "services/open-webui needs services/embeddinggemma (nixctl enable services/embeddinggemma)";
       }
     ];
 
@@ -71,6 +80,19 @@ in
         # Connection URLs and the task switches above stay in this file.
         # Chats and accounts still live in the mounted data directory.
         ENABLE_PERSISTENT_CONFIG = "False";
+        ENABLE_WEB_SEARCH = "True";
+        WEB_SEARCH_ENGINE = "searxng";
+        SEARXNG_QUERY_URL = "http://127.0.0.1:8089/search";
+        WEB_SEARCH_RESULT_COUNT = "3";
+        WEB_SEARCH_CONCURRENT_REQUESTS = "1";
+        WEB_LOADER_CONCURRENT_REQUESTS = "3";
+        RAG_EMBEDDING_ENGINE = "openai";
+        RAG_EMBEDDING_MODEL = "embeddinggemma-2";
+        RAG_OPENAI_API_BASE_URL = "http://127.0.0.1:8090/v1";
+        RAG_EMBEDDING_QUERY_PREFIX = "task: search result | query: ";
+        RAG_EMBEDDING_CONTENT_PREFIX = "title: none | text: ";
+        RAG_EMBEDDING_BATCH_SIZE = "1";
+        RAG_EMBEDDING_CONCURRENT_REQUESTS = "1";
       };
       extraOptions = [ "--network=host" ];
     };
