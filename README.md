@@ -1,7 +1,7 @@
 # NixOS Desktop Configuration
 
 This repository is the NixOS configuration for the `nixos` workstation. It
-defines a KDE Plasma desktop, dual-NVIDIA graphics, OpenSSH over the tailnet,
+defines a Cinnamon desktop, dual-NVIDIA graphics, OpenSSH over the tailnet,
 two llama.cpp servers plus a third that stays off, n8n, ntfy, Immich, Uptime Kuma, Netdata, Homarr, Homelable, and a
 torrent media stack.
 qBittorrent and Prowlarr lookups use a Private Internet Access WireGuard tunnel. The
@@ -17,7 +17,7 @@ hosts/nixos/packages.nix          programs installed by name
 hosts/nixos/hardware-configuration.nix
 modules/core/                     nix, boot, time, user, package overlays
 modules/hardware/                 NVIDIA driver, vault disk, game drive
-modules/desktop/                  Plasma, Cinnamon (off), KDE Connect, Chrome DNS policy
+modules/desktop/                  Cinnamon, KDE Connect, Chrome DNS policy
 modules/network/                  Tailscale, DNS, SSH, NetworkManager, PIA, firewall
 modules/services/arr/             Sonarr, Radarr, Lidarr, Bazarr, Prowlarr, Seerr,
                                   qBittorrent, Cleanuparr, and the shared media directories
@@ -128,10 +128,7 @@ The workstation uses:
 - Nix flakes and the `nix-command` interface
 - unfree packages and redistributable firmware
 - the proprietary stable NVIDIA driver with modesetting
-- KDE Plasma 6 on Wayland with SDDM. The session is pinned to the RTX 3050.
-  Plasma (X11) stays in the SDDM menu. Cinnamon remains in
-  `modules/desktop/cinnamon.nix` and is off; turn it on only with Plasma off,
-  because each desktop starts its own display manager.
+- Cinnamon on X11 with LightDM
 - PipeWire for ALSA and PulseAudio clients
 - KDE Connect
 - Tailscale with manual login and no automatically provisioned auth key
@@ -586,18 +583,6 @@ group `immich`. The Postgres database stays on the root disk at the
 module default. Redis is a local unix socket. The server is Immich
 3.3.5 from the nixpkgs-unstable pin. nixos-26.05 packages 2.7.5, which
 is marked insecure.
-
-On 2026-11-04 the pictures and videos in `/vault/immich-import` were
-uploaded into this library. 5,750 files were offered. 2,845 were stored
-as new files under `/vault/immich`. 2,905 matched bytes Immich already
-had, so they were not stored a second time. The external library entry
-was then removed, and the Photos timeline shows the `/vault/immich`
-copies. `$RECYCLE.BIN` and `System Volume Information` were not
-uploaded. `/vault/immich-import` was deleted on 2026-11-04 after the
-copies were in the library. That freed the space and left the library
-copies in place. Dropping a
-file into `/vault/immich` still does not add it; Immich only stores a
-file there when the file comes in through the app or the upload API.
 
 The first visit creates the admin account. Do that on this computer at
 `http://127.0.0.1:2283`, before an untrusted device is on the tailnet,

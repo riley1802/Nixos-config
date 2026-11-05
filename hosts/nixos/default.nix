@@ -19,8 +19,8 @@
   # nixctl: modules (one line per module that is on; nixctl enable/disable edit these lines)
   my.apps.openlogi.enable = true;
   my.desktop.chrome.enable = true;
+  my.desktop.cinnamon.enable = true;
   my.desktop.kdeconnect.enable = true;
-  my.desktop.plasma.enable = true;
   my.hardware.disks.enable = true;
   my.hardware.nvidia.enable = true;
   my.network.dnsproxy.enable = true;
