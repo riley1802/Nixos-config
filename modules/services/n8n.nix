@@ -2,6 +2,42 @@
 { config, lib, pkgs, ... }:
 let
   cfg = config.my.services.n8n;
+  # n8n 2.34.6 generates Zod schemas as *.schema.js, then the Nix package
+  # deletes every *.ts file. The MCP resolver only opens *.ts, so node
+  # definitions such as Postgres disappear. This copy keeps the same build
+  # and adds a relative link for each schema. It does not rebuild n8n.
+  mcpNodeTypes = pkgs.runCommand "${pkgs.n8n.name}-mcp-node-types"
+    {
+      nativeBuildInputs = [
+        pkgs.coreutils
+        pkgs.findutils
+      ];
+      meta = pkgs.n8n.meta;
+      passthru = pkgs.n8n.passthru or { };
+    }
+    ''
+      cp -a --reflink=auto ${pkgs.n8n}/. "$out/"
+
+      # The installed launcher contains the original output path. Point it at
+      # this copy so Node resolves packages containing the compatibility links.
+      chmod u+w "$out/bin/n8n"
+      substituteInPlace "$out/bin/n8n" \
+        --replace-fail '${pkgs.n8n}' "$out"
+
+      while IFS= read -r -d "" source; do
+        # Copied store directories are mode 555. The builder is not root, so
+        # the directory must be writable before the link can be created.
+        chmod u+w "$(dirname "$source")"
+        target="''${source%.schema.js}.ts"
+        ln -s "$(basename "$source")" "$target"
+      done < <(
+        find "$out/lib/n8n" \
+          -type f \
+          -path "*/dist/node-definitions/*" \
+          -name "*.schema.js" \
+          -print0
+      )
+    '';
   # Discord voice messages are Opus in an Ogg file. LFM3-Omni's llama.cpp
   # audio input accepts wav, mp3, and flac. Breeze returns wav from
   # POST /v1/audio/speech. n8n's Code node cannot run ffmpeg, so this
@@ -154,6 +190,7 @@ in
     # https://docs.n8n.io/hosting/configuration/environment-variables/
     services.n8n = {
       enable = true;
+      package = mcpNodeTypes;
       openFirewall = false;
       environment = {
         N8N_LISTEN_ADDRESS = "127.0.0.1";
