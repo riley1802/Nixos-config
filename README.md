@@ -372,12 +372,12 @@ process cannot be GPU-only for one model and CPU-only for the other.
 
 Nemotron 3.5 Bolt E4B Q4_K_M listens on `127.0.0.1:8083` when
 `my.hardware.gtx1660` is `nemotron`, with model id `nemotron-bolt`, context
-16384, a q8_0 KV cache, and the Gemma 4 E4B MTP assistant
+32768, a q8_0 KV cache, and the Gemma 4 E4B MTP assistant
 `mtp-gemma-4-E4B-it-Q8_0.gguf` as `--spec-type draft-mtp` with
 `--spec-draft-n-max 1`. It is pinned to the GTX 1660 SUPER
 (`GPU-f2ae9716-6783-f900-4fed-c05b9cb3a6aa`). The official GGUF is
 6,180,446,208 bytes, about 5.76 GiB, so the unit does not set `-ngl` and
-sets `--fit on` and `--fit-ctx 16384`. Sampling is `--temp 1.0`, `--top-p 0.95`, and
+sets `--fit on` and `--fit-ctx 32768`. Sampling is `--temp 1.0`, `--top-p 0.95`, and
 `--reasoning on`. The weight file belongs in `/home/rileyt/llama-models`
 as `Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf`. The host line
 `my.hardware.gtx1660` chooses this server or Breeze. `gtx1660 nemotron`
@@ -389,7 +389,7 @@ Measured on 2026-11-04 on this 1660, 128 new tokens, seed 1, short prompt:
 at 3, and 53.3 at 4. Draft length 1 is what the unit uses. With that
 drafter and a filled window: 15811 prompt tokens at context 16384 were
 186.7 tok/s prefill and 55.9 tok/s generation; 32218 prompt tokens at
-context 32768 were 157.0 and 42.8. The unit context stays 16384.
+context 32768 were 157.0 and 42.8. The unit uses 32768.
 https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Bolt-E4B-4GB
 https://huggingface.co/unsloth/gemma-4-E4B-it-GGUF/blob/main/MTP/README.md
 
