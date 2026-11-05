@@ -9,6 +9,25 @@ let
       "html"
       "json"
     ];
+    # Brave, DuckDuckGo, and Startpage all challenged this host on the
+    # first live test. Bing returned results, with Wikipedia as a fallback.
+    use_default_settings.engines.keep_only = [
+      "bing"
+      "wikipedia"
+    ];
+    engines = [
+      {
+        name = "bing";
+        disabled = false;
+      }
+      {
+        name = "wikipedia";
+        display_type = [
+          "infobox"
+          "list"
+        ];
+      }
+    ];
     server = lib.recursiveUpdate
       {
         bind_address = "127.0.0.1";
