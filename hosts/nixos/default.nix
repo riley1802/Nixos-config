@@ -40,6 +40,7 @@
   my.services.arr.sonarr.enable = true;
   my.services.breeze-tts.enable = true;
   my.services.d1.enable = true;
+  my.services.data-platform.enable = true;
   my.services.docker.enable = true;
   my.services.embeddinggemma.enable = true;
   my.services.homarr.enable = true;
