@@ -9,17 +9,17 @@ let
       "html"
       "json"
     ];
-    # Brave, DuckDuckGo, Google, and Startpage challenged this host. Bing's
-    # scraper reduced multi-word queries to their first word on 2026-11-05,
-    # returning dictionaries and unrelated sites. Mojeek handles the complete
-    # query; Wikipedia remains a fallback for reference topics.
+    # Brave, DuckDuckGo, Google, Mojeek, and Startpage challenged this host.
+    # Bing's scraper reduced multi-word queries to their first word on
+    # 2026-11-05, returning dictionaries and unrelated sites. Yahoo handles
+    # the complete query; Wikipedia remains a fallback for reference topics.
     use_default_settings.engines.keep_only = [
-      "mojeek"
+      "yahoo"
       "wikipedia"
     ];
     engines = [
       {
-        name = "mojeek";
+        name = "yahoo";
         disabled = false;
       }
       {
