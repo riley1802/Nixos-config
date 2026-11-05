@@ -5,6 +5,14 @@ let
   postgres = pkgs.postgresql_17;
   stateDirectory = "/var/lib/research-postgresql";
   envFile = "${stateDirectory}/secrets.env";
+  # Static group for the vault trees n8n writes. Not named n8n: that name is
+  # the dynamic user/group, and a static group of the same name without a
+  # static user makes DynamicUser= fail.
+  # https://www.freedesktop.org/software/systemd/man/systemd.exec.html#DynamicUser=
+  researchGroup = "research";
+  researchExports = "/vault/research/exports";
+  researchBlobs = "/vault/research/blobs";
+  researchBlobObjects = "/vault/research/blobs/sha256";
 
   schema = pkgs.writeText "research-archive-schema.sql" ''
       \set ON_ERROR_STOP on
@@ -428,12 +436,17 @@ in
         printf 'N8N_PASSWORD=%s\n' "$runtime_password" > ${envFile}
         chmod 0400 ${envFile}
 
-        install -d -m 0750 \
-          /vault/research \
-          /vault/research/blobs \
-          /vault/research/blobs/sha256 \
-          /vault/research/exports
-        install -d -m 0700 /vault/research/backups
+        # Parent stays root-owned and not group-writable. Group execute is
+        # enough to traverse it. exports and blobs are group-writable and
+        # setgid so new files stay in the group. backups stays root-only.
+        # install -d applies mode and owner again when the directory exists,
+        # so a tree left at root:root 0750 is corrected on the next boot.
+        install -d -m 0750 -o root -g ${researchGroup} /vault/research
+        install -d -m 2770 -o root -g ${researchGroup} \
+          ${researchBlobs} \
+          ${researchBlobObjects} \
+          ${researchExports}
+        install -d -m 0700 -o root -g root /vault/research/backups
       '';
     };
 
@@ -512,15 +525,34 @@ in
       };
     };
 
+    # n8n's dynamic user is not in /etc/group. SupplementaryGroups= is how
+    # it joins this group. Upstream services.n8n sets DynamicUser=true,
+    # ProtectSystem=strict, and StateDirectory=n8n, which only opens
+    # /var/lib/n8n. These keys are added beside those, not in place of them.
+    # https://www.freedesktop.org/software/systemd/man/systemd.exec.html#ReadWritePaths=
+    users.groups.${researchGroup} = { };
+
     systemd.services.n8n = {
       after = [
         "docker-research-postgres.service"
         "research-archive-migrate.service"
+        # Directory creation is before migrate, but n8n only orders on
+        # migrate. Start setup itself so ReadWritePaths exists first.
+        "research-archive-setup.service"
       ];
       wants = [
         "docker-research-postgres.service"
         "research-archive-migrate.service"
+        "research-archive-setup.service"
       ];
+      serviceConfig = {
+        SupplementaryGroups = [ researchGroup ];
+        ReadWritePaths = [
+          researchExports
+          researchBlobs
+          researchBlobObjects
+        ];
+      };
     };
   };
 }
