@@ -2,7 +2,7 @@
 # Uses the stock NixOS module (services.uptime-kuma). Data is under
 # /var/lib/uptime-kuma. If you used an older custom module that stored the DB
 # elsewhere, stop the service and copy kuma.db into that directory before apply.
-{ config, lib, pkgs, ... }:
+{ config, lib, ... }:
 let
   cfg = config.my.services.uptime-kuma;
 in
@@ -11,10 +11,7 @@ in
 
   config = lib.mkIf cfg.enable {
     # https://github.com/NixOS/nixpkgs/blob/nixos-26.05/nixos/modules/services/monitoring/uptime-kuma.nix
-    services.uptime-kuma = {
-      enable = true;
-      package = pkgs.uptime-kuma;
-    };
+    services.uptime-kuma.enable = true;
 
     # Process listens on 127.0.0.1 (module default). Open 3001 on the tailnet
     # interface only; Tailscale Serve proxies HTTPS from the MagicDNS name.

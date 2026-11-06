@@ -15,11 +15,13 @@ in
   config = lib.mkIf cfg.enable {
     programs.kdeconnect.enable = true;
 
-    # The package autostarts kdeconnectd only. A non-Plasma session
-    # needs this indicator entry for the tray icon. Cinnamon is the
-    # other desktop module; it is off while Plasma is on.
-    environment.etc."xdg/autostart/org.kde.kdeconnect.nonplasma.desktop".source =
-      "${config.programs.kdeconnect.package}/share/applications/org.kde.kdeconnect.nonplasma.desktop";
+    # The package autostarts kdeconnectd. Plasma draws its own tray icon,
+    # and this indicator is NotShowIn=KDE, so it is installed only with
+    # the Cinnamon module.
+    environment.etc = lib.mkIf config.my.desktop.cinnamon.enable {
+      "xdg/autostart/org.kde.kdeconnect.nonplasma.desktop".source =
+        "${config.programs.kdeconnect.package}/share/applications/org.kde.kdeconnect.nonplasma.desktop";
+    };
 
     # KDE Connect stays open for the phone on the home network only.
     networking.firewall.interfaces.${config.my.lanInterface} = {

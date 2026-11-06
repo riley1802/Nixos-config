@@ -15,8 +15,8 @@ in
     ];
 
     # Servarr accepts one bind address. "*" is what lets loopback (this
-    # computer), tailscale0 (the phone), and the Homarr bridge reach the
-    # same process. The firewall is what keeps every other interface closed.
+    # computer) and tailscale0 (the phone) reach the same process. The
+    # firewall is what keeps every other interface closed.
     # https://wiki.servarr.com/sonarr/settings#bind-address
     services.lidarr = {
       enable = true;

@@ -20,7 +20,7 @@
   my.hardware.disks.enable = true; # Mount or wire up “vault” disk and game drive
   my.hardware.nvidia.enable = true; # Proprietary NVIDIA graphics driver stack
   my.network.dnsproxy.enable = true; # Encrypted DNS forwarder (e.g. DoH/DoT upstream)
-  my.network.firewall.enable = true; # Host firewall rules (nftables; includes global allow ranges)
+  my.network.firewall.enable = true; # Keep global port ranges empty; each service opens its own interface
   my.network.networkmanager.enable = true; # NetworkManager for wired/wifi/VPN UI and profiles
   my.network.openssh.enable = true; # SSH server, restricted for Tailscale access
   my.network.pia.enable = true; # Private Internet Access VPN via WireGuard with split tunneling
