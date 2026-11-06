@@ -4,6 +4,7 @@
 {
   environment.systemPackages = with pkgs; [
     code-cursor
+    gh
     git
     google-chrome
     htop
