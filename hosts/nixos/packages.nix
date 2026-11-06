@@ -8,7 +8,6 @@
     git
     google-chrome
     htop
-    llama-cpp
     spotify
     uv
   ];

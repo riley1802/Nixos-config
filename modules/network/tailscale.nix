@@ -2,37 +2,33 @@
 { config, lib, pkgs, ... }:
 let
   cfg = config.my.network.tailscale;
-  gpu = config.my.hardware.gtx1660;
   # One list, so the serve lines, the serve-off lines, and the status
   # check cannot drift. A route with `on = false` is one this machine
   # used to publish. tailscaled keeps it until `serve off`.
   # 3010 was Homepage. 19999 was Netdata.
+  # 3000 homelable, 5678 n8n, 7575 homarr, 8081–8082 llama.cpp, 8083 nemotron,
+  # 8084–8085 breeze-tts, 8087 kokoro, 8088 open-webui were retired with those modules.
   routes = [
     { port = 2283; on = config.my.services.immich.enable; }
     { port = 2586; on = config.my.services.ntfy.enable; }
-    { port = 3000; on = config.my.services.homelable.enable; }
-    { port = 5678; on = config.my.services.n8n.enable; }
-    { port = 7575; on = config.my.services.homarr.enable; }
-    { port = 8081; on = config.my.services.llama.enable; }
-    { port = 8082; on = config.my.services.llama.enable; }
-    {
-      port = 8083;
-      on = config.my.services.nemotron.enable && gpu == "nemotron";
-    }
-    {
-      port = 8084;
-      on = config.my.services.breeze-tts.enable && gpu == "breeze-tts";
-    }
-    {
-      port = 8085;
-      on = config.my.services.breeze-tts.enable && gpu == "breeze-tts";
-    }
-    { port = 8087; on = config.my.services.kokoro.enable; }
-    { port = 8088; on = config.my.services.open-webui.enable; }
     { port = 11011; on = config.my.services.arr.cleanuparr.enable; }
   ];
   active = builtins.filter (route: route.on) routes;
-  retired = [ 3010 19999 ] ++ map (route: route.port) (builtins.filter (route: !route.on) routes);
+  retiredPortsExplicit = [
+    3010
+    19999
+    3000
+    5678
+    7575
+    8081
+    8082
+    8083
+    8084
+    8085
+    8087
+    8088
+  ];
+  retired = retiredPortsExplicit ++ map (route: route.port) (builtins.filter (route: !route.on) routes);
   serveOn = lib.concatMapStrings
     (route: ''
       "$ts" serve --bg --yes --https=${toString route.port} http://127.0.0.1:${toString route.port}

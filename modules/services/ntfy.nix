@@ -7,13 +7,12 @@ in
   options.my.services.ntfy.enable = lib.mkEnableOption "ntfy";
 
   config = lib.mkIf cfg.enable {
-    # ntfy 2.26.0 from the nixos-26.05 module. The phone, Uptime Kuma, n8n,
-    # and the arr apps all publish or subscribe here. The process listens on
+    # ntfy 2.26.0 from the nixos-26.05 module. The phone, Uptime Kuma, and the
+    # arr apps all publish or subscribe here. The process listens on
     # loopback. Chrome's HSTS list upgrades http://*.ts.net to HTTPS, and the
     # iOS app requires the public URL to be HTTPS, so Tailscale Serve
     # terminates TLS on 2586 and proxies here. modules/network/tailscale.nix installs
-    # that route. 2586 is the module default and is free: 5678 is n8n and
-    # 3001 is Uptime Kuma.
+    # that route. 2586 is the module default and is free: 3001 is Uptime Kuma.
     #
     # Anonymous clients are denied. Signup stays off. The phone user and the
     # publisher user are provisioned from an age secret so the bcrypt hashes
@@ -26,7 +25,6 @@ in
     #   shows   Sonarr, after an episode is imported
     #   music   Lidarr, after a release is imported
     #   uptime  Uptime Kuma, when a monitor changes state
-    #   n8n     a workflow that posts a message
     #
     # Messages stay cached for 24 hours, so a phone that was offline overnight
     # still receives them. iOS cannot keep its own background connection, so

@@ -11,10 +11,6 @@
   my.user = "rileyt";
   my.tailnetHost = "nixos.taile9f484.ts.net";
   my.lanInterface = "enp132s0";
-  # GTX 1660 SUPER. The other unit stays installed and stopped.
-  # `gtx1660 nemotron` or `gtx1660 breeze` flips the running process.
-  # This line is what boots, and what the tailnet publishes.
-  my.hardware.gtx1660 = "nemotron";
 
   # nixctl: modules (one line per module that is on; nixctl enable/disable edit these lines)
   my.apps.openlogi.enable = true;
@@ -38,22 +34,10 @@
   my.services.arr.radarr.enable = true;
   my.services.arr.seerr.enable = true;
   my.services.arr.sonarr.enable = true;
-  my.services.breeze-tts.enable = true;
-  my.services.data-platform.enable = true;
   my.services.docker.enable = true;
-  my.services.embeddinggemma.enable = true;
-  my.services.homarr.enable = true;
-  my.services.homelable.enable = true;
   my.services.immich.enable = true;
   my.services.jellyfin.enable = true;
-  my.services.kokoro.enable = true;
-  my.services.llama.enable = true;
-  my.services.n8n.enable = true;
-  my.services.nemotron.enable = true;
   my.services.ntfy.enable = true;
-  my.services.open-terminal.enable = true;
-  my.services.open-webui.enable = true;
-  my.services.searxng.enable = true;
   my.services.uptime-kuma.enable = true;
 
   # Set once at install. Never change it.

@@ -38,8 +38,7 @@ in
     # module default. Redis is the module's local unix socket. Machine
     # learning stays enabled and runs on CPU. The module already sets
     # MACHINE_LEARNING_WORKERS to 1. accelerationDevices stays at the empty
-    # default, which turns PrivateDevices on. The RTX 3050 runs the desktop
-    # and llama.cpp.
+    # default, which turns PrivateDevices on. The RTX 3050 runs the desktop.
     # https://docs.immich.app/
     # https://docs.immich.app/features/mobile-backup
     # https://github.com/NixOS/nixpkgs/blob/6713828a351efa628b025a1adf7f43cbf8597513/nixos/modules/services/web-apps/immich.nix

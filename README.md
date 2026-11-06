@@ -2,8 +2,7 @@
 
 This repository is the NixOS configuration for the `nixos` workstation. It
 defines a KDE Plasma desktop, dual-NVIDIA graphics, OpenSSH over the tailnet,
-llama.cpp servers, n8n, ntfy, Immich, Uptime Kuma, Homarr, Homelable, and a
-torrent media stack.
+ntfy, Immich, Uptime Kuma, and a torrent media stack.
 qBittorrent and Prowlarr lookups use a Private Internet Access WireGuard tunnel. The
 rest of the desktop stays on the home network.
 
@@ -21,10 +20,9 @@ modules/desktop/                  Plasma, Cinnamon (off), KDE Connect, Chrome DN
 modules/network/                  Tailscale, DNS, SSH, NetworkManager, PIA, firewall
 modules/services/arr/             Sonarr, Radarr, Lidarr, Bazarr, Prowlarr, Seerr,
                                   qBittorrent, Cleanuparr, and the shared media directories
-modules/services/                 Jellyfin, Immich, n8n, ntfy, llama.cpp, Kokoro,
-                                  Homarr, Homelable, Uptime Kuma, Docker
+modules/services/                 Jellyfin, Immich, ntfy, Uptime Kuma, Docker
 modules/apps/openlogi.nix         MX Master 4
-packages/                         Lidarr, Cleanuparr, llama.cpp, and Uptime Kuma builds
+packages/                         Lidarr, Cleanuparr, and Uptime Kuma builds
 secrets/                          agenix recipients and encrypted files
 pia/                              public PIA certificate and server list
 ```
@@ -48,26 +46,6 @@ by `nixos-generate-config` and should not be edited by hand.
 - `packages/cleanuparr.nix` is the official Cleanuparr 2.10.12 linux-amd64
   build. nixpkgs does not have it. `modules/services/arr/cleanuparr.nix`
   runs it.
-- `packages/llama-cpp.nix` builds llama.cpp 0.8.0 with CUDA. The 26.05 pin
-  is build 9190, which cannot load LFM3. `modules/services/llama.nix` runs
-  the two servers and publishes them with Tailscale Serve. Both servers
-  require the API key in `secrets/llama-api-key.age`.
-  `modules/services/breeze-tts.nix` runs Breeze TTS 2 Q8 on the GTX 1660
-  SUPER. The package is the `breeze-tts` flake input, tag v0.1.6. The
-  process listens on `127.0.0.1:8084` and `127.0.0.1:8085`, and Tailscale
-  Serve publishes both. The Q8_0 weights download into `/var/lib/breeze-tts`
-  on first start.
-  `modules/services/nemotron.nix` is a third server, Nemotron 3.5 Bolt E4B.
-  `my.hardware.gtx1660` in the host file chooses Breeze or Nemotron for the
-  1660. The other unit stays installed and stopped. `gtx1660 breeze` or
-  `gtx1660 nemotron` flips the running process; the host line is the boot
-  default and what the tailnet publishes.
-  `modules/services/kokoro.nix` runs Kokoro-82M on the CPU, separate from
-  Breeze. It listens on `127.0.0.1:8087`. Tailscale Serve publishes that
-  port. The weights are `hexgrad/Kokoro-82M` in `/var/lib/kokoro`.
-- `modules/services/n8n.nix` runs n8n 2.34.6 from the nixos-26.05 module and
-  publishes it with Tailscale Serve. The owner account and workflows stay in
-  `/var/lib/n8n`.
 - `modules/services/ntfy.nix` runs ntfy 2.26.0 from the nixos-26.05 module
   and publishes it with Tailscale Serve. The phone password and the
   publisher token are age secrets. `secrets/ntfy-auth.age` is what the
@@ -76,21 +54,11 @@ by `nixos-generate-config` and should not be edited by hand.
   because 26.05 has 2.7.5. The nixos-26.05 `services.immich` module still
   provides PostgreSQL, Redis, pgvector, and VectorChord. Photos are stored
   in `/vault/immich`.
-- `modules/services/homarr.nix` runs the official container
-  `ghcr.io/homarr-labs/homarr:v2.10.1`, which is not in nixpkgs. On this
-  computer it is `http://127.0.0.1:7575`. On the tailnet it is
-  `https://nixos.taile9f484.ts.net:7575`. The tiles stay in
-  `/var/lib/homarr`.
-- `modules/services/homelable.nix` runs the official containers
-  `ghcr.io/pouzor/homelable-backend:3.6.0`,
-  `ghcr.io/pouzor/homelable-frontend:3.6.0`, and
-  `ghcr.io/pouzor/homelable-mcp:3.6.0`. On this computer the diagram is
-  `http://127.0.0.1:3000`. On the tailnet it is
-  `https://nixos.taile9f484.ts.net:3000`. The canvas stays in
-  `/var/lib/homelable`. The login is `pkexec cat /run/agenix/homelable-login`.
 - Netdata was removed. `modules/network/tailscale.nix` still turns off a
   leftover Serve route on port 19999. PIA's port-forward API also uses
-  outbound HTTPS to port 19999. That is not a local listener.
+  outbound HTTPS to port 19999. That is not a local listener. The same
+  unit turns off the ports of services removed later: 3000, 5678, 7575,
+  8081, 8082, 8083, 8084, 8085, 8087, and 8088.
 - `modules/services/jellyfin.nix` runs Jellyfin. The arr apps and
   qBittorrent are the files in `modules/services/arr/`.
 - `modules/network/pia.nix` builds the split tunnel and routes Prowlarr
@@ -100,15 +68,6 @@ by `nixos-generate-config` and should not be edited by hand.
   `/run/agenix/pia-credentials` and is not in git. `secrets/ntfy-auth.age`
   and `secrets/ntfy-passwords.age` are the ntfy credentials. Decrypted
   copies are `/run/agenix/ntfy-auth` and `/run/agenix/ntfy-passwords`.
-  `secrets/homarr-encryption-key.age` is Homarr's
-  `SECRET_ENCRYPTION_KEY`. The decrypted file is
-  `/run/agenix/homarr-encryption-key`.
-  `secrets/llama-api-key.age` is the llama.cpp API key for the servers
-  and for Open WebUI. The decrypted file is `/run/agenix/llama-api-key`.
-  `secrets/homelable-env.age` is Homelable's `SECRET_KEY`, admin password
-  hash, and MCP keys. `secrets/homelable-login.age` is the admin username
-  and password. Decrypted copies are `/run/agenix/homelable-env` and
-  `/run/agenix/homelable-login`.
 - `pia/ca.rsa.4096.crt` and `pia/pia-servers.json` are public PIA material
   used to reach a server by IP when the VPN hostnames are filtered.
 
@@ -147,12 +106,11 @@ The normal user is `rileyt`, with membership in `wheel`, `networkmanager`,
 `docker`, and `media`. Docker group membership is effectively root-equivalent
 and should only be granted to trusted users.
 
-Cursor, Google Chrome, Git, htop, llama.cpp, OpenLogi, Spotify, and uv are
-installed system-wide. OpenLogi is the local manager for the MX Master 4;
+Cursor, Google Chrome, Git, htop, OpenLogi, Spotify, and uv are installed
+system-wide. OpenLogi is the local manager for the MX Master 4;
 its agent starts with the graphical session. The `uinput` kernel module is
 loaded at boot so that agent's device node receives a seat ACL. The menu
-also has Chrome app entries for Homarr and Cleanuparr.
-Those open `http://127.0.0.1:7575` and `http://127.0.0.1:11011`.
+also has a Chrome app entry for Cleanuparr that opens `http://127.0.0.1:11011`.
 
 For Python development, uv is the default project and package manager:
 use `uv init`, `uv add`, `uv sync`, `uv run`, and `uv tool` rather than
@@ -175,56 +133,6 @@ The NixOS firewall stays enabled.
   the firewall is what keeps the home network and the VPN out. This computer
   can still open `http://127.0.0.1:3001` through the trusted loopback
   interface.
-- llama.cpp is reached through Tailscale Serve on TCP 8081 and 8082.
-  Those two ports are accepted on `tailscale0`. Port 8083 is Nemotron.
-  Serve and the firewall publish it only while `my.hardware.gtx1660` is
-  `nemotron`. The llama processes themselves
-  listen on `127.0.0.1` only. Chrome forces HTTPS for every `*.ts.net`
-  name, so plain HTTP on the tailnet hostname times out. Serve presents a
-  Let's Encrypt certificate for `nixos.taile9f484.ts.net` and proxies to
-  the loopback ports. Uptime Kuma still checks `http://127.0.0.1:8081/health`
-  and `http://127.0.0.1:8082/health`. Those health URLs stay open. Other
-  routes require the API key in `secrets/llama-api-key.age`.
-- Breeze TTS 2 Q8 accepts TCP 8084 and 8085 on `tailscale0` only while
-  `my.hardware.gtx1660` is `breeze-tts`. The process listens on
-  `127.0.0.1`. Tailscale Serve presents HTTPS for
-  `nixos.taile9f484.ts.net:8084` (the page and the HTTP API) and
-  `:8085` (the WebSocket the page opens when it speaks) and proxies to
-  those ports. This computer can still open `http://127.0.0.1:8084`. The
-  home network and the VPN cannot. The server does not authenticate; the
-  tailnet is the access boundary. The service is
-  `modules/services/breeze-tts.nix`, model `breeze-tts-2-q8_0.gguf`,
-  device GTX 1660 SUPER
-  (`GPU-f2ae9716-6783-f900-4fed-c05b9cb3a6aa`). Check
-  `http://127.0.0.1:8084/health`. Synthesis is `POST /v1/audio/speech`.
-  A form post returns raw 24 kHz signed 16-bit PCM. OpenAI-style JSON
-  with `"response_format":"wav"` returns WAV. Saved voices live in
-  `/var/lib/breeze-tts/voices`. n8n's Discord replies use Breeze at
-  `http://127.0.0.1:8084/v1/audio/speech`.
-- Kokoro-82M accepts TCP 8087 on `tailscale0` only. The process listens on
-  `127.0.0.1`. Tailscale Serve presents HTTPS for
-  `nixos.taile9f484.ts.net:8087` and proxies to that port. This computer
-  can still open `http://127.0.0.1:8087`. The home network and the VPN
-  cannot. The server does not authenticate; the tailnet is the access
-  boundary. The service is `modules/services/kokoro.nix`. It uses the
-  nixpkgs `kokoro` package, CPU torch, and 16 threads. Check
-  `http://127.0.0.1:8087/health`. Synthesis is
-  `POST /v1/audio/speech` with JSON `input`, optional `voice` (default
-  `af_heart`; a name starting with `b` is British English), and
-  `response_format` `wav`. The response is 24 kHz mono WAV. On 2026-11-04,
-  voice `af_heart`, one warmup discarded, median of three runs: 16 CPU
-  threads spoke a 46-character sentence in 0.453 seconds (3.275 seconds of
-  audio, real-time factor 7.22) and a 1016-character passage in 9.667
-  seconds (59.7 seconds of audio, first audio at 4.424 seconds, real-time
-  factor 6.18). The RTX 3050, with the desktop still on the card and Omni
-  stopped, did the same clips in 0.136 seconds (real-time factor 24.1) and
-  1.990 seconds (first audio at 0.876 seconds, real-time factor 30.0).
-  Peak GPU allocation was 1027 MiB. That does not fit beside Omni, so the
-  service stays on the CPU.
-- n8n accepts TCP port 5678 on `tailscale0` only. The process listens on
-  `127.0.0.1`. Tailscale Serve presents HTTPS for
-  `nixos.taile9f484.ts.net:5678` and proxies to that port. This computer
-  can still open `http://127.0.0.1:5678`.
 - ntfy accepts TCP port 2586 on `tailscale0` only. The process listens on
   `127.0.0.1`. Tailscale Serve presents HTTPS for
   `nixos.taile9f484.ts.net:2586` and proxies to that port. This computer
@@ -234,22 +142,11 @@ The NixOS firewall stays enabled.
   `127.0.0.1`. Tailscale Serve presents HTTPS for
   `nixos.taile9f484.ts.net:2283` and proxies to that port. This computer
   uses `http://127.0.0.1:2283`. The home network and the VPN cannot.
-- Homarr accepts TCP port 7575 on `tailscale0` only. The container publishes
-  `127.0.0.1:7575`. Tailscale Serve presents HTTPS for
-  `nixos.taile9f484.ts.net:7575` and proxies to that port. This computer
-  can still open `http://127.0.0.1:7575`. The home network and the VPN
-  cannot.
 - Cleanuparr accepts TCP port 11011 on `tailscale0` only. The process
   listens on `127.0.0.1`. Tailscale Serve presents HTTPS for
   `nixos.taile9f484.ts.net:11011` and proxies to that port. This computer
   can still open `http://127.0.0.1:11011`. The home network and the VPN
   cannot.
-- Homarr's status checks come from `172.30.88.2` on the bridge
-  `br-homarr`. The firewall accepts that address on the app ports.
-  `docker0` is not opened. Open WebUI, both llama servers, n8n, and ntfy
-  stay on `127.0.0.1`. A proxy on the bridge gateway,
-  `172.30.88.1`, forwards those five pings. qBittorrent and Prowlarr
-  also accept the bridge, and Prowlarr's reply to it stays off the VPN.
 - The media web pages and the qBittorrent WebUI accept their ports on
   `tailscale0` only: 5055 Seerr, 6767 Bazarr, 7878 Radarr, 8080
   qBittorrent, 8686 Lidarr, 8989 Sonarr, and 9696 Prowlarr. These are
@@ -319,206 +216,6 @@ attached to every monitor.
 The dashboard is HTTP inside the Tailscale tunnel, which is already
 encrypted. It is not published on the home LAN.
 
-## Dashboards
-
-Homarr is the visual board. Uptime Kuma still checks the apps and still
-posts outage notifications to the ntfy topic `uptime`. The board does not
-replace that.
-
-| App | Address | What is stored where |
-|---|---|---|
-| Homarr | http://127.0.0.1:7575 or https://nixos.taile9f484.ts.net:7575 | The container and the encryption key are declared here. Tiles and the admin account are created in the web UI and stay in `/var/lib/homarr`, which is not in git. |
-| Homelable | http://127.0.0.1:3000 or https://nixos.taile9f484.ts.net:3000 | The containers and the login are declared here. The canvas stays in `/var/lib/homelable`, which is not in git. Login: `pkexec cat /run/agenix/homelable-login`. |
-
-The Chrome menu entries open the loopback addresses. The tailnet addresses
-are for the phone. Finish first-run setup on this computer before an
-untrusted device is on the tailnet. Homarr's first visit, at
-`http://127.0.0.1:7575`, creates the admin account. Open WebUI's first
-account, at `http://127.0.0.1:8088`, is the admin. Immich's first visit,
-at `http://127.0.0.1:2283`, creates the admin account, and open
-registration stays disabled.
-
-Homarr's board is the media apps and the services on this computer.
-Tiles open on this computer.
-Sonarr, Radarr, Lidarr, Bazarr, Jellyfin, and Seerr are also integrations.
-The container is the only member of the Docker network `homarr`, at
-`172.30.88.2` on the bridge `br-homarr`. Status checks use
-`http://host.docker.internal:PORT`, stored on each app in
-`/var/lib/homarr`. The firewall accepts only that source address.
-`docker0` is not opened, so another container on the default bridge
-cannot reach them. Open WebUI, both llama servers, n8n, and ntfy stay on
-loopback; Homarr reaches them through a proxy on `172.30.88.1`.
-qBittorrent and Prowlarr accept the bridge in addition to `lo`, `pia`,
-and `tailscale0`. Further tile changes stay in `/var/lib/homarr`.
-
-## llama.cpp
-
-Two `llama-server` processes from llama.cpp 0.8.0 (build 11960). One
-process cannot be GPU-only for one model and CPU-only for the other.
-
-| Model | Where it runs | Context | KV cache | Browser | API base |
-|---|---|---|---|---|---|
-| LFM3-Omni-2B Q8_0 | RTX 3050 | 32768 | q8_0 | https://nixos.taile9f484.ts.net:8081/ | https://nixos.taile9f484.ts.net:8081/v1 |
-| LFM3-1.7B Q8_0 | CPU, 12 threads | 32768 | q8_0 | https://nixos.taile9f484.ts.net:8082/ | https://nixos.taile9f484.ts.net:8082/v1 |
-
-Nemotron 3.5 Bolt E4B Q4_K_M listens on `127.0.0.1:8083` when
-`my.hardware.gtx1660` is `nemotron`, with model id `nemotron-bolt`, context
-32768, a q8_0 KV cache, and the Gemma 4 E4B MTP assistant
-`mtp-gemma-4-E4B-it-Q8_0.gguf` as `--spec-type draft-mtp` with
-`--spec-draft-n-max 1`. It is pinned to the GTX 1660 SUPER
-(`GPU-f2ae9716-6783-f900-4fed-c05b9cb3a6aa`). The official GGUF is
-6,180,446,208 bytes, about 5.76 GiB, so the unit does not set `-ngl` and
-sets `--fit on` and `--fit-ctx 32768`. Sampling is `--temp 1.0`, `--top-p 0.95`, and
-`--reasoning on`. The weight file belongs in `/home/rileyt/llama-models`
-as `Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf`. The host line
-`my.hardware.gtx1660` chooses this server or Breeze. `gtx1660 nemotron`
-starts it immediately and stops Breeze. Tailscale Serve, Open WebUI, and
-the Homarr ping proxy add port 8083 only when the host line is `nemotron`
-and `nixctl apply` has run.
-Measured on 2026-11-04 on this 1660, 128 new tokens, seed 1, short prompt:
-57.4 tok/s with no drafter, 74.7 tok/s at draft length 1, 65.4 at 2, 61.4
-at 3, and 53.3 at 4. Draft length 1 is what the unit uses. With that
-drafter and a filled window: 15811 prompt tokens at context 16384 were
-186.7 tok/s prefill and 55.9 tok/s generation; 32218 prompt tokens at
-context 32768 were 157.0 and 42.8. The unit uses 32768.
-https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Bolt-E4B-4GB
-https://huggingface.co/unsloth/gemma-4-E4B-it-GGUF/blob/main/MTP/README.md
-
-On this computer the running pages are `http://127.0.0.1:8081/` and
-`http://127.0.0.1:8082/`. The `/v1` path is the OpenAI-compatible API. A
-browser opened on `/v1` does not show the chat page.
-
-Both servers require an API key on every route except `/health` and
-`/v1/health`. The key is `secrets/llama-api-key.age`. The decrypted
-file is `/run/agenix/llama-api-key`. It is not in git. Read it with
-`pkexec cat /run/agenix/llama-api-key`. Open WebUI sends that key. The
-llama-server pages need it before a prompt runs. n8n does not read the
-file: its OpenAI credential has to use that same line. Uptime Kuma
-still probes `/health`, which does not require the key.
-
-The GGUF files are official Liquid AI Q8_0 weights. They are downloaded to
-`/home/rileyt/llama-models` and copied into `/var/lib/llama-cpp/models`
-when the system activates. The weights are not in git. LFM3-Omni-2B is
-loaded on port 8081. LFM3-VL-2B used that slot before. Activation copies
-both, and the VL files stay in the service directory unloaded. Omni loads
-`mmproj-LFM3-Omni-2B-Q8_0.gguf`, which carries the audio and vision
-weights. `ffmpeg` is on that service's `PATH` for video input. The model
-id on port 8081 is `lfm3-omni`. Omni does not reason, so the server uses
-`--reasoning off` and `--temp 0`.
-
-The Omni server is pinned to the RTX 3050 by GPU UUID
-`GPU-d80211d0-ecb1-e279-4f4d-34c53d278895`. That card has 6GB and also
-drives the desktop. The GTX 1660 SUPER runs whichever
-`my.hardware.gtx1660` names, Breeze TTS or Nemotron.
-The package builds CUDA for compute capabilities 7.5 and 8.6, which
-covers both cards, and CPU backends for runtime dispatch. The 1.7B server sets
-`CUDA_VISIBLE_DEVICES` empty, `--device none`, and `-ngl 0`. A thread
-sweep at 8, 12, 16, and 20 chose 12 because that count had the fastest
-generation. 20 was fastest on a 512-token prefill. Both servers set
-`--cache-type-k q8_0`, `--cache-type-v q8_0`, and `--flash-attn on`.
-
-Omni answers in text or speech and does not think. Its server uses
-`--reasoning off` and `--temp 0`. Speech sampling stays in the GGUF.
-The 1.7B server uses `--temp 0.1`, `--top-k 50`, and `--repeat-penalty 1.1`.
-That model thinks before it answers and keeps the trace in
-`reasoning_content`, so a very small `max_tokens` can come back with an
-empty answer. A client of the 1.7B server should allow up to 16384 new
-tokens. Omni has reasoning turned off, so a short reply does not need
-that budget.
-
-Measured on 2026-10-28 with `llama-bench`, three runs each, before the
-servers moved. Those runs used an f16 KV cache, with Omni on the RTX 3050
-and the 1.7B model on the CPU. llama-bench sizes the context to the test.
-
-LFM3-Omni-2B Q8_0 on the RTX 3050:
-
-| Test | Tokens/s |
-|---|---|
-| pp512 | 4082.64 ± 159.09 |
-| pp4096 | 3625.93 ± 52.43 |
-| pp16384 | 3262.16 ± 26.90 |
-| tg128 | 53.12 ± 0.20 |
-| tg512 | 52.53 ± 0.52 |
-
-LFM3-1.7B Q8_0 on the CPU at 12 threads:
-
-| Test | Tokens/s |
-|---|---|
-| pp512 | 246.60 ± 5.24 |
-| pp2048 | 240.25 ± 1.62 |
-| pp8192 | 227.70 ± 1.03 |
-| tg128 | 31.33 ± 0.06 |
-| tg512 | 31.00 ± 0.20 |
-
-`llama-bench` labels the Omni text file `lfm3 1.7B Q8_0` because the text
-tensors are 1.73B parameters. The file's own metadata says
-`general.name = LFM3 Omni 2B`. The vision and audio weights are in the
-mmproj.
-
-## Open WebUI
-
-Open WebUI 0.13.0 is the chat page for the running llama.cpp servers. It is
-the official image `ghcr.io/open-webui/open-webui:v0.13.0`, on the host
-network so it can call llama.cpp on `127.0.0.1`. On this computer it is
-`http://127.0.0.1:8088`. On the tailnet it is
-`https://nixos.taile9f484.ts.net:8088`. The first account created is the
-admin. Create it at the loopback URL before an untrusted device is on
-the tailnet. The API keys sent to the llama servers come from
-`/run/agenix/llama-api-key`. Chats stay in `/var/lib/open-webui/data`, which
-is not in git. v0.13.0 changes the database schema. The first switch to
-that version saves `/var/lib/open-webui/data/webui.db.bak-before-0.13.0`.
-Going back to 0.11.1 means restoring that file.
-
-## n8n
-
-n8n 2.34.6 is the workflow editor. On this computer it is
-`http://127.0.0.1:5678`. On the tailnet it is
-`https://nixos.taile9f484.ts.net:5678`. The first visit creates the owner
-account. That account, the workflows, the SQLite database, and the
-encryption key live in `/var/lib/n8n` and are not in git.
-
-LFM3-1.7B is the model n8n calls for ordinary text. The request stays on
-this computer at `http://127.0.0.1:8082/v1`. It does not go out through
-Tailscale. LFM3-Omni-2B is on `http://127.0.0.1:8081/v1`, model id
-`lfm3-omni`. Discord voice messages are converted at
-`http://127.0.0.1:8091/` (POST the audio bytes, the response is 16 kHz
-mono wav) because llama.cpp does not decode Discord's Ogg Opus.
-`http://127.0.0.1:8091/discord-voice` turns speech wav into the Ogg Opus
-file, duration, and waveform Discord uses for a voice memo. The Discord
-chat workflow asks Breeze for that wav at
-`http://127.0.0.1:8084/v1/audio/speech` with `"response_format":"wav"`.
-Breeze is listening only while the 1660 is running it (`gtx1660 breeze`).
-The host line `my.hardware.gtx1660` is what boots and what Tailscale publishes.
-After the owner account exists, add one OpenAI credential:
-
-- API key: the single line in `/run/agenix/llama-api-key`
-  (`pkexec cat /run/agenix/llama-api-key`). Update the saved credential
-  to that line before a workflow calls the model.
-- Base URL: `http://127.0.0.1:8082/v1`
-- Organization ID: empty
-
-On an OpenAI node or an OpenAI Chat Model node, the model id is
-`lfm3-1.7b`. Leave "Use Responses API" off. The 1.7B server has one slot
-and is shared with Open WebUI, so a workflow waits if a chat is already
-generating.
-
-Uptime Kuma checks `http://127.0.0.1:5678/healthz` every 60 seconds, the
-same way it checks the other apps. That monitor lives in
-`/var/lib/private/uptime-kuma/kuma.db`, not in this repository.
-
-A workflow sends a phone notification with an HTTP Request node. n8n does
-not send one on its own.
-
-- Method: `POST`
-- URL: `http://127.0.0.1:2586/n8n`
-- Authentication: Generic credential type, Header Auth. Name
-  `Authorization`, value `Bearer` and the publisher token from
-  `pkexec cat /run/agenix/ntfy-passwords`
-- Body: the message text
-
-`Title` and `Priority` can be extra headers. `Priority: high` is 4 and
-`urgent` is 5. The phone is subscribed to the topic `n8n`.
-
 ## ntfy
 
 ntfy is the push server for the phone. On this computer the web app is
@@ -536,7 +233,7 @@ pkexec cat /run/agenix/ntfy-passwords
 | Who | User | Can |
 |---|---|---|
 | Phone | `rileyt` | Read and publish every topic |
-| Sonarr, Radarr, Lidarr, Uptime Kuma, n8n | `apps` | Publish only, using the token |
+| Sonarr, Radarr, Lidarr, Uptime Kuma | `apps` | Publish only, using the token |
 
 | Topic | Who publishes | When |
 |---|---|---|
@@ -544,7 +241,6 @@ pkexec cat /run/agenix/ntfy-passwords
 | `shows` | Sonarr | An episode file is imported |
 | `music` | Lidarr | A release is imported |
 | `uptime` | Uptime Kuma | A monitor changes state |
-| `n8n` | an n8n workflow | The workflow posts a message |
 
 A grab, which is the moment a torrent is added, does not notify. An
 upgrade to a better copy does not notify either. Those switches are in
@@ -561,7 +257,7 @@ On the phone:
    no trailing slash. The iOS app only wakes for a server URL that matches
    this exactly.
 3. Log in as `rileyt` with the phone password from the file above.
-4. Subscribe to `movies`, `shows`, `music`, `uptime`, and `n8n`.
+4. Subscribe to `movies`, `shows`, `music`, and `uptime`.
 
 Android keeps its own connection to this server. Turn off battery
 optimization for ntfy, or the phone will stop showing notifications after
@@ -590,10 +286,7 @@ The first visit creates the admin account. Do that on this computer at
 and leave open registration disabled.
 
 Machine learning for faces and search runs on CPU. The module default
-is one worker. The RTX 3050 is left to the desktop and LFM3-Omni.
-
-The Homarr tile is added in the Homarr web UI and
-stored in `/var/lib/homarr`.
+is one worker. The RTX 3050 is left to the desktop.
 
 On the phone:
 

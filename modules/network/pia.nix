@@ -230,14 +230,10 @@ let
     iptables -t mangle -N PROWLARR-VPN 2>/dev/null || true
     iptables -t mangle -F PROWLARR-VPN
     # Localhost and the tailnet stay on the normal route. A reply to a
-    # Tailscale browser has to go back over the tailnet. A reply to Homarr
-    # has to go back across its bridge. Everything else Prowlarr sends is a
-    # lookup and goes through the VPN.
+    # Tailscale browser has to go back over the tailnet. Everything else
+    # Prowlarr sends is a lookup and goes through the VPN.
     iptables -t mangle -A PROWLARR-VPN -d 127.0.0.0/8 -j RETURN
     iptables -t mangle -A PROWLARR-VPN -d 100.64.0.0/10 -j RETURN
-    ${lib.optionalString config.my.services.homarr.enable ''
-      iptables -t mangle -A PROWLARR-VPN -d ${config.my.services.homarr.bridgeSubnet} -j RETURN
-    ''}
     iptables -t mangle -A PROWLARR-VPN -j MARK --set-mark 0x7072
     iptables -t mangle -A OUTPUT -m cgroup --path ${prowlarrCgroupPath} -j PROWLARR-VPN
     iptables -t nat -C POSTROUTING -o pia -m mark --mark 0x7072 -j MASQUERADE 2>/dev/null || \
