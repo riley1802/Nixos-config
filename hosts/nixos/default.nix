@@ -13,6 +13,7 @@
   my.lanInterface = "enp132s0";
 
   # nixctl: modules (one line per module that is on; nixctl enable/disable edit these lines)
+  my.dev.shell.enable = true;
   my.apps.openlogi.enable = true; # OpenLogi: Logitech MX Master 4 support (https://openlogi.org)
   my.desktop.chrome.enable = true; # Chrome/Chromium DNS policy tweaks for this machine
   my.desktop.kdeconnect.enable = true; # KDE Connect: link phone and desktop (SMS, notifications, etc.)
