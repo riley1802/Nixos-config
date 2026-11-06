@@ -24,6 +24,9 @@ Taken from the saved Cursor chats on this computer, 2026-06-29 through 2026-11-0
 - **Wrong:** `nix fmt` turned a valid file into a syntax error by rewriting a `''` string that contained another `''`.
   **Resolved:** Keep shell snippets from containing the Nix string delimiter. Evaluate again after formatting. (2026-07-18, 21701a1f)
 
+- **Wrong:** Splicing `${lib.optionalString ... '' "$cmd" ''}` onto the end of a shell line made `tailscale serve` fail with "invalid number of arguments", and `nixctl apply` rolled the generation back.
+  **Resolved:** A `''` string drops its first newline, so the next command was glued to the previous one. Put each optional command on its own line. (2026-11-04)
+
 - **Wrong:** A config was built and the service still did not exist. The browser got connection refused.
   **Resolved:** Build and eval do not switch the running system. Apply (`nixctl apply`, or the one-time `pkexec nixos-rebuild switch` before nixctl existed). (2026-06-29, 6a459f87)
 
@@ -82,6 +85,9 @@ Taken from the saved Cursor chats on this computer, 2026-06-29 through 2026-11-0
 
 ## Desktop, GPU, and the mouse
 
+- **Wrong:** The Plasma generation came up with no login screen. SDDM started, the Wayland greeter exited, and SDDM did not try again.
+  **Resolved:** `KWIN_DRM_DEVICES` was `/dev/dri/by-path/pci-0000:02:00.0-card`. KWin splits that variable on `:`, so it tried to open `pci-0000`, `02`, and `00.0-card`. A symlink at `/run/display-gpu` has no colon. (2026-11-05)
+
 - **Wrong:** Ghostty's Home Manager module left `systemd.enable` on, so the GNOME icon launched with `--initial-window=false` and appeared to do nothing.
   **Resolved:** `programs.ghostty.systemd.enable = false`. **Historical:** Ghostty was removed. (2026-07-04, aec02147; removed 2026-07-06, 47189dd1)
 
@@ -120,11 +126,20 @@ Taken from the saved Cursor chats on this computer, 2026-06-29 through 2026-11-0
 - **Wrong:** The kernel ntfs3 mount of the game drive, with one uid for the volume, let the arr users read `/mnt/game-drive/old stuff`.
   **Resolved:** ntfs-3g mounted so the volume looks rileyt-only, and a bindfs view exposes only the media tree at the paths the apps already had. (2026-10-31, 861b5676)
 
+- **Wrong:** Sonarr warned that qBittorrent's `/vault/media/downloads/tv` was invisible, and Lidarr said the same about `/vault/media/downloads/music`. Imports failed with EACCES. Sonarr also offered an update to 4.0.20.3014.
+  **Resolved:** `mirror-only=@media` kept the on-disk group `users` and cleared permissions for the service accounts. `force-group=media` makes the view mode `0770` and group `media`, which is the group those services run as. Sonarr comes from the unstable pin, where the package is 4.0.20.3014. (2026-11-04)
+
 - **Wrong:** Ordering a unit on `mnt-game-drive.mount` left the media stack down.
   **Resolved:** The hyphen in the path is escaped: `mnt-game\x2ddrive.mount`. (2026-10-31, 861b5676)
 
 - **Wrong:** Immich was pointed at the NTFS game drive, and files dropped into `/vault/immich` did not show up in the app.
   **Resolved:** The library stays on ext4 `/vault/immich`. Files the app should see are an external library scan of a directory owned by `immich`, after a copy, not a chmod on NTFS (ntfs-3g ignores chmod). (2026-10-31, b40e7bbb, 861b5676)
+
+- **Wrong:** An external library on `/vault/immich-import` was treated as the files being inside `/vault/immich`.
+  **Resolved:** Upload through the Immich API. 5,750 files were offered, 2,845 new copies landed under `/vault/immich`, and 2,905 were already the same bytes. The external library entry was removed afterward. `$RECYCLE.BIN` was left out. Riley then had `/vault/immich-import` deleted; the library copies stayed. (2026-11-04)
+
+- **Wrong:** The Photos page was opened to check that an import had worked.
+  **Resolved:** Count files and paths. Do not open picture or video files, thumbnails, or the Photos page. Ask first. (2026-11-04)
 
 - **Wrong:** Steam games lived under the Nix store and vanished across rebuilds.
   **Resolved:** A persistent `/games/steam-library` via tmpfiles, then add that path in Steam's storage settings. (2026-06-29, 72c2d78c)
@@ -193,6 +208,9 @@ Taken from the saved Cursor chats on this computer, 2026-06-29 through 2026-11-0
 - **Wrong:** A whisper service called `ffmpeg` and got "command not found" even with a systemd `Path=`.
   **Resolved:** The shell did not see `Path=`. Put ffmpeg on the unit's `Environment` PATH. (2026-07-04, bcef5447)
 
+- **Wrong:** Kokoro was pointed at `python3Packages.torch-bin` to time the RTX 3050. That build compiles NCCL from source for every CUDA architecture and pegs the CPU for a long time. Loading Kokoro on the 3050 next to LFM3-Omni then died with `CUDA out of memory` (Kokoro wanted about 1.1 GiB reserved, Omni held about 3.6 GiB, the desktop about 0.9 GiB, the card is 6 GiB).
+  **Resolved:** Time the card with the PyTorch cu128 wheel (`LD_LIBRARY_PATH` needs the Nix `libstdc++` and `/run/opengl-driver/lib`), and stop Omni only for that run. The always-on service stays on 16 CPU threads. (2026-11-04)
+
 ## Media stack and PIA
 
 - **Wrong:** The whole desktop was put on the VPN. Throughput dropped from ~28 MB/s to ~1.1 MB/s, and PIA's hostname scripts failed because DNS was reset.
@@ -220,7 +238,7 @@ Taken from the saved Cursor chats on this computer, 2026-06-29 through 2026-11-0
   **Resolved:** A one-time chmod of those trees to `700`/`600`, plus a `preStart` that keeps them there. (2026-10-28, c6e1ac1a)
 
 - **Wrong:** Lidarr offered an in-app update. Installing it would not replace the Nix store path and would drift from the pinned tarball.
-  **Resolved:** `LIDARR__UPDATE__MECHANISM=external`. The package is the official 3.1.6.5079 tarball in `packages/lidarr.nix`. (2026-10-28, 34647357)
+  **Resolved:** `LIDARR__UPDATE__MECHANISM=external` in `modules/services/arr/lidarr.nix`. The package is the official 3.1.6.5079 tarball in `packages/lidarr.nix`. (2026-10-28, 34647357)
 
 - **Wrong:** Prowlarr API automation used `appProfileId` 0, omitted sync categories, and Seerr was pointed at Jellyfin with a bad `urlBase`.
   **Resolved:** `appProfileId = 1`, the sync categories including `8000`, and `urlBase = ""`. (2026-10-28, 0ea4217b)
@@ -249,13 +267,13 @@ Taken from the saved Cursor chats on this computer, 2026-06-29 through 2026-11-0
   **Resolved:** Put the password in the `-c` string. The charset has to be safe, and the Nix `''` quoting has to survive `nix fmt`. (2026-07-18, 21701a1f)
 
 - **Wrong:** Default `pkgs.netdata` returned "File does not exist, or is not accessible" for the UI.
-  **Resolved:** Use the `netdataCloud` package and open `/v3`. (2026-10-31, 785edbdd)
+  **Resolved:** Use the `netdataCloud` package and open `/v3`. **Historical:** Netdata was later removed. The tailnet script still clears a leftover Serve route on port 19999. (2026-10-31, 785edbdd)
 
 - **Wrong:** A Netdata swap alarm was read as a broken Netdata.
   **Resolved:** Swap was actually full (Jellyfin, llama, and the rest). The alarm was right. (2026-10-31, 785edbdd)
 
 - **Wrong:** n8n was given two llama URLs only through environment variables. n8n 2.x does not wire OpenAI-compatible credentials that way.
-  **Resolved:** Create the credential in the n8n UI: `http://127.0.0.1:8082/v1`, model name, dummy key `local`. The age file is for the servers and Open WebUI, not for n8n. (2026-10-29, 068dc80a)
+  **Resolved:** Create the credential in the n8n UI: `http://127.0.0.1:8082/v1`, model name, dummy key `local`. The age file is for the servers and Open WebUI, not for n8n. **Superseded:** the servers now require the age key, so the n8n credential has to be that same line (`/run/agenix/llama-api-key`), not `local`. (2026-10-29, 068dc80a)
 
 - **Wrong:** llama-server was reachable on the tailnet with no API key.
   **Resolved:** `secrets/llama-api-key.age` and `--api-key-file` on both servers. (2026-10-31, a0c00a05)

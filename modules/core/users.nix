@@ -1,14 +1,15 @@
 # Login account for this computer.
-{ config, ... }:
+{ config, lib, ... }:
 {
   users.users.${config.my.user} = {
     isNormalUser = true;
     description = "riley thomason";
-    extraGroups = [
-      "docker"
-      "media"
-      "networkmanager"
-      "wheel"
-    ];
+    extraGroups =
+      lib.optionals config.my.services.docker.enable [ "docker" ]
+      ++ lib.optionals config.my.services.arr.media.enable [ "media" ]
+      ++ [
+        "networkmanager"
+        "wheel"
+      ];
   };
 }

@@ -25,12 +25,25 @@ let
   proxyPorts = {
     ntfy = 2586;
     n8n = 5678;
-    llama-vl = 8081;
+    llama-omni = 8081;
     llama-1_7b = 8082;
     open-webui = 8088;
+  } // lib.optionalAttrs (config.my.services.nemotron.enable && config.my.hardware.gtx1660 == "nemotron") {
+    llama-nemotron = 8083;
+  } // lib.optionalAttrs (config.my.services.breeze-tts.enable && config.my.hardware.gtx1660 == "breeze-tts") {
+    breeze-tts = 8084;
+  } // lib.optionalAttrs config.my.services.kokoro.enable {
+    kokoro = 8087;
   };
-  # iptables multiport accepts at most 15 ports.
+  # iptables multiport accepts at most 15 ports. Kokoro makes this list
+  # longer than that while Nemotron is also published, so the rule is split.
   homarrPorts = directPorts ++ lib.attrValues proxyPorts;
+  portGroups =
+    let
+      sorted = builtins.sort builtins.lessThan homarrPorts;
+      groups = xs: if xs == [ ] then [ ] else [ (lib.take 15 xs) ] ++ groups (lib.drop 15 xs);
+    in
+    groups sorted;
 in
 {
   options.my.services.homarr = {
@@ -48,10 +61,6 @@ in
       {
         assertion = config.my.services.docker.enable;
         message = "services/homarr needs services/docker (nixctl enable services/docker)";
-      }
-      {
-        assertion = builtins.length homarrPorts <= 15;
-        message = "services/homarr firewall rule uses iptables multiport, which allows at most 15 ports";
       }
     ];
 
@@ -104,6 +113,20 @@ in
       group = "root";
     };
 
+    # Chrome app window. google-chrome-stable is the package's main program;
+    # google-chrome is a symlink to it.
+    # https://github.com/NixOS/nixpkgs/blob/6713828a351efa628b025a1adf7f43cbf8597513/pkgs/by-name/go/google-chrome/package.nix
+    environment.systemPackages = [
+      (pkgs.makeDesktopItem {
+        name = "homarr";
+        desktopName = "Homarr";
+        comment = "Visual service board";
+        exec = "google-chrome-stable --app=http://127.0.0.1:7575";
+        icon = "google-chrome";
+        categories = [ "Network" ];
+      })
+    ];
+
     # Other local accounts should not read the board database.
     systemd.tmpfiles.settings.homarr."/var/lib/homarr"."d" = {
       mode = "0700";
@@ -141,11 +164,13 @@ in
     # iptables stores the interface name, so the rule can be installed
     # before br-homarr exists. Tailscale Serve uses 127.0.0.1, which never
     # arrives on this bridge. docker0 is not opened.
-    networking.firewall.extraCommands = ''
-      iptables -w -A nixos-fw -i ${bridgeName} -s ${bridgeAddress}/32 -p tcp -m multiport --dports ${
-        lib.concatMapStringsSep "," toString (builtins.sort builtins.lessThan homarrPorts)
-      } -j nixos-fw-accept
-    '';
+    networking.firewall.extraCommands = lib.concatMapStrings
+      (ports: ''
+        iptables -w -A nixos-fw -i ${bridgeName} -s ${bridgeAddress}/32 -p tcp -m multiport --dports ${
+          lib.concatMapStringsSep "," toString ports
+        } -j nixos-fw-accept
+      '')
+      portGroups;
 
     # An existing network with a different subnet is left in place and this
     # unit fails, instead of silently pointing --ip at the wrong range.

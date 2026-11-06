@@ -11,5 +11,8 @@ in
   "ntfy-auth.age".publicKeys = recipients;
   "ntfy-passwords.age".publicKeys = recipients;
   "homarr-encryption-key.age".publicKeys = recipients;
+  "homelable-env.age".publicKeys = recipients;
+  "homelable-login.age".publicKeys = recipients;
   "llama-api-key.age".publicKeys = recipients;
+  "searxng-env.age".publicKeys = recipients;
 }

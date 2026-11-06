@@ -12,6 +12,10 @@ in
         assertion = config.my.hardware.nvidia.enable;
         message = "desktop/cinnamon needs hardware/nvidia (nixctl enable hardware/nvidia)";
       }
+      {
+        assertion = !config.my.desktop.plasma.enable;
+        message = "desktop/cinnamon and desktop/plasma each start a display manager; turn one off";
+      }
     ];
 
     services.xserver = {

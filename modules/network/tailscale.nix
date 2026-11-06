@@ -2,6 +2,50 @@
 { config, lib, pkgs, ... }:
 let
   cfg = config.my.network.tailscale;
+  gpu = config.my.hardware.gtx1660;
+  # One list, so the serve lines, the serve-off lines, and the status
+  # check cannot drift. A route with `on = false` is one this machine
+  # used to publish. tailscaled keeps it until `serve off`.
+  # 3010 was Homepage. 19999 was Netdata.
+  routes = [
+    { port = 2283; on = config.my.services.immich.enable; }
+    { port = 2586; on = config.my.services.ntfy.enable; }
+    { port = 3000; on = config.my.services.homelable.enable; }
+    { port = 5678; on = config.my.services.n8n.enable; }
+    { port = 7575; on = config.my.services.homarr.enable; }
+    { port = 8081; on = config.my.services.llama.enable; }
+    { port = 8082; on = config.my.services.llama.enable; }
+    {
+      port = 8083;
+      on = config.my.services.nemotron.enable && gpu == "nemotron";
+    }
+    {
+      port = 8084;
+      on = config.my.services.breeze-tts.enable && gpu == "breeze-tts";
+    }
+    {
+      port = 8085;
+      on = config.my.services.breeze-tts.enable && gpu == "breeze-tts";
+    }
+    { port = 8087; on = config.my.services.kokoro.enable; }
+    { port = 8088; on = config.my.services.open-webui.enable; }
+    { port = 11011; on = config.my.services.arr.cleanuparr.enable; }
+  ];
+  active = builtins.filter (route: route.on) routes;
+  retired = [ 3010 19999 ] ++ map (route: route.port) (builtins.filter (route: !route.on) routes);
+  serveOn = lib.concatMapStrings
+    (route: ''
+      "$ts" serve --bg --yes --https=${toString route.port} http://127.0.0.1:${toString route.port}
+    '')
+    active;
+  serveOff = lib.concatMapStrings
+    (port: ''
+      if "$ts" serve status | ${pkgs.gnugrep}/bin/grep -q ':${toString port}'; then
+        "$ts" serve --https=${toString port} --yes off
+      fi
+    '')
+    retired;
+  activePorts = lib.concatMapStringsSep " " (route: toString route.port) active;
 in
 {
   options.my.network.tailscale.enable = lib.mkEnableOption "Tailscale";
@@ -37,6 +81,9 @@ in
         Restart = "on-failure";
         RestartSec = "10s";
         TimeoutStartSec = 150;
+        # Optional routes are their own statements. A Nix indented string
+        # drops its opening newline, so appending one to the previous
+        # command glues the two tailscale invocations into one line.
         ExecStart = pkgs.writeShellScript "tailscale-serve" ''
           set -euo pipefail
           ts=${pkgs.tailscale}/bin/tailscale
@@ -50,23 +97,11 @@ in
             fi
             "$sleep" 2
           done
-          "$ts" serve --bg --yes --https=2283 http://127.0.0.1:2283
-          "$ts" serve --bg --yes --https=2586 http://127.0.0.1:2586
-          "$ts" serve --bg --yes --https=5678 http://127.0.0.1:5678
-          "$ts" serve --bg --yes --https=7575 http://127.0.0.1:7575
-          "$ts" serve --bg --yes --https=8081 http://127.0.0.1:8081
-          "$ts" serve --bg --yes --https=8082 http://127.0.0.1:8082
-          "$ts" serve --bg --yes --https=8088 http://127.0.0.1:8088
-          # Homepage used 3010, Netdata used 19999. tailscaled keeps the last
-          # serve config, and `off` errors once that handler is already gone.
-          if "$ts" serve status | ${pkgs.gnugrep}/bin/grep -q ':3010'; then
-            "$ts" serve --https=3010 --yes off
-          fi
-          if "$ts" serve status | ${pkgs.gnugrep}/bin/grep -q ':19999'; then
-            "$ts" serve --https=19999 --yes off
-          fi
+          ${serveOn}
+          # `off` errors once that handler is already gone, so check first.
+          ${serveOff}
           status=$("$ts" serve status)
-          for port in 2283 2586 5678 7575 8081 8082 8088; do
+          for port in ${activePorts}; do
             printf '%s\n' "$status" | ${pkgs.gnugrep}/bin/grep -q ":$port" || {
               echo "missing Tailscale serve route for port $port" >&2
               exit 1

@@ -26,6 +26,10 @@ in
     };
 
     systemd.services.lidarr.serviceConfig.UMask = "0002";
+    # The package is a pinned tarball. An in-app update would not replace
+    # the store path, so Servarr must treat updates as external.
+    # https://wiki.servarr.com/lidarr/settings#updates
+    systemd.services.lidarr.environment.LIDARR__UPDATE__MECHANISM = "external";
 
     networking.firewall.interfaces.tailscale0.allowedTCPPorts = [
       8686 # Lidarr

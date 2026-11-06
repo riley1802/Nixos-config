@@ -256,6 +256,8 @@ let
     iptables -t mangle -F PROWLARR-VPN 2>/dev/null || true
     iptables -t mangle -X PROWLARR-VPN 2>/dev/null || true
     iptables -t nat -D POSTROUTING -o pia -m mark --mark 0x7072 -j MASQUERADE 2>/dev/null || true
+    # Older boots masqueraded the cgroup itself. The start script now
+    # masquerades the mark. Delete the old rule if it is still installed.
     iptables -t nat -D POSTROUTING -m cgroup --path ${prowlarrCgroupPath} -o pia -j MASQUERADE 2>/dev/null || true
     ip rule del fwmark 0x7072 lookup 51820 priority 110 2>/dev/null || true
   '';
@@ -276,7 +278,7 @@ in
     networking.firewall.checkReversePath = "loose";
 
     systemd.services.pia-wireguard = {
-      description = "PIA WireGuard tunnel for qBittorrent";
+      description = "PIA WireGuard tunnel for qBittorrent and Prowlarr";
       wantedBy = [ "multi-user.target" ];
       wants = [ "network-online.target" "pia-client-refresh.service" ];
       after = [ "network-online.target" ];

@@ -2,6 +2,9 @@
 { config, lib, ... }:
 let
   cfg = config.my.network.dnsproxy;
+  # nixos.taile9f484.ts.net -> taile9f484.ts.net. MagicDNS is the zone,
+  # not this computer's own name.
+  tailnetZone = lib.concatStringsSep "." (lib.drop 1 (lib.splitString "." config.my.tailnetHost));
 in
 {
   options.my.network.dnsproxy.enable = lib.mkEnableOption "encrypted DNS forwarder";
@@ -11,7 +14,8 @@ in
     # out over TLS (port 853), because plain DNS is blocked for VPN sites.
     # Tailscale DNS stays off so it does not replace this forwarder. The
     # tailnet zone is the exception: MagicDNS at 100.100.100.100 answers
-    # nixos.taile9f484.ts.net, which 1.1.1.1 does not know.
+    # names under that zone, which 1.1.1.1 does not know. The zone is
+    # my.tailnetHost without the first label.
     # https://github.com/AdguardTeam/dnsproxy#usage
     services.dnsproxy = {
       enable = true;
@@ -19,7 +23,7 @@ in
         listen-addrs = [ "127.0.0.1" ];
         listen-ports = [ 53 ];
         upstream = [
-          "[/taile9f484.ts.net/]100.100.100.100:53"
+          "[/${tailnetZone}/]100.100.100.100:53"
           "tls://1.1.1.1"
           "tls://1.0.0.1"
         ];
