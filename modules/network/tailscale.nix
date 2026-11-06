@@ -11,6 +11,7 @@ let
   routes = [
     { port = 2283; on = config.my.services.immich.enable; }
     { port = 2586; on = config.my.services.ntfy.enable; }
+    { port = 3001; on = config.my.services.uptime-kuma.enable; }
     { port = 11011; on = config.my.services.arr.cleanuparr.enable; }
   ];
   active = builtins.filter (route: route.on) routes;

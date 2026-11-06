@@ -1,5 +1,8 @@
-# Uptime Kuma monitors. Web page on port 3001.
-{ config, lib, ... }:
+# Uptime Kuma: uptime monitoring and status pages. Web UI on port 3001.
+# Uses the stock NixOS module (services.uptime-kuma). Data is under
+# /var/lib/uptime-kuma. If you used an older custom module that stored the DB
+# elsewhere, stop the service and copy kuma.db into that directory before apply.
+{ config, lib, pkgs, ... }:
 let
   cfg = config.my.services.uptime-kuma;
 in
@@ -7,30 +10,16 @@ in
   options.my.services.uptime-kuma.enable = lib.mkEnableOption "Uptime Kuma";
 
   config = lib.mkIf cfg.enable {
-    # Uptime Kuma 2.5.8 from packages/uptime-kuma. The admin account,
-    # monitors, and the ntfy notification are not in this file. The service
-    # sees them at DATA_DIR /var/lib/uptime-kuma. DynamicUser stores that
-    # directory on the host at /var/lib/private/uptime-kuma (kuma.db).
-    # Stop the service before editing the sqlite file. The notification
-    # posts to the local ntfy server's uptime topic. See ntfy.nix.
-    #
-    # HOST "::" listens on every IPv4 and IPv6 address. Uptime Kuma treats
-    # that as dual-stack. The firewall rule below is what limits who can
-    # connect: port 3001 is open on Tailscale only. Loopback stays
-    # reachable at http://127.0.0.1:3001 because NixOS trusts it.
-    # https://github.com/NixOS/nixpkgs/blob/6713828a351efa628b025a1adf7f43cbf8597513/nixos/modules/services/monitoring/uptime-kuma.nix
-    # https://github.com/louislam/uptime-kuma/wiki/Environment-Variables
+    # https://github.com/NixOS/nixpkgs/blob/nixos-26.05/nixos/modules/services/monitoring/uptime-kuma.nix
     services.uptime-kuma = {
       enable = true;
-      # Some notification types call the apprise program. The module
-      # only puts it on the service PATH when this is set.
-      appriseSupport = true;
-      settings = {
-        HOST = "::";
-        PORT = "3001";
-      };
+      package = pkgs.uptime-kuma;
     };
 
-    networking.firewall.interfaces.tailscale0.allowedTCPPorts = [ 3001 ];
+    # Process listens on 127.0.0.1 (module default). Open 3001 on the tailnet
+    # interface only; Tailscale Serve proxies HTTPS from the MagicDNS name.
+    networking.firewall.interfaces.tailscale0.allowedTCPPorts = [
+      3001 # Uptime Kuma
+    ];
   };
 }

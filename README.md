@@ -22,7 +22,7 @@ modules/services/arr/             Sonarr, Radarr, Lidarr, Bazarr, Prowlarr, Seer
                                   qBittorrent, Cleanuparr, and the shared media directories
 modules/services/                 Jellyfin, Immich, ntfy, Uptime Kuma, Docker
 modules/apps/openlogi.nix         MX Master 4
-packages/                         Lidarr, Cleanuparr, and Uptime Kuma builds
+packages/                         Lidarr and Cleanuparr builds
 secrets/                          agenix recipients and encrypted files
 pia/                              public PIA certificate and server list
 ```
@@ -37,12 +37,11 @@ by `nixos-generate-config` and should not be edited by hand.
   which is marked insecure, and phone apps need 3.x. The overlays live in
   `modules/core/overlays.nix`.
 - `packages/lidarr.nix` is the official Lidarr 3.1.6.5079 release, because
-  nixpkgs does not have it yet. `packages/uptime-kuma/package.nix` builds
-  Uptime Kuma 2.5.8 for the same reason: 26.05 has 2.5.3 and the unstable
-  pin has 2.5.7. 2.5.8 is the current release and includes its admin-only
-  remote-code-execution fix. `packages/uptime-kuma/uptime-kuma-database-permissions.patch`
-  keeps a newly created database from being world-readable.
-- `modules/services/uptime-kuma.nix` runs that package.
+  nixpkgs does not have it yet.
+- `modules/services/uptime-kuma.nix` enables the stock NixOS module
+  (`services.uptime-kuma`) with the nixpkgs package. Port 3001 is opened
+  on `tailscale0` and Tailscale Serve exposes HTTPS on the tailnet, same
+  pattern as Immich and ntfy.
 - `packages/cleanuparr.nix` is the official Cleanuparr 2.10.12 linux-amd64
   build. nixpkgs does not have it. `modules/services/arr/cleanuparr.nix`
   runs it.
@@ -129,10 +128,9 @@ The NixOS firewall stays enabled.
   `http://192.168.50.101:8096`, and any device on the tailnet can play
   video and music. That port is not accepted on the VPN interface.
 - Uptime Kuma accepts TCP port 3001 on `tailscale0` only. The process listens
-  on every address so both IPv4 and IPv6 tailnet clients can connect, and
-  the firewall is what keeps the home network and the VPN out. This computer
-  can still open `http://127.0.0.1:3001` through the trusted loopback
-  interface.
+  on `127.0.0.1:3001`. Tailscale Serve presents HTTPS for
+  `nixos.taile9f484.ts.net:3001` and proxies to that port. This computer can
+  still open `http://127.0.0.1:3001`. The home network and the VPN cannot.
 - ntfy accepts TCP port 2586 on `tailscale0` only. The process listens on
   `127.0.0.1`. Tailscale Serve presents HTTPS for
   `nixos.taile9f484.ts.net:2586` and proxies to that port. This computer
@@ -179,7 +177,7 @@ are available on the tailnet. Only Jellyfin is also open on the home Wi-Fi.
 | Bazarr | http://127.0.0.1:6767 or http://nixos.taile9f484.ts.net:6767 | Subtitles, after a language profile is chosen |
 | qBittorrent | http://127.0.0.1:8080 or http://nixos.taile9f484.ts.net:8080 | Torrent client. Sonarr, Radarr, and Lidarr drive it |
 | Cleanuparr | http://127.0.0.1:11011 or https://nixos.taile9f484.ts.net:11011 | Removes stalled, failed, and blocked downloads. The first visit creates the login. Cleaners stay off until enabled. Turn Dry run on first |
-| Uptime Kuma | http://127.0.0.1:3001 or http://nixos.taile9f484.ts.net:3001 | Whether the apps above, Pi-hole, and the tailnet path to the Pi are up |
+| Uptime Kuma | http://127.0.0.1:3001 or https://nixos.taile9f484.ts.net:3001 | Whether the apps above, Pi-hole, and the tailnet path to the Pi are up |
 
 A request in Seerr goes to Sonarr or Radarr. That app asks Prowlarr for a
 torrent. Prowlarr's search leaves through the VPN. The grab goes to
@@ -209,7 +207,7 @@ Uptime Kuma checks those apps every 60 seconds, plus Pi-hole on the home
 network and the same Pi-hole page over its tailnet address. The second
 check fails when Tailscale cannot reach the Pi even if the home-network
 check is still up. The admin account, monitor list, and the ntfy
-notification live in `/var/lib/private/uptime-kuma/kuma.db`. That directory is not in git.
+notification live under `/var/lib/uptime-kuma/` (e.g. `kuma.db`). That directory is not in git.
 Stop the service before editing the sqlite file.
 The notification posts to this computer's ntfy topic `uptime` and is
 attached to every monitor.
