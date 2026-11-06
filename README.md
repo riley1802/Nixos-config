@@ -22,7 +22,7 @@ modules/services/arr/             Sonarr, Radarr, Lidarr, Bazarr, Prowlarr, Seer
                                   qBittorrent, Cleanuparr, and the shared media directories
 modules/services/                 Jellyfin, Immich, ntfy, Uptime Kuma, Docker
 modules/apps/openlogi.nix         MX Master 4
-packages/                         Lidarr and Cleanuparr builds
+packages/                         Lidarr build
 secrets/                          agenix recipients and encrypted files
 pia/                              public PIA certificate and server list
 ```
@@ -42,9 +42,8 @@ by `nixos-generate-config` and should not be edited by hand.
   (`services.uptime-kuma`) with the nixpkgs package. Port 3001 is opened
   on `tailscale0` and Tailscale Serve exposes HTTPS on the tailnet, same
   pattern as Immich and ntfy.
-- `packages/cleanuparr.nix` is the official Cleanuparr 2.10.12 linux-amd64
-  build. nixpkgs does not have it. `modules/services/arr/cleanuparr.nix`
-  runs it.
+- `modules/services/arr/cleanuparr.nix` builds the official Cleanuparr
+  2.10.12 linux-amd64 release and runs it. nixpkgs does not have it.
 - `modules/services/ntfy.nix` runs ntfy 2.26.0 from the nixos-26.05 module
   and publishes it with Tailscale Serve. The phone password and the
   publisher token are age secrets. `secrets/ntfy-auth.age` is what the
