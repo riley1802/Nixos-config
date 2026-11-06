@@ -1,16 +1,16 @@
 # Jellyfin media player. Web page on port 8096.
 { config, lib, ... }:
 let
-  cfg = config.my.services.jellyfin;
+  cfg = config.my.services.arr.jellyfin;
 in
 {
-  options.my.services.jellyfin.enable = lib.mkEnableOption "Jellyfin";
+  options.my.services.arr.jellyfin.enable = lib.mkEnableOption "Jellyfin";
 
   config = lib.mkIf cfg.enable {
     assertions = [
       {
         assertion = config.my.services.arr.media.enable;
-        message = "services/jellyfin needs services/arr/media (nixctl enable services/arr/media)";
+        message = "services/arr/jellyfin needs services/arr/media (nixctl enable services/arr/media)";
       }
     ];
 

@@ -398,7 +398,7 @@ cmd_map() {
 
 cmd_new() {
   local name=${1:-} desc=${2:-} file opt
-  [[ $name =~ ^[a-z0-9-]+/[a-z0-9][a-z0-9-]*$ ]] || fail "name must look like GROUP/NAME, e.g. services/jellyfin" "nixctl new services/NAME \"what it does\""
+  [[ $name =~ ^[a-z0-9-]+/[a-z0-9][a-z0-9-]*$ ]] || fail "name must look like GROUP/NAME, e.g. services/immich" "nixctl new services/NAME \"what it does\""
   [[ $name != core/* ]] || fail "core modules are made by Claude, not with nixctl new" "pick another group, e.g. services/ or apps/"
   [[ -n $desc ]] || fail "new needs a one-line description" "nixctl new $name \"what it does\""
   file=modules/$name.nix
@@ -542,7 +542,7 @@ cmd_search() {
 
 cmd_option() {
   local path=${1:-} expr
-  [[ $path =~ ^[A-Za-z0-9_.\<\>*-]+$ ]] || fail "option needs a name like services.jellyfin.enable" "nixctl option services.jellyfin"
+  [[ $path =~ ^[A-Za-z0-9_.\<\>*-]+$ ]] || fail "option needs a name like services.arr.bazarr.enable" "nixctl option services.arr.bazarr"
   expr=$(
     cat <<'EOF'
 opts: let

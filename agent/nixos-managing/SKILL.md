@@ -67,15 +67,15 @@ You can make several changes, then run `nixctl apply` once for all of them.
 If it says the program is not in the list, a module installs it. Run `nixctl map` and turn that module off instead.
 
 ### Turn a module on or off
-1. `nixctl map` (find the name, for example `services/jellyfin`)
-2. `nixctl enable services/jellyfin` or `nixctl disable services/jellyfin`
+1. `nixctl map` (find the name, for example `services/arr/jellyfin`)
+2. `nixctl enable services/arr/jellyfin` or `nixctl disable services/arr/jellyfin`
 3. `nixctl apply "turn on jellyfin"`
 
 ### Change a setting
 1. `nixctl map` (find the module that owns it)
 2. Read that module file.
-3. `nixctl option services.jellyfin` (lists the real option names)
-4. `nixctl option services.jellyfin.openFirewall` (shows its type and current value)
+3. `nixctl option services.arr.jellyfin` (lists the real option names)
+4. `nixctl option services.arr.jellyfin.openFirewall` (shows its type and current value)
 5. Edit or add the line inside `config = lib.mkIf cfg.enable { ... };`
 6. `nixctl apply "jellyfin: open firewall"`
 
@@ -105,16 +105,16 @@ If it says the program is not in the list, a module installs it. Run `nixctl map
 
 ## Example module
 
-File `modules/services/jellyfin.nix`:
+File `modules/services/arr/jellyfin.nix`:
 
 ```nix
 # Jellyfin media server. Web page on port 8096.
 { config, lib, pkgs, ... }:
 let
-  cfg = config.my.services.jellyfin;
+  cfg = config.my.services.arr.jellyfin;
 in
 {
-  options.my.services.jellyfin.enable = lib.mkEnableOption "Jellyfin media server";
+  options.my.services.arr.jellyfin.enable = lib.mkEnableOption "Jellyfin media server";
 
   config = lib.mkIf cfg.enable {
     services.jellyfin.enable = true;
@@ -125,7 +125,7 @@ in
 ```
 
 - Line 1 says what the module does.
-- The file path `modules/services/jellyfin.nix` matches the name `my.services.jellyfin`.
+- The file path `modules/services/arr/jellyfin.nix` matches the name `my.services.arr.jellyfin`.
 - Every setting goes inside `config = lib.mkIf cfg.enable { ... };`.
 - Each line ends with `;`.
 
@@ -190,7 +190,7 @@ The goal is a config where every common change is one line in a predictable file
 Rules, and why each one exists:
 
 1. **One feature, one file.** `modules/GROUP/NAME.nix` holds everything that feature needs: service settings, firewall ports, users and groups, systemd overrides, tmpfiles, its `age.secrets` entries, its Tailscale route, its desktop entry. Why: an agent finds everything about a feature in one place, and deleting the file removes the feature completely.
-2. **The path is the name.** `modules/services/jellyfin.nix` declares exactly `options.my.services.jellyfin.enable`. `nixctl map/enable/disable` depend on this.
+2. **The path is the name.** `modules/services/arr/jellyfin.nix` declares exactly `options.my.services.arr.jellyfin.enable`. `nixctl map/enable/disable` depend on this.
 3. **Modules talk only through options.** A module never edits another module's file and never hardcodes another module's port, path or user. Shared values are `my.*` options declared in `modules/core/settings.nix` and set in the host file. Cross-feature wiring uses the hub pattern (R2). Why: this is what "fits together with no glue" means in Nix. It's the same way NixOS's own `networking.firewall.allowedTCPPorts` collects ports from every module.
 4. **Explicit dependencies.** If a feature truly needs another, it asserts it:
    `assertions = [ { assertion = config.my.network.tailscale.enable; message = "services/n8n needs network/tailscale (nixctl enable network/tailscale)"; } ];`
@@ -969,7 +969,7 @@ cmd_map() {
 
 cmd_new() {
   local name=${1:-} desc=${2:-} file opt
-  [[ $name =~ ^[a-z0-9-]+/[a-z0-9][a-z0-9-]*$ ]] || fail "name must look like GROUP/NAME, e.g. services/jellyfin" "nixctl new services/NAME \"what it does\""
+  [[ $name =~ ^[a-z0-9-]+/[a-z0-9][a-z0-9-]*$ ]] || fail "name must look like GROUP/NAME, e.g. services/immich" "nixctl new services/NAME \"what it does\""
   [[ $name != core/* ]] || fail "core modules are made by Claude, not with nixctl new" "pick another group, e.g. services/ or apps/"
   [[ -n $desc ]] || fail "new needs a one-line description" "nixctl new $name \"what it does\""
   file=modules/$name.nix
@@ -1113,7 +1113,7 @@ cmd_search() {
 
 cmd_option() {
   local path=${1:-} expr
-  [[ $path =~ ^[A-Za-z0-9_.\<\>*-]+$ ]] || fail "option needs a name like services.jellyfin.enable" "nixctl option services.jellyfin"
+  [[ $path =~ ^[A-Za-z0-9_.\<\>*-]+$ ]] || fail "option needs a name like services.arr.bazarr.enable" "nixctl option services.arr.bazarr"
   expr=$(
     cat <<'EOF'
 opts: let

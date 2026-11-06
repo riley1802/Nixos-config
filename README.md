@@ -59,8 +59,8 @@ by `nixos-generate-config` and should not be edited by hand.
   outbound HTTPS to port 19999. That is not a local listener. The same
   unit turns off the ports of services removed later: 3000, 5678, 7575,
   8081, 8082, 8083, 8084, 8085, 8087, and 8088.
-- `modules/services/jellyfin.nix` runs Jellyfin. The arr apps and
-  qBittorrent are the files in `modules/services/arr/`.
+- `modules/services/arr/jellyfin.nix` runs Jellyfin. The other arr apps and
+  qBittorrent are the rest of the files in `modules/services/arr/`.
 - `modules/network/pia.nix` builds the split tunnel and routes Prowlarr
   lookups through it.
 - `secrets/secrets.nix` lists the age recipients. `secrets/pia-credentials.age`

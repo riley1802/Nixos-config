@@ -27,6 +27,7 @@
   my.network.tailscale.enable = true;
   my.services.arr.bazarr.enable = true;
   my.services.arr.cleanuparr.enable = true;
+  my.services.arr.jellyfin.enable = true;
   my.services.arr.lidarr.enable = true;
   my.services.arr.media.enable = true;
   my.services.arr.prowlarr.enable = true;
@@ -36,7 +37,6 @@
   my.services.arr.sonarr.enable = true;
   my.services.docker.enable = true;
   my.services.immich.enable = true;
-  my.services.jellyfin.enable = true;
   my.services.ntfy.enable = true;
   my.services.uptime-kuma.enable = true;
 

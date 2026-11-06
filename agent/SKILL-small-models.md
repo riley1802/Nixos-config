@@ -67,15 +67,15 @@ You can make several changes, then run `nixctl apply` once for all of them.
 If it says the program is not in the list, a module installs it. Run `nixctl map` and turn that module off instead.
 
 ### Turn a module on or off
-1. `nixctl map` (find the name, for example `services/jellyfin`)
-2. `nixctl enable services/jellyfin` or `nixctl disable services/jellyfin`
+1. `nixctl map` (find the name, for example `services/arr/jellyfin`)
+2. `nixctl enable services/arr/jellyfin` or `nixctl disable services/arr/jellyfin`
 3. `nixctl apply "turn on jellyfin"`
 
 ### Change a setting
 1. `nixctl map` (find the module that owns it)
 2. Read that module file.
-3. `nixctl option services.jellyfin` (lists the real option names)
-4. `nixctl option services.jellyfin.openFirewall` (shows its type and current value)
+3. `nixctl option services.arr.jellyfin` (lists the real option names)
+4. `nixctl option services.arr.jellyfin.openFirewall` (shows its type and current value)
 5. Edit or add the line inside `config = lib.mkIf cfg.enable { ... };`
 6. `nixctl apply "jellyfin: open firewall"`
 
@@ -105,16 +105,16 @@ If it says the program is not in the list, a module installs it. Run `nixctl map
 
 ## Example module
 
-File `modules/services/jellyfin.nix`:
+File `modules/services/arr/jellyfin.nix`:
 
 ```nix
 # Jellyfin media server. Web page on port 8096.
 { config, lib, pkgs, ... }:
 let
-  cfg = config.my.services.jellyfin;
+  cfg = config.my.services.arr.jellyfin;
 in
 {
-  options.my.services.jellyfin.enable = lib.mkEnableOption "Jellyfin media server";
+  options.my.services.arr.jellyfin.enable = lib.mkEnableOption "Jellyfin media server";
 
   config = lib.mkIf cfg.enable {
     services.jellyfin.enable = true;
@@ -125,7 +125,7 @@ in
 ```
 
 - Line 1 says what the module does.
-- The file path `modules/services/jellyfin.nix` matches the name `my.services.jellyfin`.
+- The file path `modules/services/arr/jellyfin.nix` matches the name `my.services.arr.jellyfin`.
 - Every setting goes inside `config = lib.mkIf cfg.enable { ... };`.
 - Each line ends with `;`.
 
