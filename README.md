@@ -11,10 +11,13 @@ rest of the desktop stays on the home network.
 ```
 flake.nix                         inputs and one host
 flake.lock                        exact input revisions
+dev/flake.nix                     global dev shell, separate from the system flake
+dev/flake.lock                    nixpkgs pin for that shell only
 hosts/nixos/default.nix           hostname, shared settings, which modules are on
 hosts/nixos/packages.nix          programs installed by name
 hosts/nixos/hardware-configuration.nix
 modules/core/                     nix, boot, time, user, package overlays
+modules/dev/shell.nix             interactive `nix dev` command
 modules/hardware/                 NVIDIA driver, vault disk, game drive
 modules/desktop/                  Plasma, Cinnamon (off), KDE Connect, Chrome DNS policy
 modules/network/                  Tailscale, DNS, SSH, NetworkManager, PIA, firewall
@@ -334,6 +337,31 @@ WireGuard key, and a port before writing it into `pia.conf`, whose `PostUp`
 lines `wg-quick` runs as root.
 The forwarded-port keepalive runs every 15 minutes. The listen port in
 `modules/services/arr/qbittorrent.nix` has to match the port PIA assigned.
+
+## Development shell
+
+`nix dev` opens one development shell from any directory. Nix 2.34 has no
+`dev` command, and bash cannot alias a two-word command, so
+`modules/dev/shell.nix` installs a shell function named `nix`. That function
+sends only `nix dev` to `dev/flake.nix`. Every other `nix` command still runs
+the real Nix binary. The function is in the interactive shell startup, so a
+terminal that was already open does not have it until that terminal starts a
+new shell.
+
+The shell is its own flake, not an output of the system flake. It sits in
+`dev/` so `modules/default.nix` does not import it as a NixOS module. Its
+nixpkgs pin is `nixos-26.05`, locked in `dev/flake.lock`, separate from the
+system `flake.lock`. The shell provides git, python3, uv, nodejs, rustc,
+cargo, go, gcc, and pkg-config.
+
+Add or remove a tool by editing the package list in `dev/flake.nix`, then
+`git add` that file. Nix only sees files git is tracking. The next `nix dev`
+uses the new list. That edit does not need `nixctl apply`. Arguments after
+`dev` are passed through, so `nix dev -c python3` runs that command inside
+the shell.
+
+Turn the command off with `nixctl disable dev/shell`, then
+`nixctl apply "disable nix dev"`. The flake files can stay.
 
 ## Apply and validate
 
