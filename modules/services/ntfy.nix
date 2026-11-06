@@ -11,7 +11,7 @@ in
     # and the arr apps all publish or subscribe here. The process listens on
     # loopback. Chrome's HSTS list upgrades http://*.ts.net to HTTPS, and the
     # iOS app requires the public URL to be HTTPS, so Tailscale Serve
-    # terminates TLS on 2586 and proxies here. tailscale-serve.nix installs
+    # terminates TLS on 2586 and proxies here. modules/network/tailscale.nix installs
     # that route. 2586 is the module default and is free: 5678 is n8n and
     # 3001 is Uptime Kuma.
     #

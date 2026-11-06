@@ -41,7 +41,7 @@ in
     # The servers listen on loopback. Chrome forces HTTPS for *.ts.net, so
     # plain HTTP on the tailnet name times out. Tailscale Serve terminates
     # TLS on 8081 and 8082 and proxies to these loopback ports.
-    # tailscale-serve.nix installs those routes. Uptime Kuma still probes
+    # modules/network/tailscale.nix installs those routes. Uptime Kuma still probes
     # loopback /health, which stays public. 8080 is qBittorrent.
     #
     # Every other route, including /v1, requires the age secret. Both

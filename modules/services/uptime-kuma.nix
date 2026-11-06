@@ -8,9 +8,11 @@ in
 
   config = lib.mkIf cfg.enable {
     # Uptime Kuma 2.5.8 from packages/uptime-kuma. The admin account,
-    # monitors, and the ntfy notification are stored in /var/lib/uptime-kuma,
-    # not in this file. That notification posts to the local ntfy server's
-    # uptime topic. See ntfy.nix.
+    # monitors, and the ntfy notification are not in this file. The service
+    # sees them at DATA_DIR /var/lib/uptime-kuma. DynamicUser stores that
+    # directory on the host at /var/lib/private/uptime-kuma (kuma.db).
+    # Stop the service before editing the sqlite file. The notification
+    # posts to the local ntfy server's uptime topic. See ntfy.nix.
     #
     # HOST "::" listens on every IPv4 and IPv6 address. Uptime Kuma treats
     # that as dual-stack. The firewall rule below is what limits who can

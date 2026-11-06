@@ -379,19 +379,15 @@ in
     virtualisation.oci-containers.containers.research-postgres = {
       image = "pgvector/pgvector:0.8.1-pg17";
       ports = [ "127.0.0.1:5433:5432" ];
-      environment =
-        {
-          POSTGRES_DB = "information";
-          POSTGRES_USER = "information";
-          PGDATA = "/var/lib/postgresql/data/pgdata";
-        }
-        // lib.listToAttrs [
-          {
-            name = "POSTGRES_PASSWORD_FILE";
-            value = "/run/research-secrets/owner-password";
-          }
-        ];
-      environmentFiles = [ envFile ];
+      environment = {
+        POSTGRES_DB = "information";
+        POSTGRES_USER = "information";
+        PGDATA = "/var/lib/postgresql/data/pgdata";
+        POSTGRES_PASSWORD_FILE = "/run/research-secrets/owner-password";
+      };
+      # secrets.env holds N8N_PASSWORD for the host migrate script. The
+      # database image does not read that variable, so the file stays off
+      # the container environment.
       volumes = [
         "${stateDirectory}/data:/var/lib/postgresql/data"
         "${stateDirectory}/owner-password:/run/research-secrets/owner-password:ro"

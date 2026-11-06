@@ -159,7 +159,7 @@ in
     # n8n 2.34.6 from the nixos-26.05 module. The editor listens on loopback.
     # Chrome's HSTS list upgrades http://*.ts.net to HTTPS on the same port,
     # so Tailscale Serve terminates TLS on 5678 and proxies here.
-    # tailscale-serve.nix installs that route. 5678 is free: 8080 is
+    # modules/network/tailscale.nix installs that route. 5678 is free: 8080 is
     # qBittorrent, 8081 and 8082 are llama.cpp, and 8088 is Open WebUI.
     #
     # The owner account, workflows, SQLite database, and the generated
@@ -183,8 +183,7 @@ in
     # http://127.0.0.1:8084/v1/audio/speech (OpenAI-style JSON,
     # response_format wav). POST that wav to
     # http://127.0.0.1:8091/discord-voice for the Discord voice-memo file.
-    # The voice-or-text delivery choice is POST http://127.0.0.1:8086/v1/systemone
-    # with model alias d1-2b.
+    # Breeze answers only while the 1660 is running it (`gtx1660 breeze`).
     # The 1.7B server has one slot and is shared with Open WebUI, so a
     # workflow waits if a chat is already generating. The Omni server has
     # one slot too.
@@ -241,13 +240,11 @@ in
       after = [
         "llama-cpp-1.7b.service"
         "llama-cpp-omni.service"
-        "llama-cpp-d1.service"
         "audio-to-wav.service"
       ];
       wants = [
         "llama-cpp-1.7b.service"
         "llama-cpp-omni.service"
-        "llama-cpp-d1.service"
         "audio-to-wav.service"
       ];
     };

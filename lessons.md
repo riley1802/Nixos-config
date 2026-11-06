@@ -238,7 +238,7 @@ Taken from the saved Cursor chats on this computer, 2026-06-29 through 2026-11-0
   **Resolved:** A one-time chmod of those trees to `700`/`600`, plus a `preStart` that keeps them there. (2026-10-28, c6e1ac1a)
 
 - **Wrong:** Lidarr offered an in-app update. Installing it would not replace the Nix store path and would drift from the pinned tarball.
-  **Resolved:** `LIDARR__UPDATE__MECHANISM=external`. The package is the official 3.1.6.5079 tarball in `packages/lidarr.nix`. (2026-10-28, 34647357)
+  **Resolved:** `LIDARR__UPDATE__MECHANISM=external` in `modules/services/arr/lidarr.nix`. The package is the official 3.1.6.5079 tarball in `packages/lidarr.nix`. (2026-10-28, 34647357)
 
 - **Wrong:** Prowlarr API automation used `appProfileId` 0, omitted sync categories, and Seerr was pointed at Jellyfin with a bad `urlBase`.
   **Resolved:** `appProfileId = 1`, the sync categories including `8000`, and `urlBase = ""`. (2026-10-28, 0ea4217b)
@@ -267,13 +267,13 @@ Taken from the saved Cursor chats on this computer, 2026-06-29 through 2026-11-0
   **Resolved:** Put the password in the `-c` string. The charset has to be safe, and the Nix `''` quoting has to survive `nix fmt`. (2026-07-18, 21701a1f)
 
 - **Wrong:** Default `pkgs.netdata` returned "File does not exist, or is not accessible" for the UI.
-  **Resolved:** Use the `netdataCloud` package and open `/v3`. (2026-10-31, 785edbdd)
+  **Resolved:** Use the `netdataCloud` package and open `/v3`. **Historical:** Netdata was later removed. The tailnet script still clears a leftover Serve route on port 19999. (2026-10-31, 785edbdd)
 
 - **Wrong:** A Netdata swap alarm was read as a broken Netdata.
   **Resolved:** Swap was actually full (Jellyfin, llama, and the rest). The alarm was right. (2026-10-31, 785edbdd)
 
 - **Wrong:** n8n was given two llama URLs only through environment variables. n8n 2.x does not wire OpenAI-compatible credentials that way.
-  **Resolved:** Create the credential in the n8n UI: `http://127.0.0.1:8082/v1`, model name, dummy key `local`. The age file is for the servers and Open WebUI, not for n8n. (2026-10-29, 068dc80a)
+  **Resolved:** Create the credential in the n8n UI: `http://127.0.0.1:8082/v1`, model name, dummy key `local`. The age file is for the servers and Open WebUI, not for n8n. **Superseded:** the servers now require the age key, so the n8n credential has to be that same line (`/run/agenix/llama-api-key`), not `local`. (2026-10-29, 068dc80a)
 
 - **Wrong:** llama-server was reachable on the tailnet with no API key.
   **Resolved:** `secrets/llama-api-key.age` and `--api-key-file` on both servers. (2026-10-31, a0c00a05)

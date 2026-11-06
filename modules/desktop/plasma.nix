@@ -17,13 +17,16 @@ in
         assertion = config.my.hardware.nvidia.enable;
         message = "desktop/plasma needs hardware/nvidia (nixctl enable hardware/nvidia)";
       }
+      {
+        assertion = !config.my.desktop.cinnamon.enable;
+        message = "desktop/plasma and desktop/cinnamon each start a display manager; turn one off";
+      }
     ];
 
-    # "nvidia" in videoDrivers is what turns hardware.nvidia on, and
-    # xserver.enable is what loads those kernel modules at boot. The
-    # desktop and CUDA both need that. desktop/cinnamon sets the same
-    # pair; only one of these two modules can be on, because each one
-    # starts its own display manager.
+    # xserver.enable loads the NVIDIA kernel modules at boot. The driver
+    # package is hardware/nvidia. desktop/cinnamon sets the same xserver
+    # pair. Only one desktop module can be on, because each one starts
+    # its own display manager.
     # https://github.com/NixOS/nixpkgs/blob/6713828a351efa628b025a1adf7f43cbf8597513/nixos/modules/hardware/video/nvidia.nix
     services.xserver = {
       enable = true;

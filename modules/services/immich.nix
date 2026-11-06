@@ -28,7 +28,7 @@ in
     # and leave open registration disabled.
     #
     # The process listens on 127.0.0.1:2283. Tailscale Serve in
-    # tailscale-serve.nix presents HTTPS for nixos.taile9f484.ts.net:2283
+    # modules/network/tailscale.nix presents HTTPS for nixos.taile9f484.ts.net:2283
     # and proxies here. The phone app uses that URL. openFirewall stays
     # false: that option would open the port on every interface. TCP 2283
     # is accepted on tailscale0 only. The home LAN and the VPN stay closed.

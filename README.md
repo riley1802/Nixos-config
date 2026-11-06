@@ -2,7 +2,7 @@
 
 This repository is the NixOS configuration for the `nixos` workstation. It
 defines a KDE Plasma desktop, dual-NVIDIA graphics, OpenSSH over the tailnet,
-two llama.cpp servers plus a third that stays off, n8n, ntfy, Immich, Uptime Kuma, Netdata, Homarr, Homelable, and a
+llama.cpp servers, n8n, ntfy, Immich, Uptime Kuma, Homarr, Homelable, and a
 torrent media stack.
 qBittorrent and Prowlarr lookups use a Private Internet Access WireGuard tunnel. The
 rest of the desktop stays on the home network.
@@ -22,7 +22,7 @@ modules/network/                  Tailscale, DNS, SSH, NetworkManager, PIA, fire
 modules/services/arr/             Sonarr, Radarr, Lidarr, Bazarr, Prowlarr, Seerr,
                                   qBittorrent, Cleanuparr, and the shared media directories
 modules/services/                 Jellyfin, Immich, n8n, ntfy, llama.cpp, Kokoro,
-                                  Homarr, Homelable, Netdata, Uptime Kuma, Docker
+                                  Homarr, Homelable, Uptime Kuma, Docker
 modules/apps/openlogi.nix         MX Master 4
 packages/                         Lidarr, Cleanuparr, llama.cpp, and Uptime Kuma builds
 secrets/                          agenix recipients and encrypted files
@@ -33,8 +33,8 @@ pia/                              public PIA certificate and server list
 module that owns them. `hosts/nixos/hardware-configuration.nix` is generated
 by `nixos-generate-config` and should not be edited by hand.
 
-- `flake.nix` pins NixOS to the `nixos-26.05` branch. Cursor, Radarr, and
-  Immich come from `nixpkgs-unstable`. Cursor and Radarr are there because
+- `flake.nix` pins NixOS to the `nixos-26.05` branch. Cursor, Radarr, Sonarr, and
+  Immich come from `nixpkgs-unstable`. Cursor, Radarr, and Sonarr are there because
   26.05 lags behind. Immich is 3.3.5 on that pin because 26.05 has 2.7.5,
   which is marked insecure, and phone apps need 3.x. The overlays live in
   `modules/core/overlays.nix`.
@@ -88,14 +88,9 @@ by `nixos-generate-config` and should not be edited by hand.
   `http://127.0.0.1:3000`. On the tailnet it is
   `https://nixos.taile9f484.ts.net:3000`. The canvas stays in
   `/var/lib/homelable`. The login is `pkexec cat /run/agenix/homelable-login`.
-- `modules/services/netdata.nix` runs a local Netdata agent on loopback and
-  publishes it with Tailscale Serve. The package is `netdataCloud`, because
-  the default build has no dashboard files and the page is
-  "File does not exist, or is not accessible:". The dashboard assets
-  are NCUL-1 and are built on this computer. Open `/v3` for the
-  charts. This agent has no local password without a Netdata Cloud
-  claim, and the agent is not claimed, so a tailnet device can open
-  `/v3`. Charts and alarm state stay in `/var/lib/netdata`.
+- Netdata was removed. `modules/network/tailscale.nix` still turns off a
+  leftover Serve route on port 19999. PIA's port-forward API also uses
+  outbound HTTPS to port 19999. That is not a local listener.
 - `modules/services/jellyfin.nix` runs Jellyfin. The arr apps and
   qBittorrent are the files in `modules/services/arr/`.
 - `modules/network/pia.nix` builds the split tunnel and routes Prowlarr
@@ -255,15 +250,6 @@ The NixOS firewall stays enabled.
   stay on `127.0.0.1`. A proxy on the bridge gateway,
   `172.30.88.1`, forwards those five pings. qBittorrent and Prowlarr
   also accept the bridge, and Prowlarr's reply to it stays off the VPN.
-- Netdata accepts TCP port 19999 on `tailscale0` only. The process listens
-  on `127.0.0.1`. Tailscale Serve presents HTTPS for
-  `nixos.taile9f484.ts.net:19999` and proxies to that port. This computer
-  uses `http://127.0.0.1:19999/v3`. The home network and the VPN cannot.
-  `/v3` has no local password. Netdata 2.10.3's bearer protection is a
-  Cloud sign-in, and this agent is not claimed, so any device already on
-  the tailnet can open the charts. PIA's remote API also uses port 19999.
-  That is an outbound HTTPS call from `modules/network/pia.nix`, not this
-  listener.
 - The media web pages and the qBittorrent WebUI accept their ports on
   `tailscale0` only: 5055 Seerr, 6767 Bazarr, 7878 Radarr, 8080
   qBittorrent, 8686 Lidarr, 8989 Sonarr, and 9696 Prowlarr. These are
@@ -326,7 +312,8 @@ Uptime Kuma checks those apps every 60 seconds, plus Pi-hole on the home
 network and the same Pi-hole page over its tailnet address. The second
 check fails when Tailscale cannot reach the Pi even if the home-network
 check is still up. The admin account, monitor list, and the ntfy
-notification live in `/var/lib/uptime-kuma`. That directory is not in git.
+notification live in `/var/lib/private/uptime-kuma/kuma.db`. That directory is not in git.
+Stop the service before editing the sqlite file.
 The notification posts to this computer's ntfy topic `uptime` and is
 attached to every monitor.
 The dashboard is HTTP inside the Tailscale tunnel, which is already
@@ -342,7 +329,6 @@ replace that.
 |---|---|---|
 | Homarr | http://127.0.0.1:7575 or https://nixos.taile9f484.ts.net:7575 | The container and the encryption key are declared here. Tiles and the admin account are created in the web UI and stay in `/var/lib/homarr`, which is not in git. |
 | Homelable | http://127.0.0.1:3000 or https://nixos.taile9f484.ts.net:3000 | The containers and the login are declared here. The canvas stays in `/var/lib/homelable`, which is not in git. Login: `pkexec cat /run/agenix/homelable-login`. |
-| Netdata | http://127.0.0.1:19999/v3 or https://nixos.taile9f484.ts.net:19999/v3 | Agent config is in `modules/services/netdata.nix`. `/v3` has no local password. This agent cannot require one without a Netdata Cloud claim, and it is not claimed, so any tailnet device can open the charts. The root URL is the Cloud sign-in. Charts and alarm state stay in `/var/lib/netdata`, which is not in git. |
 
 The Chrome menu entries open the loopback addresses. The tailnet addresses
 are for the phone. Finish first-run setup on this computer before an
@@ -501,6 +487,8 @@ mono wav) because llama.cpp does not decode Discord's Ogg Opus.
 file, duration, and waveform Discord uses for a voice memo. The Discord
 chat workflow asks Breeze for that wav at
 `http://127.0.0.1:8084/v1/audio/speech` with `"response_format":"wav"`.
+Breeze is listening only while the 1660 is running it (`gtx1660 breeze`).
+The host line `my.hardware.gtx1660` is what boots and what Tailscale publishes.
 After the owner account exists, add one OpenAI credential:
 
 - API key: the single line in `/run/agenix/llama-api-key`
@@ -516,7 +504,7 @@ generating.
 
 Uptime Kuma checks `http://127.0.0.1:5678/healthz` every 60 seconds, the
 same way it checks the other apps. That monitor lives in
-`/var/lib/uptime-kuma`, not in this repository.
+`/var/lib/private/uptime-kuma/kuma.db`, not in this repository.
 
 A workflow sends a phone notification with an HTTP Request node. n8n does
 not send one on its own.

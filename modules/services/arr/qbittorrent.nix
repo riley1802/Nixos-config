@@ -2,6 +2,9 @@
 { config, lib, pkgs, ... }:
 let
   cfg = config.my.services.arr.qbittorrent;
+  qbitConf = "/var/lib/qBittorrent/qBittorrent/config/qBittorrent.conf";
+  qbitHashLine = "/var/lib/qBittorrent/qBittorrent/config/webui-password-line";
+  qbitNameLine = "/var/lib/qBittorrent/qBittorrent/config/webui-username-line";
 in
 {
   options.my.services.arr.qbittorrent.enable = lib.mkEnableOption "qBittorrent";
@@ -52,9 +55,9 @@ in
     # to Git.
     systemd.services.qbittorrent.preStart = ''
       set -euo pipefail
-      conf=/var/lib/qBittorrent/qBittorrent/config/qBittorrent.conf
-      saved=/var/lib/qBittorrent/qBittorrent/config/webui-password-line
-      saved_user=/var/lib/qBittorrent/qBittorrent/config/webui-username-line
+      conf=${qbitConf}
+      saved=${qbitHashLine}
+      saved_user=${qbitNameLine}
       # The client rewrites its config world-readable. Keep the directory private.
       chmod 700 /var/lib/qBittorrent/qBittorrent /var/lib/qBittorrent/qBittorrent/config
       umask 077
@@ -68,9 +71,9 @@ in
     systemd.services.qbittorrent.serviceConfig.ExecStartPre = lib.mkAfter [
       (pkgs.writeShellScript "qbittorrent-restore-webui-password" ''
         set -euo pipefail
-        conf=/var/lib/qBittorrent/qBittorrent/config/qBittorrent.conf
-        saved=/var/lib/qBittorrent/qBittorrent/config/webui-password-line
-        saved_user=/var/lib/qBittorrent/qBittorrent/config/webui-username-line
+        conf=${qbitConf}
+        saved=${qbitHashLine}
+        saved_user=${qbitNameLine}
         restore=0
         if [[ -s $saved ]] && ! grep -q 'Password_PBKDF2=' "$conf"; then
           restore=1

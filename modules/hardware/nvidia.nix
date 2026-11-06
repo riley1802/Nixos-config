@@ -39,7 +39,7 @@ in
             exit 0
             ;;
           *)
-            echo "usage: gtx1660 breeze|nemotron|status" >&2
+            echo "usage: gtx1660 breeze|breeze-tts|nemotron|status" >&2
             exit 1
             ;;
         esac
