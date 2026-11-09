@@ -276,9 +276,18 @@ in
     systemd.services.pia-wireguard = {
       description = "PIA WireGuard tunnel for qBittorrent and Prowlarr";
       wantedBy = [ "multi-user.target" ];
-      wants = [ "network-online.target" "pia-client-refresh.service" ];
+      wants = [
+        "network-online.target"
+        "pia-client-refresh.service"
+        # Bind the forwarded port once the interface exists. The timer below
+        # keeps refreshing it; this covers the first bind at boot.
+        "pia-port-forward.service"
+      ];
       after = [ "network-online.target" ];
-      before = [ "pia-client-refresh.service" ];
+      before = [
+        "pia-client-refresh.service"
+        "pia-port-forward.service"
+      ];
       startLimitIntervalSec = 300;
       startLimitBurst = 5;
       serviceConfig = {
@@ -387,9 +396,14 @@ in
     systemd.timers.pia-port-forward = {
       description = "Refresh the PIA forwarded port every 15 minutes";
       wantedBy = [ "timers.target" ];
+      # OnBootSec plus OnUnitActiveSec can come up already elapsed: the boot
+      # delay is in the past if this unit starts late, and OnUnitActiveSec
+      # cannot arm until the oneshot has run once. A calendar spec always has
+      # a future elapse. Persistent runs one missed slot if the timer was
+      # inactive (machine off), which monotonic timers do not.
+      # https://www.freedesktop.org/software/systemd/man/latest/systemd.timer.html#OnCalendar=
       timerConfig = {
-        OnBootSec = "30s";
-        OnUnitActiveSec = "15min";
+        OnCalendar = "*:0/15";
         AccuracySec = "30s";
         Persistent = true;
       };
