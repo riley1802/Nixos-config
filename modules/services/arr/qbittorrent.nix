@@ -5,6 +5,72 @@ let
   qbitConf = "/var/lib/qBittorrent/qBittorrent/config/qBittorrent.conf";
   qbitHashLine = "/var/lib/qBittorrent/qBittorrent/config/webui-password-line";
   qbitNameLine = "/var/lib/qBittorrent/qBittorrent/config/webui-username-line";
+  # qBittorrent has no category priority. Unfinished tv-sonarr and radarr
+  # torrents are moved to the front when one of them sits behind lidarr.
+  # Stopped torrents are left alone. topPrio keeps their relative order.
+  # https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-4.1)#set-torrent-top-priority
+  preferVideo = pkgs.writeShellApplication {
+    name = "qbittorrent-prefer-video";
+    runtimeInputs = [
+      pkgs.curl
+      pkgs.jq
+    ];
+    text = ''
+      base=http://127.0.0.1:8080
+      tmp=$(mktemp)
+      trap 'rm -f "$tmp" "$tmp.hashes"' EXIT
+
+      code=$(curl -sS --max-time 20 -o "$tmp" -w '%{http_code}' \
+        -H "Referer: ''${base}/" \
+        "''${base}/api/v2/torrents/info" || true)
+      if [[ $code == "000" || -z "$code" ]]; then
+        echo "qBittorrent WebUI is not accepting local requests yet"
+        exit 0
+      fi
+      if [[ $code != 200 ]]; then
+        echo "qBittorrent WebUI returned HTTP $code" >&2
+        exit 1
+      fi
+
+      echo "categories: $(jq -r '[group_by(.category)[] | "\(.[0].category)=\(length)"] | join(" ")' "$tmp")"
+
+      decision=$(jq -c '
+        def stopped:
+          .state == "stoppedDL" or .state == "stoppedUP"
+          or .state == "pausedDL" or .state == "pausedUP";
+        def unfinished:
+          (.progress < 1) and (stopped | not) and (.priority >= 0);
+        def video: (.category == "tv-sonarr" or .category == "radarr");
+        def music: (.category == "lidarr");
+        (map(select(unfinished and video))) as $video
+        | (map(select(unfinished and music))) as $music
+        | if (($video | length) == 0) or (($music | length) == 0) then
+            {move: false, videos: ($video | length), music: ($music | length), hashes: []}
+          else
+            (([$video[].priority] | max) > ([$music[].priority] | min)) as $behind
+            | if $behind then
+                {move: true, videos: ($video | length), music: ($music | length), hashes: [$video[].hash]}
+              else
+                {move: false, videos: ($video | length), music: ($music | length), hashes: []}
+              end
+          end
+      ' "$tmp")
+
+      videos=$(jq -r .videos <<< "$decision")
+      music=$(jq -r .music <<< "$decision")
+      if [[ $(jq -r .move <<< "$decision") != true ]]; then
+        echo "queue already prefers movies and shows (''${videos} video, ''${music} music unfinished)"
+        exit 0
+      fi
+
+      jq -j '.hashes | join("|")' <<< "$decision" > "$tmp.hashes"
+      curl -fsS --max-time 30 \
+        -H "Referer: ''${base}/" \
+        --data-urlencode "hashes@''${tmp}.hashes" \
+        "''${base}/api/v2/torrents/topPrio"
+      echo "moved ''${videos} movie/show torrents ahead of ''${music} albums"
+    '';
+  };
 in
 {
   options.my.services.arr.qbittorrent.enable = lib.mkEnableOption "qBittorrent";
@@ -37,13 +103,36 @@ in
         # A torrent under 1 MB/s does not use up a download slot, so a
         # nearly stopped album cannot keep every movie waiting.
         QueueingSystemEnabled = true;
-        MaxActiveDownloads = 8;
+        MaxActiveDownloads = 12;
         MaxActiveUploads = 4;
         MaxActiveTorrents = 16;
         IgnoreSlowTorrentsForQueueing = true;
         SlowTorrentsDownloadRate = 1024;
         SlowTorrentsUploadRate = 10;
         SlowTorrentsInactivityTimer = 60;
+      };
+
+      # Loopback skips the password so the queue helper can run without
+      # writing that password into the nix file. Other interfaces still ask.
+      # https://github.com/qbittorrent/qBittorrent/wiki/Explanation-of-Options-in-qBittorrent#bypass-authentication-for-clients-on-localhost
+      serverConfig.Preferences.WebUI.LocalHostAuth = false;
+    };
+
+    # First run waits until this start has finished rewriting qBittorrent.conf.
+    # After that, OnUnitInactiveSec repeats a minute after each pass.
+    systemd.services.qbittorrent-prefer-video = {
+      description = "Keep movies and shows ahead of music in the qBittorrent queue";
+      after = [ "qbittorrent.service" ];
+      serviceConfig.Type = "oneshot";
+      serviceConfig.ExecStart = lib.getExe preferVideo;
+    };
+    systemd.timers.qbittorrent-prefer-video = {
+      description = "Keep movies and shows ahead of music in the qBittorrent queue";
+      wantedBy = [ "timers.target" ];
+      timerConfig = {
+        OnActiveSec = "1min";
+        OnUnitInactiveSec = "1min";
+        AccuracySec = "10s";
       };
     };
 
