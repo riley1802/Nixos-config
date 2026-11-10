@@ -74,7 +74,7 @@ These rules come from the chats on this machine (2026-06-29 through 2026-11-03).
 
 Do not bring these back unless Riley asks in this chat: GitLab, the Rust game server, Hermes, Ghostty, Goose, the Tauri Homeport app, Homepage, Netdata, Liquid d1-2B (`llama-cpp-d1`, port 8086), World Monitor, the Raspberry Pi host, and the Pi OS / USB-bootstrap scripts. Building an aarch64 Pi image on this desktop runs under qemu and pegs every core for hours. The Pi GNOME session also boot-looped on a Pi 4.
 
-Also removed, with their modules: Breeze TTS, the research data platform, EmbeddingGemma, Homarr, Homelable, Kokoro, n8n, the llama.cpp servers, Open Terminal, SearXNG, and Open WebUI. Their Tailscale Serve ports are turned off by `modules/network/tailscale.nix`. Old files under `/var/lib` were left on disk. The age files `homarr-encryption-key`, `homelable-env`, `homelable-login`, `llama-api-key`, and `searxng-env` are still in `secrets/` and are no longer wired to a service.
+Also removed, with their modules: Breeze TTS, the research data platform, EmbeddingGemma, Homarr, Homelable, Kokoro, n8n, the llama.cpp servers, Open Terminal, SearXNG, and Open WebUI. Their Tailscale Serve ports are turned off by `modules/network/tailscale.nix`. Old files under `/var/lib` were left on disk. The age files `homarr-encryption-key`, `homelable-env`, `homelable-login`, and `searxng-env` are still in `secrets/` and are no longer wired to a service. `llama-api-key` is wired to services/nemotron.
 
 ## When something breaks
 
