@@ -124,11 +124,12 @@ let
         path = os.path.join(BIN, name)
         if not os.path.isfile(path) or not os.access(path, os.X_OK):
             return None
+        # Profile commands are symlinks into /nix/store. Keep the profile
+        # path as argv0 so the script shebang still runs.
         real = os.path.realpath(path)
-        prefix = BIN + "/"
-        if not real.startswith(prefix):
+        if not real.startswith("/nix/store/"):
             return None
-        return real
+        return path
 
     def timeout_for(argv):
         if argv[0] == "nixctl" and len(argv) > 1:
