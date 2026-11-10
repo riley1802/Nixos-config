@@ -101,6 +101,16 @@ in
       KERNEL=="uinput", GROUP="input", MODE="0660", OPTIONS+="static_node=uinput"
     '';
 
+    # The Flutter wrapper puts pipewiresrc on GST_PLUGIN_SYSTEM_PATH_1_0.
+    # The capture process is started with `sudo -u $USER -- env ...`, and
+    # sudo's env_reset drops that variable, so Wayland capture cannot load
+    # pipewiresrc. Keep it. The pipeline also needs videoconvert and appsink
+    # from that same path.
+    # https://github.com/rustdesk/rustdesk/blob/1.5.0/libs/scrap/src/wayland/pipewire.rs
+    security.sudo.extraConfig = ''
+      Defaults:${config.my.user} env_keep += "GST_PLUGIN_SYSTEM_PATH_1_0"
+    '';
+
     environment.etc."xdg/autostart/rustdesk.desktop".text = ''
       [Desktop Entry]
       Type=Application
