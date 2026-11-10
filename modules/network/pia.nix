@@ -293,7 +293,74 @@ let
       [[ $loc == CA ]]
     }
 
+    # /var/lib/prowlarr is a symlink into /var/lib/private. find does not
+    # follow that unless -H is set, and the first run skipped Prowlarr.
+    # The apps then stored a fresh backoff. One healthy tick clears that
+    # once; later healthy ticks only probe.
+    clear_indexers() {
+      local db has owner
+      systemctl stop sonarr.service radarr.service lidarr.service prowlarr.service
+      while IFS= read -r db; do
+        [[ -n $db && -f $db ]] || continue
+        has=$(sqlite3 "$db" "SELECT 1 FROM sqlite_master WHERE type='table' AND name='IndexerStatus' LIMIT 1;" || true)
+        [[ $has == 1 ]] || continue
+        owner=$(stat -c %U "$db")
+        echo "clearing IndexerStatus in $db"
+        runuser -u "$owner" -- sqlite3 "$db" "DELETE FROM IndexerStatus;" || echo "could not clear $db"
+      done < <(find -H /var/lib/prowlarr /var/lib/sonarr /var/lib/radarr /var/lib/lidarr -name '*.db' -type f 2>/dev/null || true)
+
+      # Prowlarr has to be answering before the apps start, or their startup
+      # RSS records another long backoff.
+      systemctl start prowlarr.service
+      for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
+        if curl -fsS -o /dev/null --max-time 3 http://127.0.0.1:9696/ping; then
+          break
+        fi
+        sleep 2
+      done
+      systemctl start sonarr.service radarr.service lidarr.service
+    }
+
+    # Sonarr 4 and Radarr 6 take commands on /api/v3. Lidarr still uses v1.
+    # The key stays in the process and is never printed.
+    trigger_rss() {
+      local name=$1 port=$2 root=$3 api=$4 cfg key code i
+      cfg=$(find -H "$root" -name config.xml -type f -print -quit 2>/dev/null || true)
+      if [[ -z $cfg ]]; then
+        echo "no config.xml under $root; skipped $name"
+        return 0
+      fi
+      key=$(awk -F '[<>]' '/<ApiKey>/ { print $3; exit }' "$cfg")
+      if [[ -z $key ]]; then
+        echo "no api key for $name; skipped"
+        return 0
+      fi
+      for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
+        if curl -fsS -o /dev/null --max-time 3 "http://127.0.0.1:''${port}/ping"; then
+          break
+        fi
+        sleep 2
+      done
+      code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 30 -X POST \
+        -H 'Content-Type: application/json' \
+        -H "X-Api-Key: $key" \
+        -d '{"name":"RssSync"}' \
+        "http://127.0.0.1:''${port}/api/''${api}/command" || true)
+      unset key
+      echo "$name rss sync http $code"
+    }
+
+    stamp=/var/lib/pia/arr-indexer-backoff-cleared
     if probe; then
+      if [[ ! -f $stamp ]]; then
+        echo "clearing indexer backoff once; Prowlarr's database was skipped"
+        clear_indexers
+        trigger_rss sonarr 8989 /var/lib/sonarr v3
+        trigger_rss radarr 7878 /var/lib/radarr v3
+        trigger_rss lidarr 8686 /var/lib/lidarr v1
+        install -d -m 700 /var/lib/pia
+        : > "$stamp"
+      fi
       echo "PIA tunnel is passing traffic (loc=CA)"
       exit 0
     fi
@@ -329,58 +396,15 @@ let
     fi
 
     echo "PIA tunnel recovered; clearing indexer failure backoff"
-    # The refresh unit restarts qBittorrent and Prowlarr without waiting.
-    # Stop the apps after that so sqlite is not open, then start them again.
+    # The refresh unit restarts qBittorrent. The apps are stopped inside
+    # clear_indexers so sqlite is not open.
     systemctl start pia-client-refresh.service || true
-    systemctl stop sonarr.service radarr.service lidarr.service prowlarr.service
-
-    while IFS= read -r db; do
-      [[ -n $db && -f $db ]] || continue
-      has=$(sqlite3 "$db" "SELECT 1 FROM sqlite_master WHERE type='table' AND name='IndexerStatus' LIMIT 1;" || true)
-      [[ $has == 1 ]] || continue
-      owner=$(stat -c %U "$db")
-      echo "clearing IndexerStatus in $db"
-      runuser -u "$owner" -- sqlite3 "$db" "DELETE FROM IndexerStatus;" || echo "could not clear $db"
-    done < <(find /var/lib/prowlarr /var/lib/sonarr /var/lib/radarr /var/lib/lidarr -name '*.db' -type f 2>/dev/null || true)
-
-    systemctl start prowlarr.service sonarr.service radarr.service lidarr.service
-    for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
-      if curl -fsS -o /dev/null --max-time 3 http://127.0.0.1:9696/ping; then
-        break
-      fi
-      sleep 2
-    done
-
-    # Ask the apps to search once. The key stays in the process and is never printed.
-    trigger_rss() {
-      local name=$1 port=$2 root=$3 cfg key code i
-      cfg=$(find "$root" -name config.xml -type f -print -quit 2>/dev/null || true)
-      if [[ -z $cfg ]]; then
-        echo "no config.xml under $root; skipped $name"
-        return 0
-      fi
-      key=$(awk -F '[<>]' '/<ApiKey>/ { print $3; exit }' "$cfg")
-      if [[ -z $key ]]; then
-        echo "no api key for $name; skipped"
-        return 0
-      fi
-      for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
-        if curl -fsS -o /dev/null --max-time 3 "http://127.0.0.1:''${port}/ping"; then
-          break
-        fi
-        sleep 2
-      done
-      code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 30 -X POST \
-        -H 'Content-Type: application/json' \
-        -H "X-Api-Key: $key" \
-        -d '{"name":"RssSync"}' \
-        "http://127.0.0.1:''${port}/api/v1/command" || true)
-      unset key
-      echo "$name rss sync http $code"
-    }
-    trigger_rss sonarr 8989 /var/lib/sonarr
-    trigger_rss radarr 7878 /var/lib/radarr
-    trigger_rss lidarr 8686 /var/lib/lidarr
+    clear_indexers
+    trigger_rss sonarr 8989 /var/lib/sonarr v3
+    trigger_rss radarr 7878 /var/lib/radarr v3
+    trigger_rss lidarr 8686 /var/lib/lidarr v1
+    install -d -m 700 /var/lib/pia
+    : > "$stamp"
 
     if systemctl start pia-port-forward.service; then
       echo "forwarded port refreshed"
