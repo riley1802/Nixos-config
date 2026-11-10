@@ -298,15 +298,23 @@ let
     # The apps then stored a fresh backoff. One healthy tick clears that
     # once; later healthy ticks only probe.
     clear_indexers() {
-      local db has owner
+      local db has uid gid
       systemctl stop sonarr.service radarr.service lidarr.service prowlarr.service
       while IFS= read -r db; do
         [[ -n $db && -f $db ]] || continue
         has=$(sqlite3 "$db" "SELECT 1 FROM sqlite_master WHERE type='table' AND name='IndexerStatus' LIMIT 1;" || true)
         [[ $has == 1 ]] || continue
-        owner=$(stat -c %U "$db")
+        # Prowlarr's dynamic user is gone while the service is stopped, and
+        # /var/lib/private is mode 0700, so that user cannot open the symlink.
+        # Root can. Put the owner back in case sqlite rewrites the file.
+        uid=$(stat -c %u "$db")
+        gid=$(stat -c %g "$db")
         echo "clearing IndexerStatus in $db"
-        runuser -u "$owner" -- sqlite3 "$db" "DELETE FROM IndexerStatus;" || echo "could not clear $db"
+        if sqlite3 "$db" "DELETE FROM IndexerStatus;"; then
+          chown "$uid:$gid" "$db" "$db-wal" "$db-shm" "$db-journal" 2>/dev/null || true
+        else
+          echo "could not clear $db"
+        fi
       done < <(find -H /var/lib/prowlarr /var/lib/sonarr /var/lib/radarr /var/lib/lidarr -name '*.db' -type f 2>/dev/null || true)
 
       # Prowlarr has to be answering before the apps start, or their startup
@@ -351,15 +359,24 @@ let
     }
 
     stamp=/var/lib/pia/arr-indexer-backoff-cleared
+    prowlarr_db=/var/lib/prowlarr/prowlarr.db
     if probe; then
-      if [[ ! -f $stamp ]]; then
+      rows=$(sqlite3 "$prowlarr_db" "SELECT COUNT(*) FROM IndexerStatus;" 2>/dev/null || echo err)
+      # The stamp was written when the clear could not open Prowlarr's
+      # database. Rows still there means that backoff is still in force.
+      if [[ ! -f $stamp || ( $rows != 0 && $rows != err ) ]]; then
         echo "clearing indexer backoff once; Prowlarr's database was skipped"
         clear_indexers
         trigger_rss sonarr 8989 /var/lib/sonarr v3
         trigger_rss radarr 7878 /var/lib/radarr v3
         trigger_rss lidarr 8686 /var/lib/lidarr v1
-        install -d -m 700 /var/lib/pia
-        : > "$stamp"
+        rows=$(sqlite3 "$prowlarr_db" "SELECT COUNT(*) FROM IndexerStatus;" 2>/dev/null || echo err)
+        if [[ $rows == 0 ]]; then
+          install -d -m 700 /var/lib/pia
+          : > "$stamp"
+        else
+          echo "Prowlarr IndexerStatus still has rows"
+        fi
       fi
       echo "PIA tunnel is passing traffic (loc=CA)"
       exit 0
