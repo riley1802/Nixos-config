@@ -161,6 +161,7 @@ in
         Home = "/home/${config.my.user}";
         WorkingDirectory = "/etc/nixos";
         ExecStart = "${pkgs.python3}/bin/python3 ${bridgePy}";
+        Environment = "PATH=/run/current-system/sw/bin";
         Restart = "on-failure";
         RestartSec = "5s";
       };
