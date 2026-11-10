@@ -4,6 +4,7 @@
 {
   environment.systemPackages = with pkgs; [
     code-cursor
+    discord
     gh
     git
     google-chrome

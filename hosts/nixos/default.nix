@@ -32,6 +32,7 @@
   my.services.arr.cleanuparr.enable = true; # Cleanuparr: clean up media the *arr stack no longer tracks
   my.services.arr.jellyfin.enable = true; # Jellyfin: home media server (stream your library)
   my.services.arr.lidarr.enable = true; # Lidarr: music collection automation (“Sonarr for music”)
+  my.services.arr.lidarr-drive.enable = true; # Nightly 3:00 AM copy of the Lidarr library to Google Drive
   my.services.arr.media.enable = true; # Shared media library paths (storage layout for *arr)
   my.services.arr.prowlarr.enable = true; # Prowlarr: indexer manager for the *arr apps
   my.services.arr.qbittorrent.enable = true; # qBittorrent: torrent client used by *arr
