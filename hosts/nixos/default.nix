@@ -16,6 +16,7 @@
   my.apps.rustdesk.enable = true;
   my.dev.shell.enable = true;
   my.services.nemotron.enable = true;
+  my.services.nixctl-bridge.enable = true;
   my.apps.openlogi.enable = true; # OpenLogi: Logitech MX Master 4 support (https://openlogi.org)
   my.desktop.chrome.enable = true; # Chrome/Chromium DNS policy tweaks for this machine
   my.desktop.kdeconnect.enable = true; # KDE Connect: link phone and desktop (SMS, notifications, etc.)
