@@ -2,7 +2,7 @@
 
 This repository is the NixOS configuration for the `nixos` workstation. It
 defines a KDE Plasma desktop, dual-NVIDIA graphics, OpenSSH over the tailnet,
-ntfy, Immich, Uptime Kuma, and a torrent media stack.
+ntfy, n8n, Immich, Uptime Kuma, and a torrent media stack.
 qBittorrent and Prowlarr lookups use a Private Internet Access WireGuard tunnel. The
 rest of the desktop stays on the home network.
 
@@ -23,7 +23,7 @@ modules/desktop/                  Plasma, Cinnamon (off), KDE Connect, Chrome DN
 modules/network/                  Tailscale, DNS, SSH, NetworkManager, PIA, firewall
 modules/services/arr/             Sonarr, Radarr, Lidarr, Bazarr, Prowlarr, Seerr,
                                   qBittorrent, Cleanuparr, and the shared media directories
-modules/services/                 Jellyfin, Immich, ntfy, Uptime Kuma, Docker
+modules/services/                 Jellyfin, Immich, n8n, ntfy, Uptime Kuma, Docker
 modules/apps/openlogi.nix         MX Master 4
 packages/                         Lidarr build
 secrets/                          agenix recipients and encrypted files
@@ -58,7 +58,7 @@ by `nixos-generate-config` and should not be edited by hand.
 - Netdata was removed. `modules/network/tailscale.nix` still turns off a
   leftover Serve route on port 19999. PIA's port-forward API also uses
   outbound HTTPS to port 19999. That is not a local listener. The same
-  unit turns off the ports of services removed later: 3000, 5678, 7575,
+  unit turns off the ports of services removed later: 3000, 7575,
   8081, 8082, 8083, 8084, 8085, 8087, and 8088.
 - `modules/services/arr/jellyfin.nix` runs Jellyfin. The other arr apps and
   qBittorrent are the rest of the files in `modules/services/arr/`.

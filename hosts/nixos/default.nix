@@ -39,6 +39,7 @@
   my.services.arr.sonarr.enable = true; # Sonarr: TV library automation
   my.services.docker.enable = true; # Docker Engine for containers
   my.services.immich.enable = true; # Immich: self-hosted photo/video backup and gallery
+  my.services.n8n.enable = true; # n8n: workflow automation editor on port 5678
   my.services.ntfy.enable = true; # ntfy: simple HTTP-based push notifications
   my.services.uptime-kuma.enable = true; # Uptime Kuma: uptime monitoring and status pages
 
