@@ -6,13 +6,14 @@ let
   # check cannot drift. A route with `on = false` is one this machine
   # used to publish. tailscaled keeps it until `serve off`.
   # 3010 was Homepage. 19999 was Netdata.
-  # 3000 homelable, 7575 homarr, 8081–8082 llama.cpp, 8083 nemotron,
+  # 3000 homelable, 7575 homarr, 8081–8082 llama.cpp,
   # 8084–8085 breeze-tts, 8087 kokoro, 8088 open-webui were retired with those modules.
   routes = [
     { port = 2283; on = config.my.services.immich.enable; }
     { port = 5678; on = config.my.services.n8n.enable; }
     { port = 2586; on = config.my.services.ntfy.enable; }
     { port = 3001; on = config.my.services.uptime-kuma.enable; }
+    { port = 8083; on = config.my.services.nemotron.enable; }
     { port = 11011; on = config.my.services.arr.cleanuparr.enable; }
   ];
   active = builtins.filter (route: route.on) routes;
@@ -23,7 +24,6 @@ let
     7575
     8081
     8082
-    8083
     8084
     8085
     8087
