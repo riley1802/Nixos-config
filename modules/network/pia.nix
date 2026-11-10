@@ -257,6 +257,137 @@ let
     iptables -t nat -D POSTROUTING -m cgroup --path ${prowlarrCgroupPath} -o pia -j MASQUERADE 2>/dev/null || true
     ip rule del fwmark 0x7072 lookup 51820 priority 110 2>/dev/null || true
   '';
+
+  # pia-wireguard is a oneshot that stays "active" after the session dies.
+  # Prowlarr then times out and disables every indexer. This probe restarts
+  # the tunnel, and only a probe that fails and then returns loc=CA clears
+  # the backoff. A later healthy tick must not touch the databases.
+  piaHealth = pkgs.writeShellScript "pia-health" ''
+    set -euo pipefail
+    export PATH=${lib.makeBinPath [
+      pkgs.coreutils
+      pkgs.curl
+      pkgs.findutils
+      pkgs.gawk
+      pkgs.gnused
+      pkgs.sqlite
+      pkgs.systemd
+      pkgs.util-linux
+    ]}:$PATH
+
+    exec 9>/run/pia-health.lock
+    flock -n 9 || {
+      echo "pia-health is already running"
+      exit 0
+    }
+
+    if [[ $(systemctl show -p ActiveState --value pia-wireguard.service) == activating ]]; then
+      echo "pia-wireguard is still starting"
+      exit 0
+    fi
+
+    probe() {
+      local trace loc
+      trace=$(curl -4 -fsS --max-time 20 --interface pia https://1.1.1.1/cdn-cgi/trace 2>/dev/null || true)
+      loc=$(printf '%s\n' "$trace" | awk -F= '$1 == "loc" { print $2; exit }')
+      [[ $loc == CA ]]
+    }
+
+    if probe; then
+      echo "PIA tunnel is passing traffic (loc=CA)"
+      exit 0
+    fi
+
+    echo "PIA tunnel is not passing traffic; restarting pia-wireguard"
+    before=$(systemctl show -p ExecMainStartTimestamp --value pia-wireguard.service)
+    systemctl reset-failed pia-wireguard.service >/dev/null 2>&1 || true
+    systemctl restart --no-block pia-wireguard.service || true
+
+    recovered=0
+    probes=0
+    for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60; do
+      state=$(systemctl show -p ActiveState --value pia-wireguard.service)
+      started=$(systemctl show -p ExecMainStartTimestamp --value pia-wireguard.service)
+      if [[ $state == failed ]]; then
+        break
+      fi
+      if [[ $state == active && -n $started && $started != "$before" ]]; then
+        probes=$((probes + 1))
+        if probe; then
+          recovered=1
+          break
+        fi
+        [[ $probes -ge 3 ]] && break
+      fi
+      sleep 2
+    done
+
+    if [[ $recovered != 1 ]]; then
+      systemctl reset-failed pia-wireguard.service >/dev/null 2>&1 || true
+      echo "PIA tunnel did not recover; will try again on the next check"
+      exit 0
+    fi
+
+    echo "PIA tunnel recovered; clearing indexer failure backoff"
+    # The refresh unit restarts qBittorrent and Prowlarr without waiting.
+    # Stop the apps after that so sqlite is not open, then start them again.
+    systemctl start pia-client-refresh.service || true
+    systemctl stop sonarr.service radarr.service lidarr.service prowlarr.service
+
+    while IFS= read -r db; do
+      [[ -n $db && -f $db ]] || continue
+      has=$(sqlite3 "$db" "SELECT 1 FROM sqlite_master WHERE type='table' AND name='IndexerStatus' LIMIT 1;" || true)
+      [[ $has == 1 ]] || continue
+      owner=$(stat -c %U "$db")
+      echo "clearing IndexerStatus in $db"
+      runuser -u "$owner" -- sqlite3 "$db" "DELETE FROM IndexerStatus;" || echo "could not clear $db"
+    done < <(find /var/lib/prowlarr /var/lib/sonarr /var/lib/radarr /var/lib/lidarr -name '*.db' -type f 2>/dev/null || true)
+
+    systemctl start prowlarr.service sonarr.service radarr.service lidarr.service
+    for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
+      if curl -fsS -o /dev/null --max-time 3 http://127.0.0.1:9696/ping; then
+        break
+      fi
+      sleep 2
+    done
+
+    # Ask the apps to search once. The key stays in the process and is never printed.
+    trigger_rss() {
+      local name=$1 port=$2 root=$3 cfg key code i
+      cfg=$(find "$root" -name config.xml -type f -print -quit 2>/dev/null || true)
+      if [[ -z $cfg ]]; then
+        echo "no config.xml under $root; skipped $name"
+        return 0
+      fi
+      key=$(awk -F '[<>]' '/<ApiKey>/ { print $3; exit }' "$cfg")
+      if [[ -z $key ]]; then
+        echo "no api key for $name; skipped"
+        return 0
+      fi
+      for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
+        if curl -fsS -o /dev/null --max-time 3 "http://127.0.0.1:''${port}/ping"; then
+          break
+        fi
+        sleep 2
+      done
+      code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 30 -X POST \
+        -H 'Content-Type: application/json' \
+        -H "X-Api-Key: $key" \
+        -d '{"name":"RssSync"}' \
+        "http://127.0.0.1:''${port}/api/v1/command" || true)
+      unset key
+      echo "$name rss sync http $code"
+    }
+    trigger_rss sonarr 8989 /var/lib/sonarr
+    trigger_rss radarr 7878 /var/lib/radarr
+    trigger_rss lidarr 8686 /var/lib/lidarr
+
+    if systemctl start pia-port-forward.service; then
+      echo "forwarded port refreshed"
+    else
+      echo "port-forward refresh failed"
+    fi
+  '';
 in
 {
   options.my.network.pia.enable = lib.mkEnableOption "PIA WireGuard split tunnel";
@@ -406,6 +537,31 @@ in
         OnCalendar = "*:0/15";
         AccuracySec = "30s";
         Persistent = true;
+      };
+    };
+
+    # Runs once when this unit is started, then every 5 minutes. A calendar
+    # spec stays in the future when the timer is installed on a long-running
+    # boot. The service itself is what runs during switch.
+    # https://www.freedesktop.org/software/systemd/man/latest/systemd.timer.html#OnCalendar=
+    systemd.services.pia-health = {
+      description = "Reconnect PIA when the tunnel stops passing traffic";
+      after = [ "pia-wireguard.service" ];
+      wants = [ "pia-wireguard.service" ];
+      wantedBy = [ "multi-user.target" ];
+      serviceConfig = {
+        Type = "oneshot";
+        TimeoutStartSec = 600;
+        ExecStart = piaHealth;
+      };
+    };
+
+    systemd.timers.pia-health = {
+      description = "Check the PIA tunnel every 5 minutes";
+      wantedBy = [ "timers.target" ];
+      timerConfig = {
+        OnCalendar = "*:0/5";
+        AccuracySec = "30s";
       };
     };
   };
