@@ -93,7 +93,7 @@ let
                 timeout,
             )
         if op == "services":
-            return run(
+            result = run(
                 [
                     SYSTEMCTL,
                     "is-active",
@@ -102,6 +102,14 @@ let
                 ],
                 timeout,
             )
+            lines = (result["output"] or "").splitlines()
+            labels = ["llama-cpp-nemotron", "n8n"]
+            labeled = []
+            for i, label in enumerate(labels):
+                state = lines[i] if i < len(lines) else "unknown"
+                labeled.append(f"{label}: {state}")
+            result["output"] = "\n".join(labeled)
+            return result
         if op == "apply":
             message = body.get("message")
             if not isinstance(message, str) or not MSG_RE.fullmatch(message):
@@ -124,7 +132,22 @@ let
                 self.send_response(404)
                 self.end_headers()
                 return
-            length = int(self.headers.get("Content-Length", "0") or 0)
+            try:
+                length = int(self.headers.get("Content-Length", "0") or 0)
+            except ValueError:
+                length = -1
+            if length < 0 or length > 4096:
+                result = reject()
+                payload = json.dumps(result).encode("utf-8")
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(payload)))
+                self.end_headers()
+                try:
+                    self.wfile.write(payload)
+                except BrokenPipeError:
+                    return
+                return
             raw = self.rfile.read(length) if length else b"{}"
             try:
                 body = json.loads(raw.decode("utf-8"))
@@ -136,7 +159,10 @@ let
             self.send_header("Content-Type", "application/json")
             self.send_header("Content-Length", str(len(payload)))
             self.end_headers()
-            self.wfile.write(payload)
+            try:
+                self.wfile.write(payload)
+            except BrokenPipeError:
+                return
 
     def main():
         server = ThreadingHTTPServer((HOST, PORT), Handler)
@@ -158,10 +184,15 @@ in
         Type = "simple";
         User = config.my.user;
         Group = "users";
-        Home = "/home/${config.my.user}";
         WorkingDirectory = "/etc/nixos";
         ExecStart = "${pkgs.python3}/bin/python3 ${bridgePy}";
-        Environment = "PATH=/run/current-system/sw/bin";
+        # User= already sets HOME from the account. Set it explicitly so
+        # nixctl's state directory stays under /home/rileyt. There is no
+        # systemd Home= key; the previous line was ignored.
+        Environment = [
+          "HOME=/home/${config.my.user}"
+          "PATH=/run/current-system/sw/bin"
+        ];
         Restart = "on-failure";
         RestartSec = "5s";
       };
