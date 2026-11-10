@@ -12,6 +12,8 @@ in
   # version is the sonarr package on this unstable pin. Lidarr's current
   # release is not packaged yet, so use the official build in
   # packages/lidarr.nix.
+  # rustdesk-flutter is the Wayland Flutter client (1.5.0). nixos-26.05
+  # rustdesk is the old Sciter client and must not be used for Plasma Wayland.
   # Immich comes from unstable because nixos-26.05 has 2.7.5, which
   # is marked insecure, and phone apps need 3.x. The unstable pin's
   # package is 3.3.5. machine-learning is passthru on that package,
@@ -27,7 +29,7 @@ in
           directory = ../../packages;
         }
       // {
-        inherit (unstable) radarr sonarr immich;
+        inherit (unstable) radarr sonarr immich rustdesk-flutter;
         code-cursor = unstable.code-cursor.overrideAttrs (
           old:
           let
