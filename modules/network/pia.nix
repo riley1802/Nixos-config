@@ -298,7 +298,7 @@ let
     # The apps then stored a fresh backoff. One healthy tick clears that
     # once; later healthy ticks only probe.
     clear_indexers() {
-      local db has uid gid
+      local db has uid gid cleared=0
       systemctl stop sonarr.service radarr.service lidarr.service prowlarr.service
       while IFS= read -r db; do
         [[ -n $db && -f $db ]] || continue
@@ -312,6 +312,7 @@ let
         echo "clearing IndexerStatus in $db"
         if sqlite3 "$db" "DELETE FROM IndexerStatus;"; then
           chown "$uid:$gid" "$db" "$db-wal" "$db-shm" "$db-journal" 2>/dev/null || true
+          [[ $db == */prowlarr.db ]] && cleared=1
         else
           echo "could not clear $db"
         fi
@@ -327,6 +328,7 @@ let
         sleep 2
       done
       systemctl start sonarr.service radarr.service lidarr.service
+      [[ $cleared == 1 ]]
     }
 
     # Sonarr 4 and Radarr 6 take commands on /api/v3. Lidarr still uses v1.
@@ -359,24 +361,21 @@ let
     }
 
     stamp=/var/lib/pia/arr-indexer-backoff-cleared
-    prowlarr_db=/var/lib/prowlarr/prowlarr.db
     if probe; then
-      rows=$(sqlite3 "$prowlarr_db" "SELECT COUNT(*) FROM IndexerStatus;" 2>/dev/null || echo err)
-      # The stamp was written when the clear could not open Prowlarr's
-      # database. Rows still there means that backoff is still in force.
-      if [[ ! -f $stamp || ( $rows != 0 && $rows != err ) ]]; then
+      # A search writes IndexerStatus rows again, so the stamp is the
+      # record that this one-time clear already happened. Later ticks
+      # only probe.
+      if [[ ! -f $stamp ]]; then
         echo "clearing indexer backoff once; Prowlarr's database was skipped"
-        clear_indexers
-        trigger_rss sonarr 8989 /var/lib/sonarr v3
-        trigger_rss radarr 7878 /var/lib/radarr v3
-        trigger_rss lidarr 8686 /var/lib/lidarr v1
-        rows=$(sqlite3 "$prowlarr_db" "SELECT COUNT(*) FROM IndexerStatus;" 2>/dev/null || echo err)
-        if [[ $rows == 0 ]]; then
+        if clear_indexers; then
           install -d -m 700 /var/lib/pia
           : > "$stamp"
         else
-          echo "Prowlarr IndexerStatus still has rows"
+          echo "Prowlarr IndexerStatus was not cleared"
         fi
+        trigger_rss sonarr 8989 /var/lib/sonarr v3
+        trigger_rss radarr 7878 /var/lib/radarr v3
+        trigger_rss lidarr 8686 /var/lib/lidarr v1
       fi
       echo "PIA tunnel is passing traffic (loc=CA)"
       exit 0
@@ -416,12 +415,13 @@ let
     # The refresh unit restarts qBittorrent. The apps are stopped inside
     # clear_indexers so sqlite is not open.
     systemctl start pia-client-refresh.service || true
-    clear_indexers
+    if clear_indexers; then
+      install -d -m 700 /var/lib/pia
+      : > "$stamp"
+    fi
     trigger_rss sonarr 8989 /var/lib/sonarr v3
     trigger_rss radarr 7878 /var/lib/radarr v3
     trigger_rss lidarr 8686 /var/lib/lidarr v1
-    install -d -m 700 /var/lib/pia
-    : > "$stamp"
 
     if systemctl start pia-port-forward.service; then
       echo "forwarded port refreshed"
