@@ -70,7 +70,12 @@ in
         N8N_HOST = config.my.tailnetHost;
         # 2.34.6 still accepts WEBHOOK_URL and warns to use this name instead.
         N8N_WEBHOOK_URL = "https://${config.my.tailnetHost}:5678/";
-        N8N_EDITOR_BASE_URL = "https://${config.my.tailnetHost}:5678/";
+        # OAuth redirect origin. n8n builds
+        # /rest/oauth2-credential/callback from this URL. Spotify allows
+        # plain HTTP only for 127.0.0.1 and rejects the tailnet host and
+        # the name localhost. Connect from a browser on this PC.
+        # https://developer.spotify.com/documentation/web-api/concepts/redirect_uri
+        N8N_EDITOR_BASE_URL = "http://127.0.0.1:5678/";
         # Tailscale Serve sets X-Forwarded-Proto. One hop is that proxy.
         N8N_PROXY_HOPS = 1;
         # Stays false so a login at http://127.0.0.1:5678 still works. The
