@@ -98,8 +98,8 @@ The workstation uses:
 - Nix flakes and the `nix-command` interface
 - unfree packages and redistributable firmware
 - the proprietary stable NVIDIA driver with modesetting
-- two NVIDIA GPUs, 6 GiB each. The RTX 3050 is the display card. The GTX
-  1660 SUPER runs Nemotron.
+- two NVIDIA GPUs, 6 GiB each. The RTX 3050 is the display card and also
+  takes the remainder of Nemotron. The GTX 1660 SUPER takes most of the model.
 - KDE Plasma 6 on Wayland with SDDM. KWin is pinned to the RTX 3050 through
   `/run/display-gpu`, because `KWIN_DRM_DEVICES` is split on `:` and the PCI
   path contains colons. Plasma (X11) stays in the SDDM menu. Cinnamon remains
@@ -326,8 +326,8 @@ The first visit creates the admin account. Do that on this computer at
 and leave open registration disabled.
 
 Machine learning for faces and search runs on CPU. The module default
-is one worker. The RTX 3050 is left to the desktop. The GTX 1660 SUPER
-runs Nemotron.
+is one worker. Nemotron uses both GPUs; the RTX 3050 still drives the
+desktop.
 
 On the phone:
 
@@ -368,8 +368,10 @@ Nemotron 3.5 Bolt E4B runs in `llama-server` from `packages/llama-cpp.nix`.
 The model alias is `nemotron-bolt`. On this computer the API is
 `http://127.0.0.1:8083`. On the tailnet it is
 `https://nixos.taile9f484.ts.net:8083`. Model files live under
-`/var/lib/llama-cpp/models`. Inference uses the GTX 1660 SUPER with context
-32768. The API key comes from `secrets/llama-api-key.age`.
+`/var/lib/llama-cpp/models`. Inference uses both GPUs: most layers on the
+GTX 1660 SUPER and the remainder on the RTX 3050, with context 65536.
+`--fit-target` leaves about 512 MiB free on the 1660 and about 2048 MiB
+free on the 3050. The API key comes from `secrets/llama-api-key.age`.
 
 The persona text is in `nemotron-bolt-system-prompt.md`.
 
@@ -389,7 +391,7 @@ with `/skill:nixos-managing`. Installed packages are
 `@juicesharp/rpiv-ask-user-question` (the model asks with fixed choices)
 and `pi-memory` (markdown notes in `~/.local/state/pi/memory`). Search
 across those notes needs `qmd`, which is not installed. Pi must not start its own llama.cpp server;
-Nemotron on the GTX 1660 SUPER is the only inference backend.
+Nemotron, split across both GPUs, is the only inference backend.
 
 ## RustDesk
 

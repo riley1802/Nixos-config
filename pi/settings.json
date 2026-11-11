@@ -8,5 +8,12 @@
   "packages": [
     "npm:@juicesharp/rpiv-ask-user-question",
     "npm:pi-memory"
-  ]
+  ],
+  "images": {
+    "blockImages": true
+  },
+  "tuiMode": "regular",
+  "modelThinkingLevels": {
+    "nemotron/nemotron-bolt": "minimal"
+  }
 }

@@ -38,14 +38,21 @@ in
     # https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Bolt-E4B-4GB
     # https://huggingface.co/unsloth/gemma-4-E4B-it-GGUF/blob/main/MTP/README.md
     #
-    # The file is 6,180,446,208 bytes (about 5.76 GiB). The GTX 1660 SUPER
-    # has 6 GiB and is otherwise idle, so -ngl all plus a q8_0 KV cache
-    # does not fit. Context is 32768. --fit-ctx keeps that window and
-    # --fit on moves layers to the CPU instead of shrinking it.
+    # The file is 6,180,446,208 bytes (about 5.76 GiB). gemma4.context_length is
+    # 65536. Neither 6 GiB card holds the weights plus a 64k q8_0 KV cache.
+    # CUDA_VISIBLE_DEVICES lists the GTX 1660 SUPER first, then the RTX 3050, so
+    # llama.cpp CUDA0 is the 1660 and CUDA1 is the display card.
+    # --split-mode stays the default, layer. The cards are Turing 7.5 and
+    # Ampere 8.6. --fit on with --fit-target 512,2048 leaves about 512 MiB free
+    # on the 1660 and about 2048 MiB free on the 3050, on top of what Plasma is
+    # already using. --fit places layers from that budget.
+    # Do not set --tensor-split; it fights --fit.
+    # --fit-ctx 65536 keeps that window and --fit moves layers to the CPU
+    # instead of shrinking it. -ngl stays unset.
     # Measured 2026-11-04 with this MTP head, n-max 1, q8_0 KV: a 15811
     # token prompt at 16384 was 186.7 tok/s prefill and 55.9 tok/s
     # generation; a 32218 token prompt at 32768 was 157.0 and 42.8.
-    # -ngl is left unset.
+    # The 2026-11-04 numbers were measured on the 1660 alone.
     #
     # Sampling is NVIDIA's: temperature 1.0, top_p 0.95, thinking on.
     # https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Bolt-E4B-4GB
@@ -101,8 +108,9 @@ in
       restartTriggers = [ config.age.secrets.llama-api-key.file ];
       unitConfig.ConditionPathExists = "${models}/${modelFile}";
       environment = {
-        # GTX 1660 SUPER, from `nvidia-smi -L` on this machine.
-        CUDA_VISIBLE_DEVICES = "GPU-f2ae9716-6783-f900-4fed-c05b9cb3a6aa";
+        # 1660 SUPER first (CUDA0), then RTX 3050 (CUDA1). UUIDs from
+        # `nvidia-smi -L` on this machine.
+        CUDA_VISIBLE_DEVICES = "GPU-f2ae9716-6783-f900-4fed-c05b9cb3a6aa,GPU-d80211d0-ecb1-e279-4f4d-34c53d278895";
         LLAMA_CACHE = "/var/lib/llama-cpp/cache";
       };
       serviceConfig = {
@@ -135,13 +143,17 @@ in
           "--alias"
           "nemotron-bolt"
           "-c"
-          "32768"
+          "65536"
           "-np"
           "1"
           "--fit"
           "on"
+          "--device"
+          "CUDA0,CUDA1"
+          "--fit-target"
+          "512,2048"
           "--fit-ctx"
-          "32768"
+          "65536"
           "--cache-type-k"
           "q8_0"
           "--cache-type-v"
