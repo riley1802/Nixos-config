@@ -4,5 +4,9 @@
   "defaultModel": "nemotron-bolt",
   "extensions": [
     "-builtin:llama.cpp"
+  ],
+  "packages": [
+    "npm:@juicesharp/rpiv-ask-user-question",
+    "npm:pi-memory"
   ]
 }

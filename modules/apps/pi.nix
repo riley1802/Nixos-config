@@ -7,6 +7,8 @@ let
   cfg = config.my.apps.pi;
   agentDir = "/etc/nixos/pi";
   sessionDir = "/home/${config.my.user}/.local/state/pi/sessions";
+  # pi-memory defaults to ~/.pi/agent/memory, which this machine no longer uses.
+  memoryDir = "/home/${config.my.user}/.local/state/pi/memory";
 
   piNemotronKey = pkgs.writeShellApplication {
     name = "pi-nemotron-key";
@@ -21,6 +23,7 @@ let
   pi = pkgs.writeShellScriptBin "pi" ''
     export PI_CODING_AGENT_DIR=${agentDir}
     export PI_CODING_AGENT_SESSION_DIR=${sessionDir}
+    export PI_MEMORY_DIR=${memoryDir}
     exec ${lib.getExe pkgs.pi-coding-agent} "$@"
   '';
 in
@@ -38,6 +41,7 @@ in
     environment.sessionVariables = {
       PI_CODING_AGENT_DIR = agentDir;
       PI_CODING_AGENT_SESSION_DIR = sessionDir;
+      PI_MEMORY_DIR = memoryDir;
     };
 
     environment.systemPackages = [

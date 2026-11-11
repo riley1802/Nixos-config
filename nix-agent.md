@@ -70,7 +70,7 @@ These rules come from the chats on this machine (2026-06-29 through 2026-11-03).
 - Uptime Kuma monitors live in its sqlite database, not only in the Nix module.
 - OpenLogi is installed for the MX Master 4. It was not the cause of the November pointer stutter.
 - n8n is on. Editor is <http://127.0.0.1:5678>. Tailscale Serve is <https://nixos.taile9f484.ts.net:5678>. The editor base URL stays the loopback URL because Spotify OAuth rejects the tailnet host.
-- Nemotron (`services/nemotron`) is the llama.cpp server on 127.0.0.1:8083, on the GTX 1660 SUPER. The RTX 3050 is the display. Do not bring back the old llama.cpp servers. Pi (`apps/pi`) is the coding agent on that server. Its config is `/etc/nixos/pi`, extensions are `pi/extensions/`, and sessions stay in `~/.local/state/pi/sessions`. Do not start a second llama.cpp.
+- Nemotron (`services/nemotron`) is the llama.cpp server on 127.0.0.1:8083, on the GTX 1660 SUPER. The RTX 3050 is the display. Do not bring back the old llama.cpp servers. Pi (`apps/pi`) is the coding agent on that server. Its config is `/etc/nixos/pi`, extensions are `pi/extensions/`, sessions stay in `~/.local/state/pi/sessions`, and pi-memory notes stay in `~/.local/state/pi/memory`. Do not start a second llama.cpp.
 - nixctl-bridge listens on 127.0.0.1:8094 for the Discord operator. Do not publish it off loopback. Read-only nixctl runs immediately. A command saved earlier runs as saved. Anything else waits for Discord approval.
 - RustDesk direct access is tailnet TCP 21118 only (`apps/rustdesk`).
 - lidarr-drive is enabled. The 3:00 AM copy is not installed until `secrets/rclone-gdrive.age` exists. Do not invent that file.

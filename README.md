@@ -385,7 +385,10 @@ and load everywhere: a `name.ts` file, or a folder with `index.ts` or a
 `~/.local/state/pi/sessions` and are not committed. `auth.json`,
 `trust.json`, and `models-store.json` are gitignored because Pi writes them
 beside the config. The nixos-managing skill there is Part 1 only. Force it
-with `/skill:nixos-managing`. Pi must not start its own llama.cpp server;
+with `/skill:nixos-managing`. Installed packages are
+`@juicesharp/rpiv-ask-user-question` (the model asks with fixed choices)
+and `pi-memory` (markdown notes in `~/.local/state/pi/memory`). Search
+across those notes needs `qmd`, which is not installed. Pi must not start its own llama.cpp server;
 Nemotron on the GTX 1660 SUPER is the only inference backend.
 
 ## RustDesk
