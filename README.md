@@ -27,6 +27,7 @@ modules/services/arr/             Sonarr, Radarr, Lidarr, Bazarr, Prowlarr, Seer
 modules/services/                 Immich, n8n, ntfy, Uptime Kuma, Docker, Nemotron,
                                   nixctl-bridge
 modules/apps/                     openlogi.nix, rustdesk.nix, pi.nix
+pi/                               Pi agent config (models, settings, skills)
 packages/                         Lidarr build, llama-cpp
 tools/nixctl.sh                   the nixctl command
 AGENTS.md                         short nixctl loader for agents
@@ -130,8 +131,9 @@ and is the local manager for the MX Master 4; its agent starts with the
 graphical session. RustDesk is `rustdesk-flutter` from the unstable overlay,
 installed by `modules/apps/rustdesk.nix`, because nixos-26.05 `rustdesk` is
 the old Sciter client. Pi (`pi-coding-agent` 1.4.0 from the unstable overlay)
-is installed by `modules/apps/pi.nix` and talks to Nemotron on loopback; it
-must not start its own llama.cpp. The `uinput` kernel module is loaded at boot so
+is installed by `modules/apps/pi.nix`. Its config is `pi/` in this repo, and
+the `pi` command points at that directory from any working directory. It
+talks to Nemotron on loopback and must not start its own llama.cpp. The `uinput` kernel module is loaded at boot so
 OpenLogi's device node receives a seat ACL. The menu also has a Chrome app
 entry for Cleanuparr that opens `http://127.0.0.1:11011`.
 
@@ -374,11 +376,15 @@ The persona text is in `nemotron-bolt-system-prompt.md`.
 ## Pi
 
 Pi is the terminal coding agent (`pi` from `pi-coding-agent`). It uses
-`http://127.0.0.1:8083` with model `nemotron-bolt`. Agent config lives under
-`~/.pi/agent/`, including `models.json` and the nixos-managing skill (Part 1
-only). Force that skill with `/skill:nixos-managing`. Pi must not start its
-own llama.cpp server; Nemotron on the GTX 1660 SUPER is the only inference
-backend.
+`http://127.0.0.1:8083` with model `nemotron-bolt`. The agent directory is
+`/etc/nixos/pi` (`PI_CODING_AGENT_DIR`), so the same `models.json`,
+`settings.json`, `APPEND_SYSTEM.md`, and skills apply in any working
+directory. That directory is this repo. Session transcripts go to
+`~/.local/state/pi/sessions` and are not committed. `auth.json`,
+`trust.json`, and `models-store.json` are gitignored because Pi writes them
+beside the config. The nixos-managing skill there is Part 1 only. Force it
+with `/skill:nixos-managing`. Pi must not start its own llama.cpp server;
+Nemotron on the GTX 1660 SUPER is the only inference backend.
 
 ## RustDesk
 

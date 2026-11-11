@@ -1,10 +1,12 @@
 # Pi coding agent, using the Nemotron server on port 8083.
+# Config is /etc/nixos/pi so it is in this repo. PI_CODING_AGENT_DIR makes
+# that the agent directory from any working directory.
+# https://pi.dev/docs/latest/configuration
 { config, lib, pkgs, ... }:
 let
   cfg = config.my.apps.pi;
-
-  skillFull = builtins.readFile ../../agent/nixos-managing/SKILL.md;
-  skillPart1 = builtins.head (lib.splitString "\n<!-- END OF CORE" skillFull);
+  agentDir = "/etc/nixos/pi";
+  sessionDir = "/home/${config.my.user}/.local/state/pi/sessions";
 
   piNemotronKey = pkgs.writeShellApplication {
     name = "pi-nemotron-key";
@@ -14,80 +16,13 @@ let
     '';
   };
 
-  piModelsJson = pkgs.writeText "pi-models.json" ''
-    {
-      "$schema": "https://pi.dev/schemas/models.schema.json",
-      "providers": {
-        "nemotron": {
-          "name": "Nemotron",
-          "baseUrl": "http://127.0.0.1:8083/v1",
-          "api": "openai-completions",
-          "apiKey": "!/run/current-system/sw/bin/pi-nemotron-key",
-          "authHeader": true,
-          "models": [
-            {
-              "id": "nemotron-bolt",
-              "name": "Nemotron 3.5 Bolt",
-              "reasoning": true,
-              "input": ["text"],
-              "contextWindow": 32768,
-              "maxTokens": 8192,
-              "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 },
-              "samplingParams": { "temperature": 1.0, "top_p": 0.95 }
-            }
-          ]
-        }
-      }
-    }
+  # The store binary defaults to ~/.pi/agent. This wrapper is the `pi` on
+  # PATH, so a shell that never sourced /etc/profile still uses the repo.
+  pi = pkgs.writeShellScriptBin "pi" ''
+    export PI_CODING_AGENT_DIR=${agentDir}
+    export PI_CODING_AGENT_SESSION_DIR=${sessionDir}
+    exec ${lib.getExe pkgs.pi-coding-agent} "$@"
   '';
-
-  piSkillMd = pkgs.writeText "nixos-managing-SKILL.md" skillPart1;
-
-  piSettingsJson = pkgs.writeText "pi-settings.json" ''
-    {
-      "$schema": "https://pi.dev/schemas/settings.schema.json",
-      "defaultProvider": "nemotron",
-      "defaultModel": "nemotron-bolt",
-      "extensions": ["-builtin:llama.cpp"]
-    }
-  '';
-
-  piAppendSystemMd = pkgs.writeText "pi-APPEND_SYSTEM.md" ''
-    For changes to this computer, follow the nixos-managing skill. Start with nixctl map. Force it with /skill:nixos-managing.
-  '';
-
-  # settings.json is created by Pi itself (a changelog stamp) before this
-  # seed runs. Fill in only the keys that are missing so a later /model
-  # save is kept, and so `pi` still starts on Nemotron.
-  piAgentSeed = pkgs.writeShellApplication {
-    name = "pi-agent-seed";
-    runtimeInputs = [
-      pkgs.coreutils
-      pkgs.jq
-    ];
-    text = ''
-      set -euo pipefail
-      home=/home/${config.my.user}
-      agent="$home/.pi/agent"
-      mkdir -p "$agent/skills/nixos-managing"
-      cp -f ${piModelsJson} "$agent/models.json"
-      cp -f ${piSkillMd} "$agent/skills/nixos-managing/SKILL.md"
-      if [[ ! -f "$agent/settings.json" ]]; then
-        cp -f ${piSettingsJson} "$agent/settings.json"
-      else
-        tmp=$(mktemp)
-        jq '
-          .defaultProvider //= "nemotron"
-          | .defaultModel //= "nemotron-bolt"
-          | .extensions = ((.extensions // []) + ["-builtin:llama.cpp"] | unique)
-        ' "$agent/settings.json" > "$tmp"
-        mv "$tmp" "$agent/settings.json"
-      fi
-      if [[ ! -f "$agent/APPEND_SYSTEM.md" ]]; then
-        cp -f ${piAppendSystemMd} "$agent/APPEND_SYSTEM.md"
-      fi
-    '';
-  };
 in
 {
   options.my.apps.pi.enable = lib.mkEnableOption "Pi coding agent on Nemotron";
@@ -100,20 +35,14 @@ in
       }
     ];
 
+    environment.sessionVariables = {
+      PI_CODING_AGENT_DIR = agentDir;
+      PI_CODING_AGENT_SESSION_DIR = sessionDir;
+    };
+
     environment.systemPackages = [
-      pkgs.pi-coding-agent
+      pi
       piNemotronKey
     ];
-
-    systemd.services.pi-agent-seed = {
-      description = "Seed Pi agent config for Nemotron";
-      wantedBy = [ "multi-user.target" ];
-      serviceConfig = {
-        Type = "oneshot";
-        RemainAfterExit = true;
-        User = config.my.user;
-        ExecStart = "${piAgentSeed}/bin/pi-agent-seed";
-      };
-    };
   };
 }

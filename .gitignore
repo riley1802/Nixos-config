@@ -1,2 +1,10 @@
 result
 result-*
+
+# Pi runtime. The config in pi/ is tracked. These are not.
+pi/sessions/
+pi/auth.json
+pi/trust.json
+pi/models-store.json
+pi/bin/
+pi/pi-debug.log
