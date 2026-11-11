@@ -26,7 +26,7 @@ modules/services/arr/             Sonarr, Radarr, Lidarr, Bazarr, Prowlarr, Seer
                                   and the shared media directories
 modules/services/                 Immich, n8n, ntfy, Uptime Kuma, Docker, Nemotron,
                                   nixctl-bridge
-modules/apps/                     openlogi.nix, rustdesk.nix
+modules/apps/                     openlogi.nix, rustdesk.nix, pi.nix
 packages/                         Lidarr build, llama-cpp
 tools/nixctl.sh                   the nixctl command
 AGENTS.md                         short nixctl loader for agents
@@ -79,7 +79,8 @@ by `nixos-generate-config` and should not be edited by hand.
   and `secrets/ntfy-passwords.age` are the ntfy credentials. Decrypted
   copies are `/run/agenix/ntfy-auth` and `/run/agenix/ntfy-passwords`.
   `secrets/llama-api-key.age` is the Nemotron API key; the decrypted copy is
-  `/run/agenix/llama-api-key`. `secrets/rclone-gdrive.age` is required for
+  `/run/agenix/llama-api-key` (mode `0440`, group `users`, so the desktop
+  user can call the API from Pi). `secrets/rclone-gdrive.age` is required for
   the Lidarr Google Drive copy and is not in the repo yet, so the nightly
   timer is not installed even though `lidarr-drive` is enabled.
 - `pia/ca.rsa.4096.crt` and `pia/pia-servers.json` are public PIA material
@@ -128,7 +129,9 @@ htop, Spotify, and uv are installed system-wide from
 and is the local manager for the MX Master 4; its agent starts with the
 graphical session. RustDesk is `rustdesk-flutter` from the unstable overlay,
 installed by `modules/apps/rustdesk.nix`, because nixos-26.05 `rustdesk` is
-the old Sciter client. The `uinput` kernel module is loaded at boot so
+the old Sciter client. Pi (`pi-coding-agent` 1.4.0 from the unstable overlay)
+is installed by `modules/apps/pi.nix` and talks to Nemotron on loopback; it
+must not start its own llama.cpp. The `uinput` kernel module is loaded at boot so
 OpenLogi's device node receives a seat ACL. The menu also has a Chrome app
 entry for Cleanuparr that opens `http://127.0.0.1:11011`.
 
@@ -367,6 +370,15 @@ The model alias is `nemotron-bolt`. On this computer the API is
 32768. The API key comes from `secrets/llama-api-key.age`.
 
 The persona text is in `nemotron-bolt-system-prompt.md`.
+
+## Pi
+
+Pi is the terminal coding agent (`pi` from `pi-coding-agent`). It uses
+`http://127.0.0.1:8083` with model `nemotron-bolt`. Agent config lives under
+`~/.pi/agent/`, including `models.json` and the nixos-managing skill (Part 1
+only). Force that skill with `/skill:nixos-managing`. Pi must not start its
+own llama.cpp server; Nemotron on the GTX 1660 SUPER is the only inference
+backend.
 
 ## RustDesk
 

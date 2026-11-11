@@ -52,11 +52,12 @@ in
     #
     # Loopback only. Tailscale Serve on port 8083 when this module is on.
     # The same API key as the retired llama servers. /health stays open.
+    # The desktop user runs Pi and reads this file; it stays out of the Nix store.
     age.secrets.llama-api-key = {
       file = ../../secrets/llama-api-key.age;
-      mode = "0400";
+      mode = "0440";
       owner = "root";
-      group = "root";
+      group = "users";
     };
 
     users.groups.llama = { };

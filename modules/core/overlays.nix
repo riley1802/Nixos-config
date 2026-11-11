@@ -21,6 +21,8 @@ in
   # lib.getExe calls keep server and ML on the same release.
   # https://github.com/NixOS/nixpkgs/blob/6713828a351efa628b025a1adf7f43cbf8597513/pkgs/by-name/im/immich/package.nix
   # https://github.com/NixOS/nixpkgs/blob/31ecbaca1bdefa45dffc409f0250bd8039ea0010/pkgs/by-name/im/immich/package.nix
+  # pi-coding-agent: nixos-26.05 is 0.75.4; this pin is 1.4.0, which has
+  # models.json and ~/.pi/agent/skills.
   nixpkgs.overlays = [
     (final: prev:
       lib.packagesFromDirectoryRecursive
@@ -29,7 +31,7 @@ in
           directory = ../../packages;
         }
       // {
-        inherit (unstable) radarr sonarr immich rustdesk-flutter;
+        inherit (unstable) radarr sonarr immich rustdesk-flutter pi-coding-agent;
         code-cursor = unstable.code-cursor.overrideAttrs (
           old:
           let
