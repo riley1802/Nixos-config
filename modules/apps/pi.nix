@@ -56,9 +56,15 @@ let
     For changes to this computer, follow the nixos-managing skill. Start with nixctl map. Force it with /skill:nixos-managing.
   '';
 
+  # settings.json is created by Pi itself (a changelog stamp) before this
+  # seed runs. Fill in only the keys that are missing so a later /model
+  # save is kept, and so `pi` still starts on Nemotron.
   piAgentSeed = pkgs.writeShellApplication {
     name = "pi-agent-seed";
-    runtimeInputs = [ pkgs.coreutils ];
+    runtimeInputs = [
+      pkgs.coreutils
+      pkgs.jq
+    ];
     text = ''
       set -euo pipefail
       home=/home/${config.my.user}
@@ -68,6 +74,14 @@ let
       cp -f ${piSkillMd} "$agent/skills/nixos-managing/SKILL.md"
       if [[ ! -f "$agent/settings.json" ]]; then
         cp -f ${piSettingsJson} "$agent/settings.json"
+      else
+        tmp=$(mktemp)
+        jq '
+          .defaultProvider //= "nemotron"
+          | .defaultModel //= "nemotron-bolt"
+          | .extensions = ((.extensions // []) + ["-builtin:llama.cpp"] | unique)
+        ' "$agent/settings.json" > "$tmp"
+        mv "$tmp" "$agent/settings.json"
       fi
       if [[ ! -f "$agent/APPEND_SYSTEM.md" ]]; then
         cp -f ${piAppendSystemMd} "$agent/APPEND_SYSTEM.md"
