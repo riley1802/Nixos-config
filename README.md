@@ -370,8 +370,9 @@ The model alias is `nemotron-bolt`. On this computer the API is
 `https://nixos.taile9f484.ts.net:8083`. Model files live under
 `/var/lib/llama-cpp/models`. Inference uses both GPUs: most layers on the
 GTX 1660 SUPER and the remainder on the RTX 3050, with context 65536.
-`--fit-target` leaves about 512 MiB free on the 1660 and about 2048 MiB
-free on the 3050. The API key comes from `secrets/llama-api-key.age`.
+`--fit-target` is `512,2048` in CUDA order (1660, then 3050). After load
+the 1660 has about 2060 MiB free and the 3050 about 900 MiB free.
+`2048,512` packs the 3050 and the server exits with CUDA out of memory. The API key comes from `secrets/llama-api-key.age`.
 
 The persona text is in `nemotron-bolt-system-prompt.md`.
 

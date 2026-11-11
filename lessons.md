@@ -193,6 +193,9 @@ Taken from the saved Cursor chats on this computer, 2026-06-29 through 2026-11-0
 - **Wrong:** llama-server's default parallel slots divided the context, so 64k was not 64k per client.
   **Resolved:** `--parallel 1`. (2026-09-06, 209ba186)
 
+- **Wrong:** Nemotron at 65536 context with `--fit-target 512,2048` left about 900 MiB free on the 3050, so the list was swapped to `2048,512` to give the display card the larger margin.
+  **Resolved:** The swapped list packed the 3050. llama-server crash-looped with `cudaMalloc failed: out of memory` on device 1 (the 3050, because `CUDA_VISIBLE_DEVICES` lists the 1660 first). Put `512,2048` back. The loaded split leaves about 2060 MiB free on the 1660 and about 900 MiB free on the 3050. (2026-11-11)
+
 - **Wrong:** Hugging Face XET left `.incomplete` blobs, then the server reported "failed to load model".
   **Resolved:** `HF_HUB_DISABLE_XET=1` and `HF_HUB_ENABLE_HF_TRANSFER=0`. (2026-07-22, b31c66c4; 2026-07-23, 2c580464)
 
