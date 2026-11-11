@@ -8,3 +8,4 @@ pi/trust.json
 pi/models-store.json
 pi/bin/
 pi/pi-debug.log
+pi/extensions/**/node_modules/

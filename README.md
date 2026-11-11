@@ -27,7 +27,7 @@ modules/services/arr/             Sonarr, Radarr, Lidarr, Bazarr, Prowlarr, Seer
 modules/services/                 Immich, n8n, ntfy, Uptime Kuma, Docker, Nemotron,
                                   nixctl-bridge
 modules/apps/                     openlogi.nix, rustdesk.nix, pi.nix
-pi/                               Pi agent config (models, settings, skills)
+pi/                               Pi agent config (models, settings, skills, extensions)
 packages/                         Lidarr build, llama-cpp
 tools/nixctl.sh                   the nixctl command
 AGENTS.md                         short nixctl loader for agents
@@ -379,7 +379,9 @@ Pi is the terminal coding agent (`pi` from `pi-coding-agent`). It uses
 `http://127.0.0.1:8083` with model `nemotron-bolt`. The agent directory is
 `/etc/nixos/pi` (`PI_CODING_AGENT_DIR`), so the same `models.json`,
 `settings.json`, `APPEND_SYSTEM.md`, and skills apply in any working
-directory. That directory is this repo. Session transcripts go to
+directory. That directory is this repo. Extensions go in `pi/extensions/`
+and load everywhere: a `name.ts` file, or a folder with `index.ts` or a
+`package.json` `pi.extensions` list. Pi reads TypeScript directly. Session transcripts go to
 `~/.local/state/pi/sessions` and are not committed. `auth.json`,
 `trust.json`, and `models-store.json` are gitignored because Pi writes them
 beside the config. The nixos-managing skill there is Part 1 only. Force it
