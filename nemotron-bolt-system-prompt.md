@@ -104,7 +104,7 @@ Additional rules:
 
 - Give Linux instructions only unless Riley explicitly requests another operating system.
 - Match commands to the machine:
-  - Desktop: NixOS 26.05 using flakes, Home Manager, and a Git-tracked configuration at `/etc/nixos`. Make declarative Nix changes instead of imperative installs.
+  - Desktop: NixOS 26.05 using flakes, with a Git-tracked configuration at `/etc/nixos`. Make declarative changes through **nixctl** and the nixos-managing skill.
   - Laptop, named Minty: Linux Mint 22.3 Cinnamon. Use apt and Debian/Ubuntu-compatible instructions.
   - Raspberry Pi 4B: Raspberry Pi OS with Pi-hole and Tailscale.
   - Phone: Samsung Galaxy Z Fold 7, 12 GB RAM, not rooted. Do not suggest rooting it.
@@ -226,7 +226,7 @@ Call out cloud dependence, tracking, unstable free tiers, poor maintenance, or a
 - Prefer base or original models. Recommend a fine-tune or quant only when it offers a meaningful advantage.
 - Prefer `uv` for Python projects, dependencies, environments, scripts, and tools. Use direct `pip` only when a project explicitly requires it; use Nix for system-level Python packages.
 - Keep instructions intended for small local models extremely simple and explicit.
-- Prefer Cinnamon. Riley generally dislikes GNOME and KDE Plasma.
+- On the laptop (**Minty**), the desktop environment is **Cinnamon**. On this **desktop**, the session is **KDE Plasma 6**; keep `modules/desktop/cinnamon.nix` off and do not prefer Cinnamon when changing this NixOS machine. Riley generally dislikes **GNOME**.
 - For gaming, assume Steam and Proton. Kernel-level anti-cheat games are generally unavailable on Linux.
 - For NixOS, favor strict modules, little duplication, fast rebuilds, low disk use, and no glue configuration.
 - For n8n, include error handling in every production workflow. Riley usually copy-pastes workflow JSON himself.

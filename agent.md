@@ -1,5 +1,7 @@
 # Agent
 
+Pi and Hermes load `AGENTS.md`. Cursor still follows `nix-agent.md`.
+
 For changes to this NixOS computer, follow `nix-agent.md`.
 
 When the user states a rule in chat, ask whether it is a permanent rule before writing it here. Add it to this file only after they say yes.

@@ -32,7 +32,7 @@ If the shell says `nixctl: command not found`, stop. Tell the user: "nixctl is n
 ## Commands
 
 | Command | What it does |
-|---|---|
+| --- | --- |
 | `nixctl map` | List modules, on or off, and what each does |
 | `nixctl status` | Running version, unsaved edits, broken services, disk space |
 | `nixctl search WORD` | Find the exact name of a program |
@@ -54,6 +54,7 @@ If the shell says `nixctl: command not found`, stop. Tell the user: "nixctl is n
 ## Recipes
 
 ### Install a program
+
 1. `nixctl pkg add firefox`
 2. If that says FAIL: `nixctl search firefox`, then `nixctl pkg add` with the exact name from the first column.
 3. `nixctl apply "add firefox"`
@@ -61,17 +62,20 @@ If the shell says `nixctl: command not found`, stop. Tell the user: "nixctl is n
 You can make several changes, then run `nixctl apply` once for all of them.
 
 ### Remove a program
+
 1. `nixctl pkg remove firefox`
 2. `nixctl apply "remove firefox"`
 
 If it says the program is not in the list, a module installs it. Run `nixctl map` and turn that module off instead.
 
 ### Turn a module on or off
+
 1. `nixctl map` (find the name, for example `services/arr/jellyfin`)
 2. `nixctl enable services/arr/jellyfin` or `nixctl disable services/arr/jellyfin`
 3. `nixctl apply "turn on jellyfin"`
 
 ### Change a setting
+
 1. `nixctl map` (find the module that owns it)
 2. Read that module file.
 3. `nixctl option services.arr.jellyfin` (lists the real option names)
@@ -80,6 +84,7 @@ If it says the program is not in the list, a module installs it. Run `nixctl map
 6. `nixctl apply "jellyfin: open firewall"`
 
 ### Add a new service
+
 1. `nixctl option services.NAME` (NixOS has it if the list contains `enable`)
 2. `nixctl new services/NAME "What it is. Web page on port PORT."`
 3. Put its settings inside `config = lib.mkIf cfg.enable {` and `};` in the new file. Copy the shape of the example below.
@@ -87,18 +92,22 @@ If it says the program is not in the list, a module installs it. Run `nixctl map
 5. `nixctl apply "add NAME"`
 
 ### Something is broken
+
 1. `nixctl status` (shows broken services)
 2. `nixctl logs NAME` (read the error)
 3. Broke right after the last change? Run `nixctl rollback`.
 4. Otherwise: find the module with `nixctl map`, fix the setting, run `nixctl apply "fix NAME"`.
 
 ### Free disk space
+
 `nixctl clean`
 
 ### Update everything
+
 `nixctl update` (can take a long time; wait for RESULT)
 
 ### Make it faster or smaller
+
 1. `nixctl audit`
 2. Do ONE `FIX:` line, then `nixctl apply "..."`. Then the next one.
 3. Skip any FIX that says "needs Claude".
@@ -132,6 +141,7 @@ in
 ## Too big for you
 
 Stop and say "This needs Claude." when the task needs any of these:
+
 - moving, renaming or splitting files
 - editing `flake.nix`, `tools/`, `packages/` or `secrets/`
 - a FIX that says "needs Claude"
@@ -141,7 +151,7 @@ Stop and say "This needs Claude." when the task needs any of these:
 
 End with exactly these three lines:
 
-```
+```text
 Done: <what changed, in one line>
 Result: <the RESULT line from nixctl>
 Undo: nixctl rollback
@@ -149,12 +159,12 @@ Undo: nixctl rollback
 
 <!-- END OF CORE: small models stop reading here. Everything below is for Claude and other large models. -->
 
-# Part 2: for Claude and other large models
+## Part 2: for Claude and other large models
 
 Part 1 is the whole job for small models, and large models use the same `nixctl` commands to apply changes. Part 2 covers design work: the layout rules, converting a repo to this layout, making it leaner, and the files to install. The sections, in order:
 
 | Section | Read when |
-|---|---|
+| --- | --- |
 | R1 Layout rules | Designing or reviewing any module; before any refactor |
 | R2 Module patterns | Writing a module that shares values, adds routes or ports, or builds a package |
 | R3 Setup: convert a repo | `nixctl` is missing, or the repo is not in this layout |
@@ -169,7 +179,7 @@ When working on Riley's machine with Claude Code, apply changes with `nixctl app
 
 The goal is a config where every common change is one line in a predictable file. That's what lets a 1.7B model edit it safely, and it's also what makes it easy for Riley to read.
 
-```
+```text
 /etc/nixos/
   flake.nix                 inputs + one mkHost line per computer; nothing else
   flake.lock
@@ -207,6 +217,7 @@ Rules, and why each one exists:
 **Basic module:** the template `nixctl new` writes (shown in Part 1).
 
 **Module with settings:** expose only what callers actually change.
+
 ```nix
 options.my.services.llama = {
   enable = lib.mkEnableOption "llama.cpp servers";
@@ -215,6 +226,7 @@ options.my.services.llama = {
 ```
 
 **Shared values:** declare them once in `modules/core/settings.nix`, set them in the host file, and read them anywhere:
+
 ```nix
 options.my.tailnetHost = lib.mkOption { type = lib.types.str; description = "This computer's MagicDNS name."; };
 # hosts/nixos/default.nix:   my.tailnetHost = "nixos.taile9f484.ts.net";
@@ -222,6 +234,7 @@ options.my.tailnetHost = lib.mkOption { type = lib.types.str; description = "Thi
 ```
 
 **Hub pattern (many modules feed one):** the hub declares a collection option and generates config from it. Each feature adds its own entry. Example: replacing a hand-maintained list of Tailscale Serve ports.
+
 ```nix
 # modules/network/tailscale.nix (hub)
 options.my.network.tailscale = {
@@ -243,6 +256,7 @@ my.network.tailscale.serve.n8n = 5678;
 ```
 
 **Repeated blocks become one generator:**
+
 ```nix
 # Six copies of wants/after/bindsTo become:
 systemd.services = lib.genAttrs [ "qbittorrent" "sonarr" "radarr" "lidarr" "jellyfin" "bazarr" ] (_: {
@@ -253,6 +267,7 @@ systemd.services = lib.genAttrs [ "qbittorrent" "sonarr" "radarr" "lidarr" "jell
 ```
 
 **Custom packages:** add one overlay in `modules/core/overlays.nix` and one file per package.
+
 ```nix
 # packages/llama-cpp.nix is a normal callPackage file. A directory with
 # package.nix inside works too (packages/uptime-kuma/package.nix + its patch).
@@ -260,9 +275,11 @@ nixpkgs.overlays = [
   (final: prev: lib.packagesFromDirectoryRecursive { inherit (prev) callPackage; directory = ../../packages; })
 ];
 ```
+
 A file named after an existing attribute (`llama-cpp`, `lidarr`) replaces the nixpkgs version.
 
 **Packages from unstable:** create one instance, in one place, and reuse it. Every `import nixpkgs-unstable { ... }` evaluates a second nixpkgs.
+
 ```nix
 # modules/core/overlays.nix (needs specialArgs = { inherit inputs; } in flake.nix)
 { inputs, ... }:
@@ -276,6 +293,7 @@ in
 ```
 
 **Secrets (agenix) stay in the module that uses them:**
+
 ```nix
 age.secrets.ntfy-auth = { file = ../../secrets/ntfy-auth.age; owner = "ntfy-sh"; mode = "0400"; };
 services.ntfy-sh.environmentFile = config.age.secrets.ntfy-auth.path;
@@ -288,12 +306,14 @@ Run this once per repo. It's large, so confirm the planned module tree with Rile
 1. **Baseline.** Start from a clean tree on a new branch (`git switch -c restructure`). Then record the current system:
    `nix eval --raw .#nixosConfigurations.HOST.config.system.build.toplevel.drvPath > /tmp/before.drv`
 2. **Install the tools into the repo.** Extract them from this skill so you aren't hand-copying 700 lines:
+
    ```bash
    SKILL=<this skill's SKILL.md path>
    x() { awk -v b="<!-- BEGIN $1 -->" -v e="<!-- END $1 -->" '$0==b{f=1;next} $0==e{f=0} f' "$SKILL" | sed '1d;$d'; }
    mkdir -p tools && x tools/nixctl.sh > tools/nixctl.sh && x cfgdiff.sh > /tmp/cfgdiff.sh && chmod +x tools/nixctl.sh /tmp/cfgdiff.sh
-   sha256sum tools/nixctl.sh   # must be d38c90083966648adb8c95caab0f6b1f6cab7746f624482ea55ba5a113249b7b
+   sha256sum tools/nixctl.sh   # must be 946636d7d937a61752faf9c0e589bb3c5c335406822cc0fb3a6febdec95eda86
    ```
+
    If you can't read the skill file from disk, copy the R7 blocks exactly and check the hash. A wrong hash means a copy error.
 3. **Create the skeleton** from R7: `flake.nix` changes, `modules/default.nix`, the `modules/core/*` files, `hosts/HOST/default.nix`, `packages.nix`, `AGENTS.md`, `.gitignore`. Then `git mv hardware-configuration.nix hosts/HOST/`. Keep the existing flake inputs, overlays and `specialArgs`, and move overlay code into `modules/core/overlays.nix`.
 4. **Move content without changing behavior.** Each feature goes into its own module, wrapped in the enable pattern and enabled in the host file. Move comments together with their code. `git add -A` after each batch, then compare:
@@ -311,28 +331,32 @@ nixctl commits locally after every successful apply (`nixctl: <message>`). It ne
 
 Measure first, change one thing, then measure again. Don't add tweaks you can't verify.
 
-**Less config code**
+### Less config code
+
 - Hub options instead of hand-maintained lists (R2). These lists exist when one file names ports or units that belong to other features.
 - `lib.genAttrs` or `lib.mapAttrs` for blocks repeated 3 or more times. `nixctl audit` reports repeated 3-line blocks.
 - Shared `my.*` values instead of repeated literals (username, tailnet host, media paths).
 - Use the NixOS module when one exists (`nixctl option services.NAME`) instead of a hand-written systemd unit.
 - Delete what nothing uses: modules that are off and unwanted, stale overlays, unused inputs. Check with `nix flake metadata` and `grep -r`.
 
-**Faster rebuilds**
+### Faster rebuilds
+
 - See what will be built from source: `nix build --dry-run .#nixosConfigurations.HOST.config.system.build.toplevel 2>&1 | sed -n '/will be built/,/will be fetched/p'`. Each line is a local build. Custom derivations (a custom `llama-cpp` with CUDA, an AppImage override) always build locally. Keep them only when they're needed.
 - CUDA packages are unfree, so cache.nixos.org doesn't have them. The NixOS CUDA cache is `https://cache.nixos-cuda.org` with key `cache.nixos-cuda.org:74DUi4Ye579gUqzH4ziL9IyiJBlDpMRn9MBN8oNan9M=`. It mainly covers unstable, so check a path before relying on it: `nix path-info --store https://cache.nixos-cuda.org <out-path>`.
 - `documentation.nixos.enable = false;` skips building the options manual on every rebuild. `nixctl option` replaces `man configuration.nix`.
 - One nixpkgs instance per input (R2). Give every input `inputs.nixpkgs.follows = "nixpkgs"` when it accepts one.
 - Rebuild time shows up in `nixctl apply` ("applied in Ns"), so compare it before and after.
 
-**Less disk**
+### Less disk
+
 - `nix.gc = { automatic = true; dates = "weekly"; options = "--delete-older-than 14d"; };` and `nix.optimise.automatic = true;`
 - `boot.loader.systemd-boot.configurationLimit = 10;` (an unlimited boot menu fills `/boot`)
 - `nix.settings.min-free` / `max-free` (automatic GC when the disk is nearly full)
 - `services.journald.extraConfig = "SystemMaxUse=500M";`
 - Find the biggest store paths: `nix path-info -rSh /run/current-system | sort -k2 -h | tail -20`. For containers: `docker system df`.
 
-**Faster system**
+### Faster system
+
 - `zramSwap.enable = true;` (compressed RAM swap). `services.fstrim.enable` is already on by default.
 - Boot: `systemd-analyze blame | head -15` and `systemd-analyze critical-chain`. Before disabling `NetworkManager-wait-online`, check what orders against `network-online.target` (on Riley's desktop, `dnsproxy` deliberately does).
 - Keep the default kernel unless there's a measured reason. `linuxPackages_latest` can break the NVIDIA driver.
@@ -354,14 +378,16 @@ Measure first, change one thing, then measure again. Don't add tweaks you can't 
 ## R6 Small models and harnesses
 
 **Install for Pi and Hermes.** Small models should get Part 1 only (about 2.5k tokens). Part 2 would just dilute their attention:
+
 ```bash
 SKILL=<this SKILL.md>
 for d in ~/.pi/agent/skills/nixos-managing ~/.hermes/skills/nixos-managing; do
   mkdir -p "$d" && sed '/^<!-- END OF CORE/q' "$SKILL" > "$d/SKILL.md"
 done
 ```
+
 - Pi doesn't always load a skill on its own. Force it with `/skill:nixos-managing`. In Hermes the command is `/nixos-managing`.
-- Start the agent in `/etc/nixos`. Both harnesses then auto-load `AGENTS.md` from the repo (R7), which points the model at `nixctl map`.
+- Start the agent in `/etc/nixos`. Both harnesses then auto-load `AGENTS.md` from the repo (R7), which points the model at `nixctl map`. On this computer `AGENTS.md` is the short loader (nixctl rules plus a pointer); the machine rules live in `nix-agent.md`.
 - LFM3-1.7B settings (Liquid's recommendation): `--temp 0.1 --top-k 50 --repeat-penalty 1.1`. In Hermes, set `agent.tool_use_enforcement true`, or the model tends to describe commands instead of running them.
 
 **Install for Cursor.** Cursor is a large model, so it gets this whole file, not the Part 1 cut. One copy stays in the repo; Cursor finds it through symlinks:
@@ -379,6 +405,7 @@ ln -sfn ../../agent/nixos-managing /etc/nixos/.cursor/skills/nixos-managing
 **Unattended use (the n8n watchdog idea):** nixctl's commands make a natural safe action menu. `status`, `logs` and `audit` are read-only. `rollback` and `clean` are bounded fixes. `apply` only keeps a change that passes the health check, and its 5-minute dead-man timer restores the old system if the agent dies mid-switch.
 
 **What nixctl apply does, so you can explain failures:**
+
 1. Stages all files and refuses edits to hardware-configuration, stateVersion, secrets or flake.lock, and plain-text secrets.
 2. Formats the changed `.nix` files.
 3. Evaluates. On error it prints `ERROR`, the code lines, `WHERE: file:line` and a specific `NEXT`.
@@ -391,6 +418,7 @@ ln -sfn ../../agent/nixos-managing /etc/nixos/.cursor/skills/nixos-managing
 Replace `HOST` and the `my.*` values with the machine's real ones. Keep the inputs, `system` and `specialArgs` the existing flake already has.
 
 `flake.nix`:
+
 ```nix
 {
   description = "NixOS config";
@@ -421,6 +449,7 @@ Replace `HOST` and the `my.*` values with the machine's real ones. Keep the inpu
 ```
 
 `modules/default.nix`:
+
 ```nix
 # Imports every .nix file under modules/. A new module is just a new file.
 { lib, ... }:
@@ -432,6 +461,7 @@ Replace `HOST` and the `my.*` values with the machine's real ones. Keep the inpu
 ```
 
 `modules/core/settings.nix`:
+
 ```nix
 # Shared values any module can read, such as config.my.user.
 { lib, ... }:
@@ -444,6 +474,7 @@ Replace `HOST` and the `my.*` values with the machine's real ones. Keep the inpu
 ```
 
 `modules/core/nix.nix`:
+
 ```nix
 # Nix itself: flakes and unfree packages.
 { ... }:
@@ -457,6 +488,7 @@ Replace `HOST` and the `my.*` values with the machine's real ones. Keep the inpu
 ```
 
 `modules/core/boot.nix`:
+
 ```nix
 # Boot loader and kernel.
 { ... }:
@@ -467,6 +499,7 @@ Replace `HOST` and the `my.*` values with the machine's real ones. Keep the inpu
 ```
 
 `modules/core/system.nix`:
+
 ```nix
 # Basics every computer gets: time zone, language, logs, memory.
 { ... }:
@@ -477,6 +510,7 @@ Replace `HOST` and the `my.*` values with the machine's real ones. Keep the inpu
 ```
 
 `modules/core/nixctl.nix`:
+
 ```nix
 # nixctl, the one command for changing this computer (script: tools/nixctl.sh).
 { config, pkgs, ... }:
@@ -520,6 +554,7 @@ in
 ```
 
 `hosts/HOST/default.nix`:
+
 ```nix
 # Control panel for the computer "nixos": which modules are on, plus
 # settings that belong to this machine only.
@@ -541,6 +576,7 @@ in
 ```
 
 `hosts/HOST/packages.nix`:
+
 ```nix
 # Programs installed by name. One plain name per line, sorted.
 # Change with: nixctl pkg add NAME / nixctl pkg remove NAME
@@ -554,12 +590,14 @@ in
 ```
 
 `.gitignore`:
-```
+
+```gitignore
 result
 result-*
 ```
 
 `AGENTS.md` (repo root):
+
 ```markdown
 # NixOS config
 Change this computer only with `nixctl` (run `nixctl help`). Start with `nixctl map`.
@@ -567,6 +605,7 @@ Use the nixos-managing skill. Every nixctl output ends with RESULT: and usually 
 Never run nixos-rebuild or sudo yourself.
 ```
 
+<!-- markdownlint-disable MD031 -->
 <!-- BEGIN tools/nixctl.sh -->
 ```bash
 #!/usr/bin/env bash
@@ -1371,3 +1410,4 @@ done <"$tmp/changed"
 rm -rf "$tmp"
 ```
 <!-- END cfgdiff.sh -->
+<!-- markdownlint-enable MD031 -->

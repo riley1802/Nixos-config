@@ -4,7 +4,7 @@ Change this computer only with `nixctl` (run `nixctl help`). Start with `nixctl 
 Use the nixos-managing skill. Every nixctl output ends with RESULT: and usually NEXT: lines; do what NEXT says.
 Never run nixos-rebuild or sudo yourself. If a task needs root, use `pkexec`.
 
-These rules come from the chats on this machine (2026-06-29 through 2026-11-03). `lessons.md` is the matching list of what went wrong and what fixed it. When a rule here and a chat disagree, the newer chat wins. When Riley says something in the moment, that wins over both.
+These rules come from the chats on this machine (2026-06-29 through 2026-11-03). The service list in this file was checked against the running modules on 2026-11-10. `lessons.md` is the matching list of what went wrong and what fixed it. When a rule here and a chat disagree, the newer chat wins. When Riley says something in the moment, that wins over both.
 
 ## Before editing
 
@@ -69,12 +69,17 @@ These rules come from the chats on this machine (2026-06-29 through 2026-11-03).
 - An oci-container `extraOptions` of `--restart=…` conflicts with Nix's `--rm`. systemd restarts the container.
 - Uptime Kuma monitors live in its sqlite database, not only in the Nix module.
 - OpenLogi is installed for the MX Master 4. It was not the cause of the November pointer stutter.
+- n8n is on. Editor is <http://127.0.0.1:5678>. Tailscale Serve is <https://nixos.taile9f484.ts.net:5678>. The editor base URL stays the loopback URL because Spotify OAuth rejects the tailnet host.
+- Nemotron (`services/nemotron`) is the llama.cpp server on 127.0.0.1:8083, on the GTX 1660 SUPER. The RTX 3050 is the display. Do not bring back the old llama.cpp servers.
+- nixctl-bridge listens on 127.0.0.1:8094 for the Discord operator. Do not publish it off loopback. Read-only nixctl runs immediately. A command saved earlier runs as saved. Anything else waits for Discord approval.
+- RustDesk direct access is tailnet TCP 21118 only (`apps/rustdesk`).
+- lidarr-drive is enabled. The 3:00 AM copy is not installed until `secrets/rclone-gdrive.age` exists. Do not invent that file.
 
 ## Removed on purpose
 
 Do not bring these back unless Riley asks in this chat: GitLab, the Rust game server, Hermes, Ghostty, Goose, the Tauri Homeport app, Homepage, Netdata, Liquid d1-2B (`llama-cpp-d1`, port 8086), World Monitor, the Raspberry Pi host, and the Pi OS / USB-bootstrap scripts. Building an aarch64 Pi image on this desktop runs under qemu and pegs every core for hours. The Pi GNOME session also boot-looped on a Pi 4.
 
-Also removed, with their modules: Breeze TTS, the research data platform, EmbeddingGemma, Homarr, Homelable, Kokoro, n8n, the llama.cpp servers, Open Terminal, SearXNG, and Open WebUI. Their Tailscale Serve ports are turned off by `modules/network/tailscale.nix`. Old files under `/var/lib` were left on disk. The age files `homarr-encryption-key`, `homelable-env`, `homelable-login`, and `searxng-env` are still in `secrets/` and are no longer wired to a service. `llama-api-key` is wired to services/nemotron.
+Also removed, with their modules: Breeze TTS, the research data platform, EmbeddingGemma, Homarr, Homelable, Kokoro, the old llama.cpp servers (ports 8081, 8082, 8084, 8085, 8087, and 8088), Open Terminal, SearXNG, and Open WebUI. Nemotron on 8083 (`services/nemotron`) is the current llama.cpp server and replaced that stack. Retired Serve ports are turned off by `modules/network/tailscale.nix`. Old files under `/var/lib` were left on disk. The age files `homarr-encryption-key`, `homelable-env`, `homelable-login`, and `searxng-env` are still in `secrets/` and are no longer wired to a service. `llama-api-key` is wired to `services/nemotron`.
 
 ## When something breaks
 

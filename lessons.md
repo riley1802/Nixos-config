@@ -13,7 +13,7 @@ Taken from the saved Cursor chats on this computer, 2026-06-29 through 2026-11-0
   **Resolved:** Root work goes through `pkexec`. `sudo` has no TTY here. (2026-07-02, db4ce5db; written into `agent.md` 2026-11-03)
 
 - **Wrong:** `pkexec nixos-rebuild switch --flake .#nixos` failed because pkexec's working directory was root's home.
-  **Resolved:** Use the absolute flake path `/etc/nixos#nixos`. (2026-07-18, 5f219270)
+  **Resolved:** Use the absolute flake path `/etc/nixos` or `/etc/nixos#nixos` (same host: hostname `nixos` selects `nixosConfigurations.nixos`). The bootstrap command used in the README is `pkexec nixos-rebuild switch --flake /etc/nixos`. (2026-07-18, 5f219270)
 
 - **Wrong:** `pkexec` could not find `jq` or `wg` because it clears `PATH`.
   **Resolved:** `pkexec env "PATH=$PATH" …`, or call the binary under `/run/current-system/sw/bin`. (2026-10-28, 0ea4217b)
@@ -37,13 +37,13 @@ Taken from the saved Cursor chats on this computer, 2026-06-29 through 2026-11-0
   **Resolved:** ntfs-3g cannot remount a live volume. The mount stayed up and the generation was still good. (2026-10-29, 38d03ad3)
 
 - **Wrong:** `reboot` from a shell was refused: "Operation inhibited by user session".
-  **Resolved:** Cinnamon's logind inhibitor. Use the Cinnamon menu, or `systemctl reboot -i`. (2026-10-29, 38d03ad3)
+  **Resolved:** The graphical session can block reboot with a logind inhibitor. **Historical:** Cinnamon's menu on the old desktop. The session is KDE Plasma 6 now. Use the Plasma menu, or `pkexec systemctl reboot -i` (`nix-agent.md`). (2026-10-29, 38d03ad3)
 
 - **Wrong:** `/etc/nixos` was root-owned, so the agent wrote nothing and a rebuild left the old desktop in place.
   **Resolved:** `chown` the tree to `rileyt` so the working copy is editable. Apply after the files actually exist. (2026-06-29, d4e585e0)
 
 - **Wrong:** `services.displayManager.gdm.wayland = true` was rejected on NixOS 26.05 / GNOME 50.
-  **Resolved:** Drop the option. GDM already defaults to Wayland. **Historical:** the desktop is Cinnamon on X11 now. (2026-06-29, d4e585e0)
+  **Resolved:** Drop the option. GDM already defaults to Wayland. **Historical:** the desktop was later Cinnamon on X11. It is Plasma 6 on Wayland now. See `nix-agent.md`. (2026-06-29, d4e585e0)
 
 - **Wrong:** Two `systemd.services` assignments in one attrset in `modules/services/arr/media.nix` failed evaluation.
   **Resolved:** One attrset, with each unit's settings inside it. Nix does not merge duplicate keys inside a single set. (2026-11-03, 11e74586)

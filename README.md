@@ -16,16 +16,22 @@ dev/flake.lock                    nixpkgs pin for that shell only
 hosts/nixos/default.nix           hostname, shared settings, which modules are on
 hosts/nixos/packages.nix          programs installed by name
 hosts/nixos/hardware-configuration.nix
-modules/core/                     nix, boot, time, user, package overlays
+modules/core/                     nix, boot, system, settings, users, nixctl, overlays
 modules/dev/shell.nix             interactive `nix dev` command
 modules/hardware/                 NVIDIA driver, vault disk, game drive
 modules/desktop/                  Plasma, Cinnamon (off), KDE Connect, Chrome DNS policy
 modules/network/                  Tailscale, DNS, SSH, NetworkManager, PIA, firewall
 modules/services/arr/             Sonarr, Radarr, Lidarr, Bazarr, Prowlarr, Seerr,
-                                  qBittorrent, Cleanuparr, and the shared media directories
-modules/services/                 Jellyfin, Immich, n8n, ntfy, Uptime Kuma, Docker
-modules/apps/openlogi.nix         MX Master 4
-packages/                         Lidarr build
+                                  qBittorrent, Cleanuparr, Jellyfin, lidarr-drive,
+                                  and the shared media directories
+modules/services/                 Immich, n8n, ntfy, Uptime Kuma, Docker, Nemotron,
+                                  nixctl-bridge
+modules/apps/                     openlogi.nix, rustdesk.nix
+packages/                         Lidarr build, llama-cpp
+tools/nixctl.sh                   the nixctl command
+AGENTS.md                         short nixctl loader for agents
+nix-agent.md                      machine rules for agents
+agent.md                          Cursor pointer to the agent docs
 secrets/                          agenix recipients and encrypted files
 pia/                              public PIA certificate and server list
 ```
@@ -34,11 +40,11 @@ pia/                              public PIA certificate and server list
 module that owns them. `hosts/nixos/hardware-configuration.nix` is generated
 by `nixos-generate-config` and should not be edited by hand.
 
-- `flake.nix` pins NixOS to the `nixos-26.05` branch. Cursor, Radarr, Sonarr, and
-  Immich come from `nixpkgs-unstable`. Cursor, Radarr, and Sonarr are there because
-  26.05 lags behind. Immich is 3.3.5 on that pin because 26.05 has 2.7.5,
-  which is marked insecure, and phone apps need 3.x. The overlays live in
-  `modules/core/overlays.nix`.
+- `flake.nix` pins NixOS to the `nixos-26.05` branch. Cursor, Radarr, Sonarr,
+  Immich, and `rustdesk-flutter` come from `nixpkgs-unstable`. Cursor, Radarr,
+  and Sonarr are there because 26.05 lags behind. Immich is 3.3.5 on that pin
+  because 26.05 has 2.7.5, which is marked insecure, and phone apps need 3.x.
+  The overlays live in `modules/core/overlays.nix`.
 - `packages/lidarr.nix` is the official Lidarr 3.1.6.5079 release, because
   nixpkgs does not have it yet.
 - `modules/services/uptime-kuma.nix` enables the stock NixOS module
@@ -58,10 +64,13 @@ by `nixos-generate-config` and should not be edited by hand.
 - Netdata was removed. `modules/network/tailscale.nix` still turns off a
   leftover Serve route on port 19999. PIA's port-forward API also uses
   outbound HTTPS to port 19999. That is not a local listener. The same
-  unit turns off the ports of services removed later: 3000, 7575,
-  8081, 8082, 8083, 8084, 8085, 8087, and 8088.
-- `modules/services/arr/jellyfin.nix` runs Jellyfin. The other arr apps and
-  qBittorrent are the rest of the files in `modules/services/arr/`.
+  unit turns off retired Serve ports: 3010 (Homepage), 19999 (Netdata),
+  3000 (homelable), 7575 (homarr), 8081, 8082, 8084, 8085, 8087, and 8088.
+  Port 8083 is Nemotron when `my.services.nemotron.enable` is true. Active
+  Serve ports are 2283 Immich, 5678 n8n, 2586 ntfy, 3001 Uptime Kuma,
+  8083 Nemotron, and 11011 Cleanuparr.
+- Jellyfin, lidarr-drive, and the other arr apps live in
+  `modules/services/arr/`.
 - `modules/network/pia.nix` builds the split tunnel and routes Prowlarr
   lookups through it.
 - `secrets/secrets.nix` lists the age recipients. `secrets/pia-credentials.age`
@@ -69,6 +78,10 @@ by `nixos-generate-config` and should not be edited by hand.
   `/run/agenix/pia-credentials` and is not in git. `secrets/ntfy-auth.age`
   and `secrets/ntfy-passwords.age` are the ntfy credentials. Decrypted
   copies are `/run/agenix/ntfy-auth` and `/run/agenix/ntfy-passwords`.
+  `secrets/llama-api-key.age` is the Nemotron API key; the decrypted copy is
+  `/run/agenix/llama-api-key`. `secrets/rclone-gdrive.age` is required for
+  the Lidarr Google Drive copy and is not in the repo yet, so the nightly
+  timer is not installed even though `lidarr-drive` is enabled.
 - `pia/ca.rsa.4096.crt` and `pia/pia-servers.json` are public PIA material
   used to reach a server by IP when the VPN hostnames are filtered.
 
@@ -83,6 +96,8 @@ The workstation uses:
 - Nix flakes and the `nix-command` interface
 - unfree packages and redistributable firmware
 - the proprietary stable NVIDIA driver with modesetting
+- two NVIDIA GPUs, 6 GiB each. The RTX 3050 is the display card. The GTX
+  1660 SUPER runs Nemotron.
 - KDE Plasma 6 on Wayland with SDDM. KWin is pinned to the RTX 3050 through
   `/run/display-gpu`, because `KWIN_DRM_DEVICES` is split on `:` and the PCI
   path contains colons. Plasma (X11) stays in the SDDM menu. Cinnamon remains
@@ -107,11 +122,15 @@ The normal user is `rileyt`, with membership in `wheel`, `networkmanager`,
 `docker`, and `media`. Docker group membership is effectively root-equivalent
 and should only be granted to trusted users.
 
-Cursor, Google Chrome, Git, htop, OpenLogi, Spotify, and uv are installed
-system-wide. OpenLogi is the local manager for the MX Master 4;
-its agent starts with the graphical session. The `uinput` kernel module is
-loaded at boot so that agent's device node receives a seat ACL. The menu
-also has a Chrome app entry for Cleanuparr that opens `http://127.0.0.1:11011`.
+Cursor (`code-cursor`), Discord, GitHub CLI (`gh`), Git, Google Chrome,
+htop, Spotify, and uv are installed system-wide from
+`hosts/nixos/packages.nix`. OpenLogi comes from `modules/apps/openlogi.nix`
+and is the local manager for the MX Master 4; its agent starts with the
+graphical session. RustDesk is `rustdesk-flutter` from the unstable overlay,
+installed by `modules/apps/rustdesk.nix`, because nixos-26.05 `rustdesk` is
+the old Sciter client. The `uinput` kernel module is loaded at boot so
+OpenLogi's device node receives a seat ACL. The menu also has a Chrome app
+entry for Cleanuparr that opens `http://127.0.0.1:11011`.
 
 For Python development, uv is the default project and package manager:
 use `uv init`, `uv add`, `uv sync`, `uv run`, and `uv tool` rather than
@@ -147,6 +166,22 @@ The NixOS firewall stays enabled.
   `nixos.taile9f484.ts.net:11011` and proxies to that port. This computer
   can still open `http://127.0.0.1:11011`. The home network and the VPN
   cannot.
+- n8n accepts TCP port 5678 on `tailscale0` only. The process listens on
+  `127.0.0.1:5678`. Tailscale Serve presents HTTPS for
+  `nixos.taile9f484.ts.net:5678`. This computer uses
+  `http://127.0.0.1:5678`. The editor base URL is that loopback address
+  because Spotify OAuth allows plain HTTP only for `127.0.0.1` and rejects
+  the tailnet host.
+- Nemotron accepts TCP port 8083 on `tailscale0` only. `llama-server`
+  listens on `127.0.0.1:8083`. Tailscale Serve presents HTTPS for
+  `nixos.taile9f484.ts.net:8083`. The API key is the age secret
+  `secrets/llama-api-key.age` (decrypted at `/run/agenix/llama-api-key`).
+- RustDesk accepts TCP port 21118 on `tailscale0` only, for Android direct
+  access. That port is not on the LAN or the VPN.
+- nixctl-bridge listens on `127.0.0.1:8094` only. It is not on Tailscale.
+  Read-only `nixctl` commands run immediately. A command saved earlier runs
+  as saved. Anything else waits for Discord approval. Do not publish this
+  port.
 - The media web pages and the qBittorrent WebUI accept their ports on
   `tailscale0` only: 5055 Seerr, 6767 Bazarr, 7878 Radarr, 8080
   qBittorrent, 8686 Lidarr, 8989 Sonarr, and 9696 Prowlarr. These are
@@ -286,7 +321,8 @@ The first visit creates the admin account. Do that on this computer at
 and leave open registration disabled.
 
 Machine learning for faces and search runs on CPU. The module default
-is one worker. The RTX 3050 is left to the desktop.
+is one worker. The RTX 3050 is left to the desktop. The GTX 1660 SUPER
+runs Nemotron.
 
 On the phone:
 
@@ -308,6 +344,49 @@ On the phone:
 7. The app checksums files and skips ones already on the server.
 
 https://docs.immich.app/features/mobile-backup
+
+## n8n
+
+n8n is the workflow editor. On this computer it is
+`http://127.0.0.1:5678`. On the tailnet it is
+`https://nixos.taile9f484.ts.net:5678`. The package is n8n 2.34.6 from
+nixos-26.05. Each `*.schema.js` is hardlinked to a matching `*.ts` so the
+MCP node list still resolves.
+
+Spotify OAuth must be started from a browser on this PC. The editor base
+URL stays on loopback HTTP because Spotify only allows that for
+`127.0.0.1`.
+
+## Nemotron
+
+Nemotron 3.5 Bolt E4B runs in `llama-server` from `packages/llama-cpp.nix`.
+The model alias is `nemotron-bolt`. On this computer the API is
+`http://127.0.0.1:8083`. On the tailnet it is
+`https://nixos.taile9f484.ts.net:8083`. Model files live under
+`/var/lib/llama-cpp/models`. Inference uses the GTX 1660 SUPER with context
+32768. The API key comes from `secrets/llama-api-key.age`.
+
+The persona text is in `nemotron-bolt-system-prompt.md`.
+
+## RustDesk
+
+RustDesk is the remote desktop host for Android on the tailnet. Direct
+access is TCP port 21118 on `tailscale0` only. The client is
+`rustdesk-flutter` from nixpkgs-unstable, the Wayland Flutter client.
+
+## nixctl-bridge
+
+The nixctl-bridge service listens on `127.0.0.1:8094` for the Discord
+operator. Read-only `nixctl` commands run immediately. A command saved
+earlier runs as saved. Anything else waits for approval in Discord.
+
+## lidarr-drive
+
+`modules/services/arr/lidarr-drive.nix` copies
+`/vault/media/library/music` to `gdrive:Lidarr` every night at 3:00 AM
+`America/Chicago`. The module is enabled in `hosts/nixos/default.nix`. The
+timer is not installed until `secrets/rclone-gdrive.age` is committed. The
+copy needs `services/arr/media` for the library paths.
 
 ## VPN
 
@@ -365,9 +444,12 @@ Turn the command off with `nixctl disable dev/shell`, then
 
 ## Apply and validate
 
-Change this computer with `nixctl` after it is installed. `nixctl apply`
-builds the config, activates it as a test, and keeps it only if no new
-service is broken. It also commits the change locally. It does not push.
+Change this computer with `nixctl` after it is installed. Run `nixctl map`
+to see which modules are on, edit the repo, then `nixctl apply "what
+changed"`. `nixctl apply` builds the config, activates it as a test, and
+keeps it only if no new service is broken. It also commits the change
+locally. It does not push. Agent rules are in `nix-agent.md`. The short
+loader is `AGENTS.md`. `agent.md` points Cursor at those files.
 
 nixctl is not on the running system until the next switch. Run this once
 from `/etc/nixos`:
