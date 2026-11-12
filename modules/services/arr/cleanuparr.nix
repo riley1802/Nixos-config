@@ -57,11 +57,16 @@ in
 
     # The process listens on loopback. Chrome forces HTTPS for *.ts.net,
     # so Tailscale Serve terminates TLS on 11011 and proxies here.
-    # The first visit creates the login. The cleaners stay off until
-    # they are enabled in the page. Dry run is also off, so turn that
-    # on before enabling one or it will delete downloads. Replacement
-    # search is allowed once an app is connected. Proactive search for
-    # missing items stays off.
+    # The first visit creates the login. The Queue Cleaner is on and runs
+    # every 5 minutes. Its stall rule "stalled" removes a download after 3
+    # strikes, for public and private torrents, and resets the strikes after
+    # 1MB of progress. Metadata downloads are removed after 3 strikes.
+    # The internet check uses https://1.1.1.1/cdn-cgi/trace so an outage
+    # does not strike every download. Dry run is off. Slow-speed rules and
+    # proactive search stay off. Those settings live in Cleanuparr's
+    # database, not in this file. Stall rules are created with
+    # POST /api/queue-rules/stall. PUT /api/configuration/queue_cleaner
+    # does not save them.
     #
     # qBittorrent saves to /vault/media/downloads. Cleanuparr is in the
     # media group and sees that same path, so the download-directory

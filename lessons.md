@@ -249,6 +249,9 @@ Taken from the saved Cursor chats on this computer, 2026-06-29 through 2026-11-0
 - **Wrong:** Lidarr reported "connection refused" to `127.0.0.1:8080`.
   **Resolved:** qBittorrent was not running yet. The arr apps use that loopback port and their categories. (2026-10-28, 0ea4217b)
 
+- **Wrong:** A max of 12 active downloads meant only a few shows were moving, and music was not trying.
+  **Resolved:** Ten stalled torrents filled qBittorrent's 16 active slots, so hundreds of albums stayed queued. Removing those stalled grabs, blocklisting them, and searching again let new downloads start. A stalled grab blocks a replacement until it is removed. Cleanuparr's stall rule `stalled` now does that after 3 strikes. Sonarr 4.0.20, Radarr 6.4.4, and Lidarr 3.1.6 have no remove-completed checkbox. Indexers were not in backoff. (2026-11-12)
+
 ## Other services
 
 - **Wrong:** Homepage linked to nginx `/n8n/`. n8n 2.x referenced assets under `/n8n/` while serving them at `/`, so the browser received HTML instead of JavaScript.
