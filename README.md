@@ -405,10 +405,10 @@ earlier runs as saved. Anything else waits for approval in Discord.
 
 ## lidarr-drive
 
-`modules/services/arr/lidarr-drive.nix` copies
-`/vault/media/library/music` to `gdrive:Lidarr` every night at 3:00 AM
+`modules/services/arr/lidarr-drive.nix` uses the existing user rclone config
+(`gdrive`) to copy only files that are not already on Drive from
+`/vault/media/library/music` to `gdrive:Lidarr`, nightly at 3:00 AM
 `America/Chicago`. The module is enabled in `hosts/nixos/default.nix`. The
-timer is not installed until `secrets/rclone-gdrive.age` is committed. The
 copy needs `services/arr/media` for the library paths.
 
 ## VPN
