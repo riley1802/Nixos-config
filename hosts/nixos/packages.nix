@@ -9,6 +9,7 @@
     git
     google-chrome
     htop
+    nodejs
     spotify
     uv
   ];

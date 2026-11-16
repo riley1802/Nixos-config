@@ -12,7 +12,7 @@ It still finishes every part the task needs, including callers and tests the cha
 
 Open a new chat after the plugin is installed. A chat that was already open does not load a plugin that arrived mid-conversation.
 
-The checkout has three ways Cursor can carry Ponytail. On this machine the marketplace plugin is the one that is active. There is no `~/.cursor/hooks.json`. This workspace has no `.cursor/rules/ponytail.mdc`. `/etc/nixos/.cursor/hooks.json` has no Ponytail entries.
+The checkout has three ways Cursor can carry Ponytail. On this machine the marketplace skills are installed, and the user hooks file is `~/.cursor/hooks.json` with `PONYTAIL_DEFAULT_MODE=ultra`. This workspace has no `.cursor/rules/ponytail.mdc`. `/etc/nixos/.cursor/hooks.json` has no Ponytail entries.
 
 ### Skills
 
