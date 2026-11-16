@@ -71,7 +71,10 @@ by `nixos-generate-config` and should not be edited by hand.
   Serve ports are 2283 Immich, 5678 n8n, 2586 ntfy, 3001 Uptime Kuma,
   8083 Nemotron, and 11011 Cleanuparr.
 - Jellyfin, lidarr-drive, and the other arr apps live in
-  `modules/services/arr/`.
+  `modules/services/arr/`. With `lidarr-drive` enabled, the nightly copy
+  timer is installed and uses the desktop user's rclone config at
+  `~/.config/rclone/rclone.conf` (destination `gdrive:Lidarr`), not an
+  agenix secret.
 - `modules/network/pia.nix` builds the split tunnel and routes Prowlarr
   lookups through it.
 - `secrets/secrets.nix` lists the age recipients. `secrets/pia-credentials.age`
@@ -81,9 +84,7 @@ by `nixos-generate-config` and should not be edited by hand.
   copies are `/run/agenix/ntfy-auth` and `/run/agenix/ntfy-passwords`.
   `secrets/llama-api-key.age` is the Nemotron API key; the decrypted copy is
   `/run/agenix/llama-api-key` (mode `0440`, group `users`, so the desktop
-  user can call the API from Pi). `secrets/rclone-gdrive.age` is required for
-  the Lidarr Google Drive copy and is not in the repo yet, so the nightly
-  timer is not installed even though `lidarr-drive` is enabled.
+  user can call the API from Pi).
 - `pia/ca.rsa.4096.crt` and `pia/pia-servers.json` are public PIA material
   used to reach a server by IP when the VPN hostnames are filtered.
 

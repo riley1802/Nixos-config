@@ -73,7 +73,9 @@ These rules come from the chats on this machine (2026-06-29 through 2026-11-03).
 - Nemotron (`services/nemotron`) is the llama.cpp server on 127.0.0.1:8083, on the GTX 1660 SUPER. The RTX 3050 is the display. Do not bring back the old llama.cpp servers. Pi (`apps/pi`) is the coding agent on that server. Its config is `/etc/nixos/pi`, extensions are `pi/extensions/`, sessions stay in `~/.local/state/pi/sessions`, and pi-memory notes stay in `~/.local/state/pi/memory`. Do not start a second llama.cpp.
 - nixctl-bridge listens on 127.0.0.1:8094 for the Discord operator. Do not publish it off loopback. Read-only nixctl runs immediately. A command saved earlier runs as saved. Anything else waits for Discord approval.
 - RustDesk direct access is tailnet TCP 21118 only (`apps/rustdesk`).
-- lidarr-drive is enabled. The 3:00 AM copy is not installed until `secrets/rclone-gdrive.age` exists. Do not invent that file.
+- lidarr-drive is enabled. The 3:00 AM copy timer is installed and uses
+  `~/.config/rclone/rclone.conf` (destination `gdrive:Lidarr`); it does not
+  use an age secret.
 
 ## Removed on purpose
 

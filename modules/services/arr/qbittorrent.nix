@@ -90,7 +90,6 @@ in
     services.qbittorrent = {
       enable = true;
       webuiPort = 8080;
-      torrentingPort = 53644;
       openFirewall = false;
       extraArgs = [ "--confirm-legal-notice" ];
 
@@ -153,8 +152,8 @@ in
       if [[ -f $conf ]] && grep -q 'Password_PBKDF2=' "$conf"; then
         grep 'Password_PBKDF2=' "$conf" > "$saved"
       fi
-      if [[ -f $conf ]] && grep -q 'WebUI\Username=' "$conf"; then
-        grep 'WebUI\Username=' "$conf" > "$saved_user"
+      if [[ -f $conf ]] && grep -q 'WebUI\\Username=' "$conf"; then
+        grep 'WebUI\\Username=' "$conf" > "$saved_user"
       fi
     '';
     systemd.services.qbittorrent.serviceConfig.ExecStartPre = lib.mkAfter [
@@ -167,7 +166,7 @@ in
         if [[ -s $saved ]] && ! grep -q 'Password_PBKDF2=' "$conf"; then
           restore=1
         fi
-        if [[ -s $saved_user ]] && ! grep -q 'WebUI\Username=' "$conf"; then
+        if [[ -s $saved_user ]] && ! grep -q 'WebUI\\Username=' "$conf"; then
           restore=1
         fi
         if [[ $restore == 1 ]]; then
@@ -175,7 +174,7 @@ in
           if [[ -s $saved ]] && ! grep -q 'Password_PBKDF2=' "$conf"; then
             cat "$saved" >> "$conf"
           fi
-          if [[ -s $saved_user ]] && ! grep -q 'WebUI\Username=' "$conf"; then
+          if [[ -s $saved_user ]] && ! grep -q 'WebUI\\Username=' "$conf"; then
             cat "$saved_user" >> "$conf"
           fi
         fi
@@ -186,9 +185,5 @@ in
     networking.firewall.interfaces.tailscale0.allowedTCPPorts = [
       8080 # qBittorrent WebUI
     ];
-    networking.firewall.interfaces.pia = {
-      allowedTCPPorts = [ 53644 ];
-      allowedUDPPorts = [ 53644 ];
-    };
   };
 }

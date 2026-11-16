@@ -87,7 +87,9 @@ in
       for f in ${modelFile} ${draftFile}; do
         if [[ -f $src/$f ]]; then
           if [[ ! -f /var/lib/llama-cpp/models/$f ]] || ! ${pkgs.diffutils}/bin/cmp -s "$src/$f" "/var/lib/llama-cpp/models/$f"; then
-            cp -a "$src/$f" "/var/lib/llama-cpp/models/$f"
+            tmp="/var/lib/llama-cpp/models/.$f.partial"
+            cp -a "$src/$f" "$tmp"
+            mv -f "$tmp" "/var/lib/llama-cpp/models/$f"
             chmod 644 "/var/lib/llama-cpp/models/$f"
           fi
         fi
@@ -99,7 +101,10 @@ in
       after = [ "network.target" ];
       wantedBy = [ "multi-user.target" ];
       restartTriggers = [ config.age.secrets.llama-api-key.file ];
-      unitConfig.ConditionPathExists = "${models}/${modelFile}";
+      unitConfig.ConditionPathExists = [
+        "${models}/${modelFile}"
+        "${models}/${draftFile}"
+      ];
       environment = {
         # GTX 1660 SUPER, from `nvidia-smi -L` on this machine.
         CUDA_VISIBLE_DEVICES = "GPU-f2ae9716-6783-f900-4fed-c05b9cb3a6aa";

@@ -1,13 +1,16 @@
-# Loopback command bridge for the Discord operator. Read-only commands run
-# immediately. Saved commands run immediately. Anything else needs Discord.
+# Loopback command bridge for the Discord operator. Callers must send header
+# X-Nixctl-Token matching /var/lib/nixctl-bridge/token (mode 0600). Read-only
+# commands run immediately. Saved commands run immediately. Anything else needs Discord.
 { config, lib, pkgs, ... }:
 let
   cfg = config.my.services.nixctl-bridge;
   bridgePy = pkgs.writeText "nixctl-bridge-server.py" ''
     import fcntl
+    import hmac
     import json
     import os
     import re
+    import secrets
     import subprocess
     from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -15,6 +18,8 @@ let
     PORT = 8094
     BIN = "/run/current-system/sw/bin"
     ALLOW_PATH = "/var/lib/nixctl-bridge/allowlist.json"
+    TOKEN_PATH = "/var/lib/nixctl-bridge/token"
+    AUTH_TOKEN = ""
     REPO = "/etc/nixos"
     MAX_OUT = 12000
     MAX_ARGS = 12
@@ -89,6 +94,17 @@ let
             "check is not read-only because it stages git files."
         ),
     }
+
+    def load_auth_token():
+        if not os.path.isfile(TOKEN_PATH):
+            fd = os.open(TOKEN_PATH, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+            try:
+                token = secrets.token_hex(32)
+                os.write(fd, token.encode("utf-8"))
+            finally:
+                os.close(fd)
+        with open(TOKEN_PATH, "r", encoding="utf-8") as handle:
+            return handle.read().strip()
 
     def cap(text):
         text = text or ""
@@ -336,12 +352,12 @@ let
         return argv
 
     def git_read(argv):
-        if len(argv) < 2 or argv[1] not in ("status", "log", "diff", "show"):
+        if len(argv) < 2 or argv[1] not in ("status", "log"):
             return None
         i = 2
         while i < len(argv):
             arg = argv[i]
-            if arg in ("--oneline", "--stat", "--name-only", "--name-status", "--shortstat", "-p", "--patch", "-1"):
+            if arg in ("--oneline", "--stat", "--name-only", "--name-status", "--shortstat", "-1"):
                 i += 1
                 continue
             if arg in ("-n", "--max-count") and i + 1 < len(argv) and argv[i + 1].isdigit():
@@ -397,17 +413,9 @@ let
         return [argv[0], *flags, *paths]
 
     def ps_read(argv):
-        for arg in argv[1:]:
-            if arg in ("aux", "ax", "ef"):
-                continue
-            if arg in ("-e", "-f", "-a", "-u", "-x", "-o", "-p", "-C"):
-                continue
-            if re.fullmatch(r"-[efauxo]+", arg):
-                continue
-            if re.fullmatch(r"[A-Za-z0-9_,.%:-]+", arg):
-                continue
-            return None
-        return argv
+        if argv == ["ps", "aux"] or argv == ["ps", "-ef"]:
+            return argv
+        return None
 
     SIMPLE = {
         "df": {"-h", "-T", "-a", "-l", "--human-readable", "--print-type", "--si", "-P"},
@@ -571,6 +579,12 @@ let
                 self.send_response(404)
                 self.end_headers()
                 return
+            if not AUTH_TOKEN or not hmac.compare_digest(
+                self.headers.get("X-Nixctl-Token", ""), AUTH_TOKEN
+            ):
+                self.send_response(401)
+                self.end_headers()
+                return
             try:
                 length = int(self.headers.get("Content-Length", "0") or 0)
             except ValueError:
@@ -594,6 +608,8 @@ let
                 return
 
     def main():
+        global AUTH_TOKEN
+        AUTH_TOKEN = load_auth_token()
         server = ThreadingHTTPServer((HOST, PORT), Handler)
         server.serve_forever()
 

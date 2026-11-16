@@ -10,6 +10,17 @@ let
   piaServer = "vancouver438";
   # iptables --path. The directory check prefixes /sys/fs/cgroup/.
   prowlarrCgroupPath = "system.slice/prowlarr.service";
+  piaDnsCgroupPath = "system.slice/pia-dns.service";
+
+  piaDnsYaml = pkgs.formats.yaml { };
+  piaDnsConfigFile = piaDnsYaml.generate "pia-dns-config.yaml" {
+    listen-addrs = [ "127.0.0.2" ];
+    listen-ports = [ 53 ];
+    upstream = [
+      "tls://1.1.1.1"
+      "tls://1.0.0.1"
+    ];
+  };
 
   tools = lib.makeBinPath [
     pkgs.coreutils
@@ -18,6 +29,7 @@ let
     pkgs.gnused
     pkgs.iproute2
     pkgs.jq
+    pkgs.nftables
     pkgs.wireguard-tools
   ];
 
@@ -145,8 +157,8 @@ let
   '';
 
   # The saved PIA payload contains a token, so it stays in /var/lib/pia,
-  # never in this Git repository. A missing file requests one port assignment.
-  # Later runs only refresh that assignment; they do not request a replacement.
+  # never in this Git repository. A new signature is requested when the file
+  # is missing, expires within a day, or bindPort stops returning OK.
   refreshPort = pkgs.writeShellScript "pia-port-forward" ''
     set -euo pipefail
     umask 077
@@ -166,7 +178,7 @@ let
       '.regions[] | select(.id == $id) | .servers.wg[] | select(.cn == $cn) | .cn' \
       ${piaServers})
 
-    if [[ ! -s $state ]]; then
+    request_signature() {
       user=$(sed -n '1p' "$creds")
       pass=$(sed -n '2p' "$creds")
       meta_ip=$(jq -er --arg id "$region" --arg cn "$server" \
@@ -186,21 +198,88 @@ let
       test "$(jq -r .status <<< "$signature_json")" = OK
       jq -e '{payload, signature}' <<< "$signature_json" > "$state"
       chmod 600 "$state"
+    }
+
+    signature_expires_soon() {
+      local expires_at=$1 now threshold expires_epoch
+      now=$(date -u +%s)
+      threshold=$((now + 86400))
+      expires_epoch=$(date -u -d "$expires_at" +%s)
+      (( expires_epoch <= threshold ))
+    }
+
+    if [[ -s $state ]]; then
+      payload=$(jq -er .payload "$state")
+      expires_at=$(printf '%s' "$payload" | base64 -d | jq -er .expires_at)
+      if signature_expires_soon "$expires_at"; then
+        rm -f "$state"
+      fi
+    fi
+
+    if [[ ! -s $state ]]; then
+      request_signature
+    fi
+
+    bind_port() {
+      local bind_json status
+      payload=$(jq -er .payload "$state")
+      signature=$(jq -er .signature "$state")
+      bind_json=$({
+        curl_config data-urlencode "payload=$payload"
+        curl_config data-urlencode "signature=$signature"
+      } | curl -fsS --max-time 20 -G -K - \
+        --interface pia \
+        --connect-to "$hostname::$gateway:" \
+        --cacert ${piaCert} \
+        "https://$hostname:19999/bindPort")
+      unset signature
+      status=$(jq -r .status <<< "$bind_json")
+      printf '%s' "$status"
+    }
+
+    if [[ $(bind_port) != OK ]]; then
+      rm -f "$state"
+      request_signature
+      test "$(bind_port)" = OK
     fi
 
     payload=$(jq -er .payload "$state")
-    signature=$(jq -er .signature "$state")
     port=$(printf '%s' "$payload" | base64 -d | jq -er .port)
     expires_at=$(printf '%s' "$payload" | base64 -d | jq -er .expires_at)
-    bind_json=$({
-      curl_config data-urlencode "payload=$payload"
-      curl_config data-urlencode "signature=$signature"
-    } | curl -fsS --max-time 20 -G -K - \
-      --interface pia \
-      --connect-to "$hostname::$gateway:" \
-      --cacert ${piaCert} \
-      "https://$hostname:19999/bindPort")
-    test "$(jq -r .status <<< "$bind_json")" = OK
+    unset payload
+
+    delete_fw_port() {
+      local table family handle
+      for family in ip ip6; do
+        while read -r handle; do
+          [[ -n $handle ]] || continue
+          nft delete rule "$family" filter nixos-fw handle "$handle" 2>/dev/null || true
+        done < <(nft -a list chain "$family" filter nixos-fw 2>/dev/null \
+          | grep 'comment "pia-port-forward-' \
+          | sed -n 's/.*handle \([0-9]*\).*/\1/p')
+      done
+    }
+
+    apply_fw_port() {
+      local family proto
+      delete_fw_port
+      for family in ip ip6; do
+        for proto in tcp udp; do
+          nft add rule "$family" filter nixos-fw \
+            iifname "pia" "$proto" dport "$port" \
+            counter jump nixos-fw-accept comment "\"pia-port-forward-$proto\""
+        done
+      done
+    }
+
+    apply_fw_port
+
+    if curl -fsS -o /dev/null --max-time 3 http://127.0.0.1:8080/api/v2/app/version 2>/dev/null; then
+      curl -fsS --max-time 15 -X POST \
+        --data-urlencode "json={\"listen_port\":$port}" \
+        'http://127.0.0.1:8080/api/v2/app/setPreferences' >/dev/null || true
+    fi
+
     echo "Forwarded port $port refreshed; expires $expires_at"
   '';
 
@@ -241,6 +320,35 @@ let
     ip rule show | grep -q 'fwmark 0x7072 lookup 51820' || ip rule add fwmark 0x7072 lookup 51820 priority 110
   '';
 
+  piaDnsVpnRoute = pkgs.writeShellScript "pia-dns-vpn-route" ''
+    set -euo pipefail
+    export PATH=${lib.makeBinPath [ pkgs.coreutils pkgs.iproute2 pkgs.iptables ]}:$PATH
+    cgroup=/sys/fs/cgroup/${piaDnsCgroupPath}
+    for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
+      [[ -d $cgroup ]] && break
+      sleep 0.5
+    done
+    if [[ ! -d $cgroup ]]; then
+      echo "pia-dns cgroup $cgroup is not ready" >&2
+      exit 1
+    fi
+    while iptables -t mangle -D OUTPUT -m cgroup --path ${piaDnsCgroupPath} ! -d 127.0.0.0/8 -j MARK --set-mark 0x7072 2>/dev/null; do
+      true
+    done
+    iptables -t mangle -A OUTPUT -m cgroup --path ${piaDnsCgroupPath} ! -d 127.0.0.0/8 -j MARK --set-mark 0x7072
+    iptables -t nat -C POSTROUTING -o pia -m mark --mark 0x7072 -j MASQUERADE 2>/dev/null || \
+      iptables -t nat -A POSTROUTING -o pia -m mark --mark 0x7072 -j MASQUERADE
+    ip rule show | grep -q 'fwmark 0x7072 lookup 51820' || ip rule add fwmark 0x7072 lookup 51820 priority 110
+  '';
+
+  piaDnsVpnRouteStop = pkgs.writeShellScript "pia-dns-vpn-route-stop" ''
+    set -euo pipefail
+    export PATH=${lib.makeBinPath [ pkgs.iproute2 pkgs.iptables ]}:$PATH
+    while iptables -t mangle -D OUTPUT -m cgroup --path ${piaDnsCgroupPath} ! -d 127.0.0.0/8 -j MARK --set-mark 0x7072 2>/dev/null; do
+      true
+    done
+  '';
+
   prowlarrVpnRouteStop = pkgs.writeShellScript "prowlarr-vpn-route-stop" ''
     set -euo pipefail
     export PATH=${lib.makeBinPath [ pkgs.iproute2 pkgs.iptables ]}:$PATH
@@ -274,6 +382,7 @@ let
       pkgs.systemd
       pkgs.util-linux
     ]}:$PATH
+    ${curlConfig}
 
     exec 9>/run/pia-health.lock
     flock -n 9 || {
@@ -351,9 +460,8 @@ let
         fi
         sleep 2
       done
-      code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 30 -X POST \
+      code=$(curl_config header "X-Api-Key: $key" | curl -sS -o /dev/null -w '%{http_code}' --max-time 30 -K - -X POST \
         -H 'Content-Type: application/json' \
-        -H "X-Api-Key: $key" \
         -d '{"name":"RssSync"}' \
         "http://127.0.0.1:''${port}/api/''${api}/command" || true)
       unset key
@@ -445,6 +553,67 @@ in
     # router, so strict reverse-path filtering would drop the torrent replies.
     networking.firewall.checkReversePath = "loose";
 
+    environment.etc."pia-arr/resolv.conf".text = ''
+      nameserver 127.0.0.2
+    '';
+
+    systemd.services.pia-dns = {
+      description = "DNS forwarder for VPN-only torrent clients";
+      after = [ "pia-wireguard.service" ];
+      before = [ "pia-dns-vpn-route.service" ];
+      wants = [
+        "pia-wireguard.service"
+        "pia-dns-vpn-route.service"
+      ];
+      wantedBy = [ "multi-user.target" ];
+      serviceConfig = {
+        Type = "simple";
+        ExecStart = "${lib.getExe pkgs.dnsproxy} --config-path=${piaDnsConfigFile}";
+        Restart = "always";
+        RestartSec = 10;
+        AmbientCapabilities = "CAP_NET_BIND_SERVICE";
+        DynamicUser = true;
+        LockPersonality = true;
+        MemoryDenyWriteExecute = true;
+        NoNewPrivileges = true;
+        ProtectClock = true;
+        ProtectHome = true;
+        ProtectHostname = true;
+        ProtectKernelLogs = true;
+        RemoveIPC = true;
+        RestrictAddressFamilies = [
+          "AF_INET"
+          "AF_INET6"
+        ];
+        RestrictNamespaces = true;
+        RestrictRealtime = true;
+        RestrictSUIDSGID = true;
+        SystemCallArchitectures = "native";
+        SystemCallErrorNumber = "EPERM";
+        SystemCallFilter = [
+          "@system-service"
+          "~@privileged @resources"
+        ];
+      };
+    };
+
+    systemd.services.pia-dns-vpn-route = {
+      description = "Send pia-dns upstream lookups through the VPN";
+      after = [ "pia-dns.service" "pia-wireguard.service" "firewall.service" ];
+      wants = [ "pia-wireguard.service" ];
+      partOf = [ "pia-dns.service" ];
+      startLimitIntervalSec = 60;
+      startLimitBurst = 10;
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+        Restart = "on-failure";
+        RestartSec = "2s";
+        ExecStart = piaDnsVpnRoute;
+        ExecStop = piaDnsVpnRouteStop;
+      };
+    };
+
     systemd.services.pia-wireguard = {
       description = "PIA WireGuard tunnel for qBittorrent and Prowlarr";
       wantedBy = [ "multi-user.target" ];
@@ -494,17 +663,22 @@ in
     # file lists that one first, then the tunnel.
     systemd.services.qbittorrent = {
       wants = lib.mkAfter [
+        "pia-dns.service"
         "pia-wireguard.service"
+        "pia-port-forward.service"
         "sys-subsystem-net-devices-tailscale0.device"
       ];
       after = lib.mkAfter [
+        "pia-dns.service"
         "pia-wireguard.service"
         "pia-client-refresh.service"
+        "pia-port-forward.service"
         "tailscaled.service"
         "sys-subsystem-net-devices-tailscale0.device"
       ];
       serviceConfig = {
         RestrictNetworkInterfaces = [ "lo" "pia" "tailscale0" ];
+        BindReadOnlyPaths = [ "/etc/pia-arr/resolv.conf:/etc/resolv.conf" ];
         Restart = "on-failure";
         RestartSec = "5s";
       };
@@ -539,22 +713,27 @@ in
     systemd.services.prowlarr = {
       wants = [
         "prowlarr-vpn-route.service"
+        "pia-dns.service"
         "pia-wireguard.service"
         "sys-subsystem-net-devices-tailscale0.device"
       ];
       after = [
+        "pia-dns.service"
         "pia-wireguard.service"
         "pia-client-refresh.service"
         "tailscaled.service"
         "sys-subsystem-net-devices-tailscale0.device"
       ];
       before = [ "prowlarr-vpn-route.service" ];
-      serviceConfig.RestrictNetworkInterfaces = [ "lo" "pia" "tailscale0" ];
+      serviceConfig = {
+        RestrictNetworkInterfaces = [ "lo" "pia" "tailscale0" ];
+        BindReadOnlyPaths = [ "/etc/pia-arr/resolv.conf:/etc/resolv.conf" ];
+      };
     };
 
     systemd.services.pia-port-forward = {
       description = "Refresh the PIA forwarded-port binding";
-      after = [ "pia-wireguard.service" ];
+      after = [ "pia-wireguard.service" "firewall.service" ];
       requires = [ "pia-wireguard.service" ];
       serviceConfig = {
         Type = "oneshot";

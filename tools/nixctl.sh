@@ -55,34 +55,55 @@ settle() {
 }
 
 disarm() {
-  systemctl stop nixctl-revert.timer >/dev/null 2>&1 || true
-  systemctl reset-failed nixctl-revert.service nixctl-revert.timer >/dev/null 2>&1 || true
+  systemctl stop nixctl-revert.service >/dev/null 2>&1 || true
+  systemctl reset-failed nixctl-revert.service >/dev/null 2>&1 || true
+}
+
+# Try switch-to-configuration test on the old system; disarm only if that succeeds.
+rollback_old_system() {
+  local old=$1
+  if run_stc "$old" test; then
+    disarm
+    say "ROLLED BACK"
+    return 1
+  fi
+  say "== rollback failed; the revert watcher is still armed"
+  return 1
 }
 
 root_apply_system() {
-  local new=$1 old before after newbad u
+  local new=$1 old before after newbad u prev_gen
   store_system_ok "$new" || fail "not a NixOS system path: $new"
   old=$(readlink -f /run/current-system)
-  before=$(bad_units)
+  if ! before=$(systemctl list-units --state=failed,auto-restart --plain --no-legend --no-pager 2>/dev/null |
+      awk '{print $1}' | sort -u); then
+    say "== health check: could not list units"
+    return 1
+  fi
 
-  # Dead-man switch: if this script dies before it finishes, the old
-  # system comes back by itself after 5 minutes.
+  # Dead-man switch: if this root process dies before apply finishes, the
+  # watcher below brings the old system back (see disarm on the success path).
+  local apply_pid=$$
   disarm
-  systemd-run --quiet --unit=nixctl-revert --on-active=300 \
-    --timer-property=AccuracySec=5s "$old/bin/switch-to-configuration" test
+  systemd-run --quiet --unit=nixctl-revert --service-type=simple \
+    /run/current-system/sw/bin/bash -c \
+    "while kill -0 ${apply_pid} 2>/dev/null; do sleep 5; done; exec $(printf '%q' "$old/bin/switch-to-configuration") test"
 
   say "== test: activating the new system (not permanent yet)"
   if ! run_stc "$new" test; then
     say "== activation reported errors, going back to the old system"
-    run_stc "$old" test || true
-    disarm
-    say "ROLLED BACK"
+    rollback_old_system "$old"
     return 1
   fi
 
   say "== health check: waiting for services to settle"
   settle
-  after=$(bad_units)
+  if ! after=$(systemctl list-units --state=failed,auto-restart --plain --no-legend --no-pager 2>/dev/null |
+      awk '{print $1}' | sort -u); then
+    say "== health check: could not list units"
+    rollback_old_system "$old"
+    return 1
+  fi
   newbad=$(comm -13 <(printf '%s\n' "$before") <(printf '%s\n' "$after") | sed '/^$/d')
   if [[ -n $newbad ]]; then
     say "== these services broke after the change:"
@@ -91,23 +112,33 @@ root_apply_system() {
       journalctl -u "$u" -b --no-pager -n 15 -o cat 2>/dev/null || true
     done
     say "== going back to the old system"
-    run_stc "$old" test || true
-    disarm
     say "BROKEN UNITS: $(tr '\n' ' ' <<<"$newbad")"
-    say "ROLLED BACK"
+    rollback_old_system "$old"
     return 1
   fi
 
   say "== healthy, making it permanent"
+  prev_gen=$(readlink /nix/var/nix/profiles/system)
   disarm
   nix-env -p /nix/var/nix/profiles/system --set "$new"
-  run_stc "$new" switch
+  if ! run_stc "$new" switch; then
+    nix-env -p /nix/var/nix/profiles/system --switch-generation \
+      "$(sed -n 's/^system-\([0-9]*\)-link$/\1/p' <<<"$prev_gen")"
+    rollback_old_system "$old"
+    return 1
+  fi
   say "SWITCHED"
 }
 
 root_rollback() {
+  local prev_gen
+  prev_gen=$(readlink /nix/var/nix/profiles/system)
   nix-env -p /nix/var/nix/profiles/system --rollback
-  run_stc "$(readlink -f /nix/var/nix/profiles/system)" switch
+  if ! run_stc "$(readlink -f /nix/var/nix/profiles/system)" switch; then
+    nix-env -p /nix/var/nix/profiles/system --switch-generation \
+      "$(sed -n 's/^system-\([0-9]*\)-link$/\1/p' <<<"$prev_gen")"
+    return 1
+  fi
   say "SWITCHED"
 }
 
@@ -234,7 +265,7 @@ guards() {
   if grep -qE 'stateVersion' <<<"$added"; then
     fail "a stateVersion line was changed; it must never change" "put the old stateVersion line back, then run nixctl apply again"
   fi
-  if grep -iE '(password|passwd|secret|token|api_?key)[A-Za-z_]*[[:space:]]*=[[:space:]]*"[^"]+"' <<<"$added" |
+  if grep -iE "(password|passwd|secret|token|api_?key)[A-Za-z_]*[[:space:]]*=[[:space:]]*(\"[^\"]+\"|''[^'']+'')" <<<"$added" |
     grep -viE '(file|path|dir)[[:space:]]*=' | grep -q .; then
     fail "a password, token or key looks like it was written into a .nix file" "remove it; secrets go in secrets/ with agenix (ask Riley)"
   fi
@@ -300,9 +331,16 @@ cmd_apply() {
   fi
 
   say "== 3/3 test, health check, switch"
-  if ! as_root apply-system "$new" | tee -a "$LOG"; then
-    fail "the new system broke something and was rolled back; your file edits are still there" "read the log lines above, run nixctl logs UNIT for more, fix the module, then nixctl apply again (or nixctl undo)"
+  local root_out=${TMPDIR:-/tmp}/nixctl-apply-root.$$
+  if ! as_root apply-system "$new" 2>&1 | tee -a "$LOG" | tee "$root_out"; then
+    if grep -qx 'ROLLED BACK' "$root_out" 2>/dev/null; then
+      rm -f "$root_out"
+      fail "the new system broke something and was rolled back; your file edits are still there" "read the log lines above, run nixctl logs UNIT for more, fix the module, then nixctl apply again (or nixctl undo)"
+    fi
+    rm -f "$root_out"
+    fail "the apply did not finish; the rollback did not finish" "read the log lines above; if the revert watcher is still armed wait for it or fix the issue, then nixctl status and nixctl apply again (or nixctl undo)"
   fi
+  rm -f "$root_out"
   commit "$msg"
   ok "applied in $((SECONDS - start))s: $msg" "if something looks wrong later: nixctl rollback"
 }
@@ -318,11 +356,16 @@ cmd_undo() {
 
 cmd_rollback() {
   lock
+  if ! git_q diff HEAD --quiet || [[ -n $(git_q ls-files --others --exclude-standard) ]]; then
+    fail "unsaved file edits or untracked files in the repo; rollback needs a clean tree" "run nixctl undo first, then nixctl rollback"
+  fi
   if ! as_root rollback; then
     fail "rollback failed" "run nixctl status and report the output"
   fi
   if git_q log -1 --format=%s | grep -q '^nixctl: '; then
-    git_q revert --no-edit HEAD >/dev/null
+    if ! git_q revert --no-edit HEAD >/dev/null; then
+      fail "system rolled back but git revert of the last nixctl commit failed" "fix the repo (nixctl status), then nixctl apply or hand-fix git; do not run nixctl rollback again for this"
+    fi
     say "== files reverted to match (git revert of the last nixctl change)"
   fi
   ok "the computer is back on the previous version" "nixctl status"
