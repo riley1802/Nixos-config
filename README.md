@@ -8,7 +8,7 @@ rest of the desktop stays on the home network.
 
 ## Repository layout
 
-```
+```nix
 flake.nix                         inputs and one host
 flake.lock                        exact input revisions
 dev/flake.nix                     global dev shell, separate from the system flake
@@ -209,21 +209,21 @@ Requests and playback work in a browser on this computer. The same pages
 are available on the tailnet. Only Jellyfin is also open on the home Wi-Fi.
 
 | App | Address | Role |
-|---|---|---|
-| Seerr | http://127.0.0.1:5055 or http://nixos.taile9f484.ts.net:5055 | Request a show or movie |
-| Jellyfin | http://192.168.50.101:8096 on Wi-Fi, http://nixos.taile9f484.ts.net:8096 on Tailscale | Watch and listen |
-| Sonarr | http://127.0.0.1:8989 or http://nixos.taile9f484.ts.net:8989 | TV downloads and library |
-| Radarr | http://127.0.0.1:7878 or http://nixos.taile9f484.ts.net:7878 | Movie downloads and library |
-| Prowlarr | http://127.0.0.1:9696 or http://nixos.taile9f484.ts.net:9696 | Indexers for the apps above |
-| Lidarr | http://127.0.0.1:8686 or http://nixos.taile9f484.ts.net:8686 | Music. Add artists here; Seerr does not request music |
-| Bazarr | http://127.0.0.1:6767 or http://nixos.taile9f484.ts.net:6767 | Subtitles, after a language profile is chosen |
-| qBittorrent | http://127.0.0.1:8080 or http://nixos.taile9f484.ts.net:8080 | Torrent client. Sonarr, Radarr, and Lidarr drive it |
-| Cleanuparr | http://127.0.0.1:11011 or https://nixos.taile9f484.ts.net:11011 | Removes stalled, failed, and blocked downloads. The first visit creates the login. Cleaners stay off until enabled. Turn Dry run on first |
-| Uptime Kuma | http://127.0.0.1:3001 or https://nixos.taile9f484.ts.net:3001 | Whether the apps above, Pi-hole, and the tailnet path to the Pi are up |
+| --- | --- | --- |
+| Seerr | <http://127.0.0.1:5055> or <http://nixos.taile9f484.ts.net:5055> | Request a show or movie |
+| Jellyfin | <http://192.168.50.101:8096> on Wi-Fi, <http://nixos.taile9f484.ts.net:8096> on Tailscale | Watch and listen |
+| Sonarr | <http://127.0.0.1:8989> or <http://nixos.taile9f484.ts.net:8989> | TV downloads and library |
+| Radarr | <http://127.0.0.1:7878> or <http://nixos.taile9f484.ts.net:7878> | Movie downloads and library |
+| Prowlarr | <http://127.0.0.1:9696> or <http://nixos.taile9f484.ts.net:9696> | Indexers for the apps above |
+| Lidarr | <http://127.0.0.1:8686> or <http://nixos.taile9f484.ts.net:8686> | Music. Add artists here; Seerr does not request music |
+| Bazarr | <http://127.0.0.1:6767> or <http://nixos.taile9f484.ts.net:6767> | Subtitles, after a language profile is chosen |
+| qBittorrent | <http://127.0.0.1:8080> or <http://nixos.taile9f484.ts.net:8080> | Torrent client. Sonarr, Radarr, and Lidarr drive it |
+| Cleanuparr | <http://127.0.0.1:11011> or <https://nixos.taile9f484.ts.net:11011> | Removes stalled, failed, and blocked downloads. The first visit creates the login. Cleaners stay off until enabled. Turn Dry run on first |
+| Uptime Kuma | <http://127.0.0.1:3001> or <https://nixos.taile9f484.ts.net:3001> | Whether the apps above, Pi-hole, and the tailnet path to the Pi are up |
 
 A request in Seerr goes to Sonarr or Radarr. That app asks Prowlarr for a
 torrent. Prowlarr's search leaves through the VPN. The grab goes to
-qBittorrent, which is bound to the `pia` interface, so the download stops if
+qBittorrent, which is bound to the `pia` interfac>e, so the download stops if
 the tunnel is down instead of using the home address. Finished files are
 moved into the library and then show up in Jellyfin. Cleanuparr reads the
 same queue. Its login and the API keys it stores stay in
@@ -271,12 +271,12 @@ pkexec cat /run/agenix/ntfy-passwords
 ```
 
 | Who | User | Can |
-|---|---|---|
+| --- | --- | --- |
 | Phone | `rileyt` | Read and publish every topic |
 | Sonarr, Radarr, Lidarr, Uptime Kuma | `apps` | Publish only, using the token |
 
 | Topic | Who publishes | When |
-|---|---|---|
+| --- | --- | --- |
 | `movies` | Radarr | A movie file is imported |
 | `shows` | Sonarr | An episode file is imported |
 | `music` | Lidarr | A release is imported |
@@ -348,7 +348,7 @@ On the phone:
    uploads itself; opening the app uploads sooner.
 7. The app checksums files and skips ones already on the server.
 
-https://docs.immich.app/features/mobile-backup
+<https://docs.immich.app/features/mobile-backup>
 
 ## n8n
 
