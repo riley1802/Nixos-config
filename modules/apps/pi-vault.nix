@@ -518,7 +518,7 @@ let
         "$vault"/*) ;;
         *) refuse "file must stay in vault" ;;
       esac
-      ${lib.getExe pkgs.gnused}/bin/sed -i -E \
+      ${lib.getExe pkgs.gnused} -i -E \
         's/([^[\]]+)\[\]\(([^)]+)\)/[\1](\2)/g' "$file"
       ${markdownlintExe} --config ${mdLintConfig} --fix ":$canon" >/dev/null 2>&1 || true
       if ${markdownlintExe} --config ${mdLintConfig} ":$canon" >/dev/null 2>&1; then
