@@ -46,7 +46,7 @@ let
     extensions = [ "-builtin:llama.cpp" ];
     packages = [ ];
     images = { blockImages = true; };
-    modelThinkingLevels = { "spark/spark" = "minimal"; };
+    modelThinkingLevels = { "spark/spark" = "low"; };
   });
 
   appendSystem = pkgs.writeText "pi-vault-APPEND_SYSTEM.md" (
@@ -167,7 +167,7 @@ let
                     "--model",
                     "spark",
                     "--thinking",
-                    "minimal",
+                    "low",
                     "--tools",
                     "read,write,edit,bash",
                     "--no-skills",
