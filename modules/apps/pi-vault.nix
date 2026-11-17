@@ -728,7 +728,7 @@ let
           my $fail = 0;
           while ($body =~ m/\[[^\]]*\]\(([^)]+)\)/g) {
             my $t = $1;
-            next if $t =~ m{^https?://};
+            next if $t =~ m{^[A-Za-z][A-Za-z0-9+.-]*:};
             my $path = $t;
             $path =~ s/\s+"[^"]*"\s*\z//;
             $path =~ s/^\s+|\s+$//g;
