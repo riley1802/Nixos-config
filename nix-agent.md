@@ -29,6 +29,7 @@ These rules come from the chats on this machine (2026-06-29 through 2026-11-03).
 ## This computer
 
 - Host `nixos`, user `rileyt`, timezone `America/Chicago`. The laptop on the tailnet is `rileys-minty`, account `riley`. `ssh laptop` is that account, not `rileyt`.
+- Home Manager for `rileyt` lives in `hosts/nixos/home.nix`; global wiring is `modules/core/home.nix`. It activates only on `nixctl apply`, not `home-manager switch`. Do not add Home Manager files under `modules/` except `modules/core/home.nix`. `~/.config/rclone/rclone.conf` stays unmanaged.
 - Desktop is KDE Plasma 6 on Wayland with SDDM. KWin is pinned to the RTX 3050 with `KWIN_DRM_DEVICES=/run/display-gpu`, a symlink to `/dev/dri/by-path/pci-0000:02:00.0-card`. The by-path node itself must not be that variable: KWin splits it on `:`. Plasma (X11) is in the SDDM menu. Cinnamon remains in `modules/desktop/cinnamon.nix` and is off; do not enable it while Plasma is on, because each one starts its own display manager. GNOME was the first desktop. There is no Pi host in this repo.
 - Two NVIDIA cards, 6 GB each. The RTX 3050 drives the displays. The GTX 1660 SUPER is the second card.
 - Monitors are dual 2560×1440 and can sit at 60 Hz while the panel is 144 Hz. Pointer stutter has also been a USB receiver dongle, and a burst stall when Jellyfin transcode plus the USB game drive saturated the bus. Check the dongle, refresh rates, and disk stalls before changing the compositor.

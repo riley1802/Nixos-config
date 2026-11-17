@@ -15,8 +15,10 @@ dev/flake.nix                     global dev shell, separate from the system fla
 dev/flake.lock                    nixpkgs pin for that shell only
 hosts/nixos/default.nix           hostname, shared settings, which modules are on
 hosts/nixos/packages.nix          programs installed by name
+hosts/nixos/home.nix              Home Manager config for the login user
 hosts/nixos/hardware-configuration.nix
 modules/core/                     nix, boot, system, settings, users, nixctl, overlays
+modules/core/home.nix             Home Manager NixOS module (useGlobalPkgs, backups)
 modules/dev/shell.nix             interactive `nix dev` command
 modules/hardware/                 NVIDIA driver, vault disk, game drive
 modules/desktop/                  Plasma, Cinnamon (off), KDE Connect, Chrome DNS policy

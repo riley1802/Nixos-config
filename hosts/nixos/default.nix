@@ -5,6 +5,7 @@
   imports = [
     ./hardware-configuration.nix
     ./packages.nix
+    ./home.nix
   ];
 
   networking.hostName = "nixos";

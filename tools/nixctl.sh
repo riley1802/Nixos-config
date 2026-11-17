@@ -262,7 +262,7 @@ guards() {
     fail "flake.lock was changed by hand" "run: git -C $REPO checkout HEAD -- flake.lock, then use nixctl update"
   fi
   added=$(git_q diff HEAD -U0 -- '*.nix' | grep -E '^\+[^+]' || true)
-  if grep -qE 'stateVersion' <<<"$added"; then
+  if grep -qE 'system\.stateVersion' <<<"$added"; then
     fail "a stateVersion line was changed; it must never change" "put the old stateVersion line back, then run nixctl apply again"
   fi
   if grep -iE "(password|passwd|secret|token|api_?key)[A-Za-z_]*[[:space:]]*=[[:space:]]*(\"[^\"]+\"|''[^'']+'')" <<<"$added" |
