@@ -14,6 +14,7 @@
   my.lanInterface = "enp132s0";
 
   # nixctl: modules (one line per module that is on; nixctl enable/disable edit these lines)
+  my.apps.pi-vault.enable = true;
   my.apps.pi.enable = true;
   my.apps.rustdesk.enable = true;
   my.dev.shell.enable = true;

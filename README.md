@@ -407,6 +407,18 @@ Spark on the GTX 1660 SUPER is the only inference backend. Pi turns a page
 into markdown by POSTing the URL to the loopback webhook
 `http://127.0.0.1:5678/webhook/crawl4ai-markdown`.
 
+## Vault Pi
+
+Vault Pi is a separate agent for `/obsidian-vault`. It listens on loopback
+`127.0.0.1:8095` only; do not publish it on Tailscale. Callers send header
+`X-Pi-Vault-Token` matching `/var/lib/pi-vault/token` (mode `0600`). `POST
+/prompt` with JSON `session` and `text` talks to one long-lived Pi RPC process.
+While a run is active, message `stop` aborts; any other mid-run message steers
+and returns `steered` true; a different session gets `409`. Tool progress POSTs
+to `http://127.0.0.1:5678/webhook/pi-vault-progress` (failures ignored).
+Saving a web page uses the loopback `crawl4ai-markdown` webhook. The Discord
+workflow is not built yet.
+
 ## RustDesk
 
 RustDesk is the remote desktop host for Android on the tailnet. Direct

@@ -73,6 +73,7 @@ These rules come from the chats on this machine (2026-06-29 through 2026-11-03).
 - OpenLogi is installed for the MX Master 4. It was not the cause of the November pointer stutter.
 - n8n is on. Editor is <http://127.0.0.1:5678>. Tailscale Serve is <https://nixos.taile9f484.ts.net:5678>. The editor base URL stays the loopback URL because Spotify OAuth rejects the tailnet host.
 - Spark-X2.6-4B Q4_K_M with a DSpark drafter (`services/nemotron`) is the llama.cpp server on 127.0.0.1:8083, on the GTX 1660 SUPER. The RTX 3050 is the display. Do not bring back the old llama.cpp servers. Pi (`apps/pi`) is the coding agent on that server. Its config is `/etc/nixos/pi`, extensions are `pi/extensions/`, sessions stay in `~/.local/state/pi/sessions`, and pi-memory notes stay in `~/.local/state/pi/memory`. Pi turns a page into markdown by POSTing the URL to `http://127.0.0.1:5678/webhook/crawl4ai-markdown`. Do not start a second llama.cpp.
+- Vault Pi (`apps/pi-vault`) is a separate runtime for `/obsidian-vault` on `127.0.0.1:8095` only. Do not publish it off loopback. It is not the coding agent and it is not nixctl-bridge. The Discord workflow is not built yet.
 - nixctl-bridge listens on 127.0.0.1:8094 for the Discord operator. Do not publish it off loopback. Read-only nixctl runs immediately. A command saved earlier runs as saved. Anything else waits for Discord approval.
 - RustDesk direct access is tailnet TCP 21118 only (`apps/rustdesk`).
 - lidarr-drive is enabled. The 3:00 AM copy timer is installed and uses
