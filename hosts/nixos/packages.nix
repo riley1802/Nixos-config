@@ -11,6 +11,7 @@
     google-chrome
     htop
     nodejs
+    obsidian
     spotify
     uv
   ];

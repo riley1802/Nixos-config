@@ -24,7 +24,7 @@
   my.desktop.chrome.enable = true; # Chrome/Chromium DNS policy tweaks for this machine
   my.desktop.kdeconnect.enable = true; # KDE Connect: link phone and desktop (SMS, notifications, etc.)
   my.desktop.plasma.enable = true; # KDE Plasma desktop session and related defaults
-  my.hardware.disks.enable = true; # Mount or wire up “vault” disk and game drive
+  my.hardware.disks.enable = true; # Mount vault, Obsidian Vault, and game drive
   my.hardware.nvidia.enable = true; # Proprietary NVIDIA graphics driver stack
   my.network.dnsproxy.enable = true; # Encrypted DNS forwarder (e.g. DoH/DoT upstream)
   my.network.firewall.enable = true; # Keep global port ranges empty; each service opens its own interface

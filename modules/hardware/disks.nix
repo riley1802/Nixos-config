@@ -1,10 +1,10 @@
-# Extra disks: the vault SSD and the USB game drive.
+# Extra disks: the vault SSD, the Obsidian SSD, and the USB game drive.
 { config, lib, ... }:
 let
   cfg = config.my.hardware.disks;
 in
 {
-  options.my.hardware.disks.enable = lib.mkEnableOption "vault disk and game drive";
+  options.my.hardware.disks.enable = lib.mkEnableOption "vault disk, Obsidian disk, and game drive";
 
   config = lib.mkIf cfg.enable {
     # The disk labeled "vault". Existing backups stay where they are.
@@ -12,6 +12,12 @@ in
     # view the apps already use, so their saved paths do not change.
     fileSystems."/vault" = {
       device = "/dev/disk/by-uuid/f279aaed-ae58-47e8-9629-d6654c68a0e9";
+      fsType = "ext4";
+    };
+
+    # Samsung 256 GB NVMe, labeled "Obsidian Vault". The mount is the vault.
+    fileSystems."/obsidian-vault" = {
+      device = "/dev/disk/by-uuid/b4205a07-a02d-4812-90bc-827d72a56683";
       fsType = "ext4";
     };
 

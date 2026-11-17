@@ -29,5 +29,10 @@ in
         HostName rileys-minty.taile9f484.ts.net
         User riley
     '';
+
+    # Laptop rileys-minty. sshd reads this in addition to ~/.ssh/authorized_keys.
+    users.users.${config.my.user}.openssh.authorizedKeys.keys = [
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDH6z16wiXnwFA+cj9Jmv3ug3Kv0LA86qNpZlxevctP1 riley@rileys-minty"
+    ];
   };
 }

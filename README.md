@@ -20,7 +20,7 @@ hosts/nixos/hardware-configuration.nix
 modules/core/                     nix, boot, system, settings, users, nixctl, overlays
 modules/core/home.nix             Home Manager NixOS module (useGlobalPkgs, backups)
 modules/dev/shell.nix             interactive `nix dev` command
-modules/hardware/                 NVIDIA driver, vault disk, game drive
+modules/hardware/                 NVIDIA driver, vault disk, Obsidian disk, game drive
 modules/desktop/                  Plasma, Cinnamon (off), KDE Connect, Chrome DNS policy
 modules/network/                  Tailscale, DNS, SSH, NetworkManager, PIA, firewall
 modules/services/arr/             Sonarr, Radarr, Lidarr, Bazarr, Prowlarr, Seerr,
@@ -126,7 +126,7 @@ The workstation uses:
   resolve `nixos.taile9f484.ts.net`.
 
 The normal user is `rileyt`, with membership in `wheel`, `networkmanager`,
-`docker`, and `media`. Docker group membership is effectively root-equivalent
+`docker`, and `media`. Git's name and email, the gh alias `co`, and the laptop SSH public key are declared in the config (`home.nix` and `modules/network/openssh.nix`). Docker group membership is effectively root-equivalent
 and should only be granted to trusted users.
 
 Cursor (`code-cursor`), Discord, GitHub CLI (`gh`), Git, Google Chrome,
