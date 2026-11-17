@@ -59,13 +59,7 @@ let
       ""
       "Reply with the paths that changed. A crawled page becomes a note in the vault. The reply is the path, not the page."
       ""
-      "To save a web page, one curl, no pipes:"
-      ""
-      "curl -fsS --max-time 180 -H 'Content-Type: application/json' -d '{\"url\":\"https://example.com\"}' http://127.0.0.1:5678/webhook/crawl4ai-markdown"
-      ""
-      "The field is url, not link. Optional mode: omit or fit for main content, raw for the whole page; bm25 and llm also need q. Stdout of a 200 is the markdown. The Content-Disposition attachment header does not change that. A non-200 body is JSON with error and message. There is no login. Use 127.0.0.1. The tailnet URL fails inside this service. Then write that markdown into a note."
-      ""
-      "When someone wants a page and the pages it links to, run pi-vault-crawl URL once. Do not curl in a loop. Do not read the saved notes. If they say continue, run pi-vault-crawl --continue once. Reply with the command's lines."
+      "You do not turn web pages into markdown. pi-vault-crawl URL does that for one page and prints link URLs. You choose which of those links to crawl next, one URL per call, and only when the user asked for those links. You do not crawl links of links unless the user asked. You still move, rename, delete, and organize notes. Never paste a crawled page into a note yourself. Reply with the command's lines."
     ]
     + "\n"
   );
@@ -537,19 +531,17 @@ let
       pkgs.coreutils
       pkgs.curl
       pkgs.gnugrep
+      pkgs.perl
       piVaultMd
     ];
     text = ''
       set -euo pipefail
 
       vault=/obsidian-vault
-      queue=/var/lib/pi-vault/crawl-queue
+      crawl_root="$vault/crawl"
       crawl_api=http://127.0.0.1:5678/webhook/crawl4ai-markdown
       md_lint=${lib.getExe piVaultMd}
-      max_pages=12
-      max_secs=240
-      start=$SECONDS
-      pages=0
+      max_link_lines=40
 
       die() { echo "pi-vault-crawl: $1" >&2; exit 1; }
 
@@ -586,8 +578,9 @@ let
       }
 
       drop_obvious() {
-        local low
-        low=$(printf '%s' "''${1%%\?*}" | tr '[:upper:]' '[:lower:]')
+        local low u=$1
+        [[ "$u" =~ ^mailto: ]] && return 0
+        low=$(printf '%s' "''${u%%\?*}" | tr '[:upper:]' '[:lower:]')
         [[ "$low" =~ \.(png|jpe?g|gif|webp|svg|pdf|zip)(\?|#|$) ]]
       }
 
@@ -608,15 +601,41 @@ let
         printf '%s' "$u"
       }
 
-      same_host() {
-        local link=$1 seed_host=$2
-        local -a _lh=()
-        mapfile -t _lh < <(url_host_path "$link") || return 1
-        [[ "''${_lh[0],,}" == "''${seed_host,,}" ]]
+      gate_reason() {
+        local url=$1 file=$2
+        local -a hp=()
+        if [[ "$url" == *"/blob/"* ]] || [[ "$url" == *"Special:"* ]] || [[ "$url" == *"index.php"* ]]; then
+          printf '%s' "blocked-url-pattern"
+          return 0
+        fi
+        mapfile -t hp < <(url_host_path "$url") || true
+        if ((''${#hp[@]} > 0)) && [[ "''${hp[0],,}" == "example.com" ]]; then
+          printf '%s' "example-host"
+          return 0
+        fi
+        if [[ ! -s "$file" ]] || (($(wc -c <"$file") < 200)); then
+          printf '%s' "too-small"
+          return 0
+        fi
+        if grep -qF 'js_challenge' "$file" 2>/dev/null \
+          || grep -qF 'You have been blocked' "$file" 2>/dev/null \
+          || grep -qF 'potentially abusive' "$file" 2>/dev/null; then
+          printf '%s' "blocked-content"
+          return 0
+        fi
+        if grep -q . "$file" 2>/dev/null; then
+          while IFS= read -r line || [[ -n "$line" ]]; do
+            if ((''${#line} > 8000)); then
+              printf '%s' "long-line"
+              return 0
+            fi
+          done <"$file"
+        fi
+        return 1
       }
 
-      collect_links() {
-        local file=$1 seed_host=$2
+      collect_link_urls() {
+        local file=$1
         local -a out=()
         local -A seen=()
         local raw norm
@@ -634,8 +653,127 @@ let
         fi
       }
 
-      time_up() {
-        (( SECONDS - start >= max_secs ))
+      print_link_lines() {
+        local file=$1
+        local -a links=()
+        local i=0 u
+        mapfile -t links < <(collect_link_urls "$file")
+        for u in "''${links[@]}"; do
+          echo "link $u"
+          i=$((i + 1))
+          (( i >= max_link_lines )) && break
+        done
+      }
+
+      rewrite_obsidian_links() {
+        local file=$1
+        local canon
+        canon=$(readlink -f -- "$file")
+        VAULT="$vault" CRAWL_ROOT="$crawl_root" FILE="$canon" ${lib.getExe pkgs.perl} -i -0pe '
+          use strict;
+          use warnings;
+          use File::Spec;
+          my $vault = $ENV{VAULT};
+          my $crawl = $ENV{CRAWL_ROOT};
+          my $file = $ENV{FILE};
+          my $dir = (File::Spec->splitpath($file))[1];
+          sub url_host_path {
+            my ($url) = @_;
+            $url =~ s/#.*\z//;
+            $url =~ s/\?.*\z//;
+            return unless $url =~ m{^https?://([^/]+)(/.*)?$};
+            my ($host, $path) = ($1, $2 // "/");
+            $path =~ s{^/}{};
+            $path =~ s{/$}{};
+            my $rel = length($path) ? "$host/$path.md" : "$host/index.md";
+            return "$crawl/$rel";
+          }
+          sub rel {
+            my ($dest) = @_;
+            return File::Spec->abs2rel($dest, $dir);
+          }
+          my %map;
+          while (m{(https?://[^\s<>\)"]+)}g) {
+            my $u = $1;
+            my $np = url_host_path($u);
+            next unless defined $np && -f $np;
+            $map{$u} = rel($np);
+          }
+          for my $u (sort { length($b) <=> length($a) } keys %map) {
+            my $r = $map{$u};
+            s~\Q($u)\E~($r)~g;
+            s~(?<!\()\Q$u\E(?!\))~[$u]($r)~g;
+          }
+        ' "$canon"
+      }
+
+      check_links_ok() {
+        local file=$1
+        local canon
+        canon=$(readlink -f -- "$file")
+        VAULT="$vault" FILE="$canon" ${lib.getExe pkgs.perl} -e '
+          use strict;
+          use warnings;
+          use File::Spec;
+          use File::Basename qw(basename fileparse);
+          my $vault = $ENV{VAULT};
+          my $file = $ENV{FILE};
+          my $dir = (File::Spec->splitpath($file))[1];
+          open my $fh, "<", $file or exit 1;
+          local $/;
+          my $body = <$fh>;
+          close $fh;
+          my $fail = 0;
+          while ($body =~ m/\[[^\]]*\]\(([^)]+)\)/g) {
+            my $t = $1;
+            next if $t =~ m{^https?://};
+            my $path = $t;
+            $path =~ s/^\s+|\s+$//g;
+            next if $path eq "";
+            my $abs;
+            if (File::Spec->file_name_is_absolute($path)) {
+              $abs = File::Spec->rel2abs($path, $vault);
+            } else {
+              $abs = File::Spec->rel2abs($path, $dir);
+            }
+            unless (-f $abs) { $fail = 1; last; }
+          }
+          exit 1 if $fail;
+          while ($body =~ m/\[\[([^\]|#]+)(?:#[^\]|]+)?(?:\|[^\]]+)?\]\]/g) {
+            my $target = $1;
+            $target =~ s/^\s+|\s+$//g;
+            next if $target eq "";
+            my @hits;
+            if ($target =~ m{/}) {
+              my $p = "$vault/$target.md";
+              push @hits, $p if -f $p;
+            } else {
+              my $want = lc $target;
+              require File::Find;
+              File::Find::find({
+                wanted => sub {
+                  return unless -f $_;
+                  return unless /\.md\z/;
+                  my $base = fileparse($_, qr/\.md/);
+                  push @hits, $File::Find::name if lc($base) eq $want;
+                },
+                no_chdir => 1,
+              }, $vault);
+            }
+            if (@hits != 1) { $fail = 1; last; }
+          }
+          exit($fail ? 1 : 0);
+        '
+      }
+
+      links_pass() {
+        local file=$1
+        rewrite_obsidian_links "$file"
+        if check_links_ok "$file"; then
+          echo "links ok"
+        else
+          echo "links fail $file"
+        fi
       }
 
       fetch_page() {
@@ -649,86 +787,61 @@ let
         return 1
       }
 
-      process_url() {
-        local url=$1 dest
-        dest=$(note_path "$url") || { echo "fail $url"; pages=$((pages + 1)); return; }
-        if [[ -f "$dest" ]]; then
-          echo "skip $dest"
-          pages=$((pages + 1))
-          return
-        fi
-        if fetch_page "$url" "$dest"; then
-          echo "saved $dest"
-          "$md_lint" "$dest" >/dev/null 2>&1 || true
-        else
-          echo "fail $url"
-        fi
-        pages=$((pages + 1))
-      }
-
-      write_queue_lines() {
-        local tmp
-        tmp=$(mktemp)
-        if (($# > 0)); then
-          printf '%s\n' "$@" >"$tmp"
-        else
-          : >"$tmp"
-        fi
-        chmod 600 "$tmp"
-        mv -f "$tmp" "$queue"
-      }
-
-      run_batch() {
-        local -a work=("$@")
-        local -a rest=()
-        local i
-        for i in "''${!work[@]}"; do
-          if (( pages >= max_pages )) || time_up; then
-            rest=("''${work[@]:i}")
-            break
-          fi
-          process_url "''${work[i]}"
-        done
-        write_queue_lines "''${rest[@]}"
-        echo "left ''${#rest[@]}"
+      vault_file_ok() {
+        local f=$1
+        case "$f" in
+          "$vault"/*) ;;
+          *) die "file must be under $vault" ;;
+        esac
+        [[ -f "$f" ]] || die "not a file"
       }
 
       if [[ $# -eq 1 && "$1" == "--continue" ]]; then
-        pending=()
-        if [[ -f "$queue" ]]; then
-          mapfile -t pending <"$queue" || true
-        fi
-        if ((''${#pending[@]} == 0)); then
-          echo "left 0"
-          exit 0
-        fi
-        run_batch "''${pending[@]}"
+        echo "left 0"
+        exit 0
+      fi
+
+      if [[ $# -eq 2 && "$1" == "--links" ]]; then
+        vault_file_ok "$2"
+        links_pass "$2"
         exit 0
       fi
 
       if [[ $# -ne 1 ]]; then
-        die "usage: pi-vault-crawl URL | pi-vault-crawl --continue"
+        die "usage: pi-vault-crawl URL | pi-vault-crawl --continue | pi-vault-crawl --links FILE"
       fi
 
-      seed=$1
-      mapfile -t _seed_hp < <(url_host_path "$seed") || die "bad URL"
-      seed_host=''${_seed_hp[0]}
+      url=$1
+      dest=$(note_path "$url") || die "bad URL"
 
-      process_url "$seed"
-
-      seed_file=$(note_path "$seed") || die "bad seed path"
-      children=()
-      if [[ -f "$seed_file" ]]; then
-        mapfile -t children < <(collect_links "$seed_file" "$seed_host")
-      fi
-
-      if (( pages >= max_pages )) || time_up; then
-        write_queue_lines "''${children[@]}"
-        echo "left ''${#children[@]}"
+      if [[ -f "$dest" ]]; then
+        echo "skip $dest"
+        print_link_lines "$dest"
+        links_pass "$dest"
+        echo "left 0"
         exit 0
       fi
 
-      run_batch "''${children[@]}"
+      if ! fetch_page "$url" "$dest"; then
+        echo "reject $url fetch"
+        echo "left 0"
+        exit 0
+      fi
+
+      "$md_lint" "$dest" >/dev/null 2>&1 || true
+
+      reason=$(gate_reason "$url" "$dest" || true)
+      if [[ -n "$reason" ]]; then
+        rm -f "$dest"
+        echo "reject $url $reason"
+        echo "left 0"
+        exit 0
+      fi
+
+      echo "saved $dest"
+      print_link_lines "$dest"
+      links_pass "$dest"
+      echo "left 0"
     '';
   };
 
