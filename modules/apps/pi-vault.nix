@@ -64,6 +64,8 @@ let
       "curl -fsS --max-time 180 -H 'Content-Type: application/json' -d '{\"url\":\"https://example.com\"}' http://127.0.0.1:5678/webhook/crawl4ai-markdown"
       ""
       "The field is url, not link. Optional mode: omit or fit for main content, raw for the whole page; bm25 and llm also need q. Stdout of a 200 is the markdown. The Content-Disposition attachment header does not change that. A non-200 body is JSON with error and message. There is no login. Use 127.0.0.1. The tailnet URL fails inside this service. Then write that markdown into a note."
+      ""
+      "When someone wants a page and the pages it links to, run pi-vault-crawl URL once. Do not curl in a loop. Do not read the saved notes. If they say continue, run pi-vault-crawl --continue once. Reply with the command's lines."
     ]
     + "\n"
   );
@@ -529,6 +531,208 @@ let
     '';
   };
 
+  piVaultCrawl = pkgs.writeShellApplication {
+    name = "pi-vault-crawl";
+    runtimeInputs = [
+      pkgs.coreutils
+      pkgs.curl
+      pkgs.gnugrep
+      piVaultMd
+    ];
+    text = ''
+      set -euo pipefail
+
+      vault=/obsidian-vault
+      queue=/var/lib/pi-vault/crawl-queue
+      crawl_api=http://127.0.0.1:5678/webhook/crawl4ai-markdown
+      md_lint=${lib.getExe piVaultMd}
+      max_pages=12
+      max_secs=240
+      start=$SECONDS
+      pages=0
+
+      die() { echo "pi-vault-crawl: $1" >&2; exit 1; }
+
+      json_url() {
+        local u=$1
+        u=''${u//\\/\\\\}
+        u=''${u//\"/\\\"}
+        printf '%s' "$u"
+      }
+
+      url_host_path() {
+        local url=$1 n
+        n=''${url%%#*}
+        n=''${n%%\?*}
+        if [[ ! "$n" =~ ^https?://([^/]+)(/.*)?$ ]]; then
+          return 1
+        fi
+        printf '%s\n%s\n' "''${BASH_REMATCH[1]}" "''${BASH_REMATCH[2]:-/}"
+      }
+
+      note_path() {
+        local url=$1 host path rel
+        mapfile -t _hp < <(url_host_path "$url") || return 1
+        host=''${_hp[0]}
+        path=''${_hp[1]}
+        path=''${path#/}
+        path=''${path%/}
+        if [[ -z "$path" ]]; then
+          rel="''${host}/index.md"
+        else
+          rel="''${host}/''${path}.md"
+        fi
+        printf '%s/crawl/%s\n' "$vault" "$rel"
+      }
+
+      drop_obvious() {
+        local low
+        low=$(printf '%s' "''${1%%\?*}" | tr '[:upper:]' '[:lower:]')
+        [[ "$low" =~ \.(png|jpe?g|gif|webp|svg|pdf|zip)(\?|#|$) ]]
+      }
+
+      strip_fragment() {
+        printf '%s' "''${1%%#*}"
+      }
+
+      trim_link() {
+        local u=$1 ch
+        u=$(strip_fragment "$u")
+        while [[ -n "$u" ]]; do
+          ch="''${u: -1}"
+          case "$ch" in
+            ")" | "]" | "." | ",") u="''${u%?}" ;;
+            *) break ;;
+          esac
+        done
+        printf '%s' "$u"
+      }
+
+      same_host() {
+        local link=$1 seed_host=$2
+        local -a _lh=()
+        mapfile -t _lh < <(url_host_path "$link") || return 1
+        [[ "''${_lh[0],,}" == "''${seed_host,,}" ]]
+      }
+
+      collect_links() {
+        local file=$1 seed_host=$2
+        local -a out=()
+        local -A seen=()
+        local raw norm
+        while IFS= read -r raw; do
+          [[ -n "$raw" ]] || continue
+          norm=$(trim_link "$raw")
+          [[ "$norm" =~ ^https?:// ]] || continue
+          same_host "$norm" "$seed_host" || continue
+          drop_obvious "$norm" && continue
+          [[ -n "''${seen[$norm]+x}" ]] && continue
+          seen["$norm"]=1
+          out+=("$norm")
+        done < <(grep -oE 'https?://[^[:space:]<>\)"]+' "$file" 2>/dev/null || true)
+        if ((''${#out[@]} > 0)); then
+          printf '%s\n' "''${out[@]}"
+        fi
+      }
+
+      time_up() {
+        (( SECONDS - start >= max_secs ))
+      }
+
+      fetch_page() {
+        local url=$1 dest=$2 payload
+        payload=$(printf '{"url":"%s","mode":"fit"}' "$(json_url "$url")")
+        mkdir -p "$(dirname "$dest")"
+        if curl -fsS --max-time 180 -H 'Content-Type: application/json' -d "$payload" -o "$dest" "$crawl_api"; then
+          return 0
+        fi
+        rm -f "$dest"
+        return 1
+      }
+
+      process_url() {
+        local url=$1 dest
+        dest=$(note_path "$url") || { echo "fail $url"; pages=$((pages + 1)); return; }
+        if [[ -f "$dest" ]]; then
+          echo "skip $dest"
+          pages=$((pages + 1))
+          return
+        fi
+        if fetch_page "$url" "$dest"; then
+          echo "saved $dest"
+          "$md_lint" "$dest" >/dev/null 2>&1 || true
+        else
+          echo "fail $url"
+        fi
+        pages=$((pages + 1))
+      }
+
+      write_queue_lines() {
+        local tmp
+        tmp=$(mktemp)
+        if (($# > 0)); then
+          printf '%s\n' "$@" >"$tmp"
+        else
+          : >"$tmp"
+        fi
+        chmod 600 "$tmp"
+        mv -f "$tmp" "$queue"
+      }
+
+      run_batch() {
+        local -a work=("$@")
+        local -a rest=()
+        local i
+        for i in "''${!work[@]}"; do
+          if (( pages >= max_pages )) || time_up; then
+            rest=("''${work[@]:i}")
+            break
+          fi
+          process_url "''${work[i]}"
+        done
+        write_queue_lines "''${rest[@]}"
+        echo "left ''${#rest[@]}"
+      }
+
+      if [[ $# -eq 1 && "$1" == "--continue" ]]; then
+        pending=()
+        if [[ -f "$queue" ]]; then
+          mapfile -t pending <"$queue" || true
+        fi
+        if ((''${#pending[@]} == 0)); then
+          echo "left 0"
+          exit 0
+        fi
+        run_batch "''${pending[@]}"
+        exit 0
+      fi
+
+      if [[ $# -ne 1 ]]; then
+        die "usage: pi-vault-crawl URL | pi-vault-crawl --continue"
+      fi
+
+      seed=$1
+      mapfile -t _seed_hp < <(url_host_path "$seed") || die "bad URL"
+      seed_host=''${_seed_hp[0]}
+
+      process_url "$seed"
+
+      seed_file=$(note_path "$seed") || die "bad seed path"
+      children=()
+      if [[ -f "$seed_file" ]]; then
+        mapfile -t children < <(collect_links "$seed_file" "$seed_host")
+      fi
+
+      if (( pages >= max_pages )) || time_up; then
+        write_queue_lines "''${children[@]}"
+        echo "left ''${#children[@]}"
+        exit 0
+      fi
+
+      run_batch "''${children[@]}"
+    '';
+  };
+
   piVaultCli = pkgs.writeShellApplication {
     name = "pi-vault";
     runtimeInputs = [ pkgs.curl pkgs.jq ];
@@ -564,7 +768,7 @@ in
   config = lib.mkIf cfg.enable {
     assertions = [{ assertion = config.my.services.nemotron.enable; message = "apps/pi-vault needs services/nemotron (nixctl enable services/nemotron)"; }];
 
-    environment.systemPackages = [ piVaultCli piVaultMd piVaultKey ];
+    environment.systemPackages = [ piVaultCli piVaultCrawl piVaultMd piVaultKey ];
 
     systemd.services.pi-vault = {
       description = "Vault Pi loopback bridge for Obsidian vault";
