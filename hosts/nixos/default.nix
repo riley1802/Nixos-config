@@ -16,6 +16,7 @@
   my.apps.pi.enable = true;
   my.apps.rustdesk.enable = true;
   my.dev.shell.enable = true;
+  my.services.crawl4ai.enable = true;
   my.services.nemotron.enable = true;
   my.services.nixctl-bridge.enable = true;
   my.apps.openlogi.enable = true; # OpenLogi: Logitech MX Master 4 support (https://openlogi.org)

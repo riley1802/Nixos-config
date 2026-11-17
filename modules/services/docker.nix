@@ -14,5 +14,7 @@ in
       enable = true;
       daemon.settings.ip = "127.0.0.1";
     };
+    # On 26.05, oci-containers defaults to podman without this line.
+    virtualisation.oci-containers.backend = "docker";
   };
 }

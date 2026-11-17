@@ -24,8 +24,8 @@ modules/network/                  Tailscale, DNS, SSH, NetworkManager, PIA, fire
 modules/services/arr/             Sonarr, Radarr, Lidarr, Bazarr, Prowlarr, Seerr,
                                   qBittorrent, Cleanuparr, Jellyfin, lidarr-drive,
                                   and the shared media directories
-modules/services/                 Immich, n8n, ntfy, Uptime Kuma, Docker, Nemotron,
-                                  nixctl-bridge
+modules/services/                 Crawl4AI, Immich, n8n, ntfy, Uptime Kuma, Docker,
+                                  Nemotron, nixctl-bridge
 modules/apps/                     openlogi.nix, rustdesk.nix, pi.nix
 pi/                               Pi agent config (models, settings, skills, extensions)
 packages/                         Lidarr build, llama-cpp
@@ -85,6 +85,8 @@ by `nixos-generate-config` and should not be edited by hand.
   `secrets/llama-api-key.age` is the Spark / llama.cpp API key; the decrypted copy is
   `/run/agenix/llama-api-key` (mode `0440`, group `users`, so the desktop
   user can call the API from Pi).
+  `secrets/crawl4ai-api-token.age` holds `CRAWL4AI_API_TOKEN` for the Crawl4AI
+  container; decrypted copy is `/run/agenix/crawl4ai-api-token`.
 - `pia/ca.rsa.4096.crt` and `pia/pia-servers.json` are public PIA material
   used to reach a server by IP when the VPN hostnames are filtered.
 
@@ -350,6 +352,14 @@ On the phone:
 7. The app checksums files and skips ones already on the server.
 
 <https://docs.immich.app/features/mobile-backup>
+
+## Crawl4AI
+
+`modules/services/crawl4ai.nix` runs the `unclecode/crawl4ai` image on
+loopback port 11235 only. There is no Tailscale Serve route. The API token
+is in agenix (`secrets/crawl4ai-api-token.age`). n8n on this host should
+call `http://127.0.0.1:11235` with `Authorization: Bearer` and the token
+from the secret file.
 
 ## n8n
 

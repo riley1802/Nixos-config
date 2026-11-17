@@ -76,6 +76,11 @@ These rules come from the chats on this machine (2026-06-29 through 2026-11-03).
 - lidarr-drive is enabled. The 3:00 AM copy timer is installed and uses
   `~/.config/rclone/rclone.conf` (destination `gdrive:Lidarr`); it does not
   use an age secret.
+- Crawl4AI container `docker-crawl4ai`, image `unclecode/crawl4ai:latest`,
+  127.0.0.1:11235. Token at `/run/agenix/crawl4ai-api-token`; do not publish
+  it off loopback. Without the token the server binds loopback inside the
+  container and the published port resets. Do not use Docker `--restart`
+  because the unit uses `--rm`.
 
 ## Removed on purpose
 

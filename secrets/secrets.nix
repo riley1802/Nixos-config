@@ -15,4 +15,5 @@ in
   "homelable-login.age".publicKeys = recipients;
   "llama-api-key.age".publicKeys = recipients;
   "searxng-env.age".publicKeys = recipients;
+  "crawl4ai-api-token.age".publicKeys = recipients;
 }
