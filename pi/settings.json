@@ -15,5 +15,8 @@
   "tuiMode": "regular",
   "modelThinkingLevels": {
     "spark/spark": "minimal"
+  },
+  "terminal": {
+    "showTerminalProgress": true
   }
 }
