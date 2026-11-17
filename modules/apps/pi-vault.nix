@@ -486,6 +486,49 @@ let
 
   jq = lib.getExe pkgs.jq;
 
+  mdLintConfig = pkgs.writeText "pi-vault-md-lint.json" (builtins.toJSON {
+    default = true;
+    MD013 = false;
+    MD033 = false;
+    MD040 = false;
+  });
+
+  markdownlintExe = lib.getExe pkgs.markdownlint-cli2;
+
+  piVaultMd = pkgs.writeShellApplication {
+    name = "pi-vault-md";
+    runtimeInputs = [ pkgs.markdownlint-cli2 pkgs.coreutils pkgs.gnused ];
+    text = ''
+      set -euo pipefail
+      vault=/obsidian-vault
+      refuse() { echo "pi-vault-md: $1" >&2; exit 1; }
+      if [[ $# -ne 1 ]]; then
+        refuse "usage: pi-vault-md FILE"
+      fi
+      file=$1
+      case "$file" in
+        "$vault"/*) ;;
+        *) refuse "file must be under $vault" ;;
+      esac
+      if [[ ! -e "$file" ]] || [[ -d "$file" ]] || [[ ! -f "$file" ]]; then
+        refuse "not a vault file"
+      fi
+      canon=$(readlink -f -- "$file")
+      case "$canon" in
+        "$vault"/*) ;;
+        *) refuse "file must stay in vault" ;;
+      esac
+      ${lib.getExe pkgs.gnused}/bin/sed -i -E \
+        's/([^[\]]+)\[\]\(([^)]+)\)/[\1](\2)/g' "$file"
+      ${markdownlintExe} --config ${mdLintConfig} --fix ":$canon" >/dev/null 2>&1 || true
+      if ${markdownlintExe} --config ${mdLintConfig} ":$canon" >/dev/null 2>&1; then
+        echo "ok $file"
+      else
+        echo "issues $file"
+      fi
+    '';
+  };
+
   piVaultCli = pkgs.writeShellApplication {
     name = "pi-vault";
     runtimeInputs = [ pkgs.curl pkgs.jq ];
@@ -521,7 +564,7 @@ in
   config = lib.mkIf cfg.enable {
     assertions = [{ assertion = config.my.services.nemotron.enable; message = "apps/pi-vault needs services/nemotron (nixctl enable services/nemotron)"; }];
 
-    environment.systemPackages = [ piVaultCli piVaultKey ];
+    environment.systemPackages = [ piVaultCli piVaultMd piVaultKey ];
 
     systemd.services.pi-vault = {
       description = "Vault Pi loopback bridge for Obsidian vault";
