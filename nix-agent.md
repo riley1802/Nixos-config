@@ -70,7 +70,7 @@ These rules come from the chats on this machine (2026-06-29 through 2026-11-03).
 - Uptime Kuma monitors live in its sqlite database, not only in the Nix module.
 - OpenLogi is installed for the MX Master 4. It was not the cause of the November pointer stutter.
 - n8n is on. Editor is <http://127.0.0.1:5678>. Tailscale Serve is <https://nixos.taile9f484.ts.net:5678>. The editor base URL stays the loopback URL because Spotify OAuth rejects the tailnet host.
-- Nemotron (`services/nemotron`) is the llama.cpp server on 127.0.0.1:8083, on the GTX 1660 SUPER. The RTX 3050 is the display. Do not bring back the old llama.cpp servers. Pi (`apps/pi`) is the coding agent on that server. Its config is `/etc/nixos/pi`, extensions are `pi/extensions/`, sessions stay in `~/.local/state/pi/sessions`, and pi-memory notes stay in `~/.local/state/pi/memory`. Do not start a second llama.cpp.
+- Spark-X2.6-4B Q4_K_M with a DSpark drafter (`services/nemotron`) is the llama.cpp server on 127.0.0.1:8083, on the GTX 1660 SUPER. The RTX 3050 is the display. Do not bring back the old llama.cpp servers. Pi (`apps/pi`) is the coding agent on that server. Its config is `/etc/nixos/pi`, extensions are `pi/extensions/`, sessions stay in `~/.local/state/pi/sessions`, and pi-memory notes stay in `~/.local/state/pi/memory`. Do not start a second llama.cpp.
 - nixctl-bridge listens on 127.0.0.1:8094 for the Discord operator. Do not publish it off loopback. Read-only nixctl runs immediately. A command saved earlier runs as saved. Anything else waits for Discord approval.
 - RustDesk direct access is tailnet TCP 21118 only (`apps/rustdesk`).
 - lidarr-drive is enabled. The 3:00 AM copy timer is installed and uses
@@ -81,7 +81,7 @@ These rules come from the chats on this machine (2026-06-29 through 2026-11-03).
 
 Do not bring these back unless Riley asks in this chat: GitLab, the Rust game server, Hermes, Ghostty, Goose, the Tauri Homeport app, Homepage, Netdata, Liquid d1-2B (`llama-cpp-d1`, port 8086), World Monitor, the Raspberry Pi host, and the Pi OS / USB-bootstrap scripts. Building an aarch64 Pi image on this desktop runs under qemu and pegs every core for hours. The Pi GNOME session also boot-looped on a Pi 4.
 
-Also removed, with their modules: Breeze TTS, the research data platform, EmbeddingGemma, Homarr, Homelable, Kokoro, the old llama.cpp servers (ports 8081, 8082, 8084, 8085, 8087, and 8088), Open Terminal, SearXNG, and Open WebUI. Nemotron on 8083 (`services/nemotron`) is the current llama.cpp server and replaced that stack. Retired Serve ports are turned off by `modules/network/tailscale.nix`. Old files under `/var/lib` were left on disk. The age files `homarr-encryption-key`, `homelable-env`, `homelable-login`, and `searxng-env` are still in `secrets/` and are no longer wired to a service. `llama-api-key` is wired to `services/nemotron`.
+Also removed, with their modules: Breeze TTS, the research data platform, EmbeddingGemma, Homarr, Homelable, Kokoro, the old llama.cpp servers (ports 8081, 8082, 8084, 8085, 8087, and 8088), Open Terminal, SearXNG, and Open WebUI. Spark replaced Nemotron on 8083 (`services/nemotron`); that module is the current llama.cpp server and replaced the old stack. Retired Serve ports are turned off by `modules/network/tailscale.nix`. Old files under `/var/lib` were left on disk. The age files `homarr-encryption-key`, `homelable-env`, `homelable-login`, and `searxng-env` are still in `secrets/` and are no longer wired to a service. `llama-api-key` is wired to `services/nemotron`.
 
 ## When something breaks
 

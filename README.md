@@ -67,9 +67,9 @@ by `nixos-generate-config` and should not be edited by hand.
   outbound HTTPS to port 19999. That is not a local listener. The same
   unit turns off retired Serve ports: 3010 (Homepage), 19999 (Netdata),
   3000 (homelable), 7575 (homarr), 8081, 8082, 8084, 8085, 8087, and 8088.
-  Port 8083 is Nemotron when `my.services.nemotron.enable` is true. Active
-  Serve ports are 2283 Immich, 5678 n8n, 2586 ntfy, 3001 Uptime Kuma,
-  8083 Nemotron, and 11011 Cleanuparr.
+  Port 8083 is Spark-X2.6-4B when `my.services.nemotron.enable` is true.
+  Active Serve ports are 2283 Immich, 5678 n8n, 2586 ntfy, 3001 Uptime
+  Kuma, 8083 Spark, and 11011 Cleanuparr.
 - Jellyfin, lidarr-drive, and the other arr apps live in
   `modules/services/arr/`. With `lidarr-drive` enabled, the nightly copy
   timer is installed and uses the desktop user's rclone config at
@@ -82,7 +82,7 @@ by `nixos-generate-config` and should not be edited by hand.
   `/run/agenix/pia-credentials` and is not in git. `secrets/ntfy-auth.age`
   and `secrets/ntfy-passwords.age` are the ntfy credentials. Decrypted
   copies are `/run/agenix/ntfy-auth` and `/run/agenix/ntfy-passwords`.
-  `secrets/llama-api-key.age` is the Nemotron API key; the decrypted copy is
+  `secrets/llama-api-key.age` is the Spark / llama.cpp API key; the decrypted copy is
   `/run/agenix/llama-api-key` (mode `0440`, group `users`, so the desktop
   user can call the API from Pi).
 - `pia/ca.rsa.4096.crt` and `pia/pia-servers.json` are public PIA material
@@ -100,7 +100,7 @@ The workstation uses:
 - unfree packages and redistributable firmware
 - the proprietary stable NVIDIA driver with modesetting
 - two NVIDIA GPUs, 6 GiB each. The RTX 3050 is the display card. The GTX
-  1660 SUPER runs Nemotron.
+  1660 SUPER runs Spark-X2.6-4B.
 - KDE Plasma 6 on Wayland with SDDM. KWin is pinned to the RTX 3050 through
   `/run/display-gpu`, because `KWIN_DRM_DEVICES` is split on `:` and the PCI
   path contains colons. Plasma (X11) stays in the SDDM menu. Cinnamon remains
@@ -134,7 +134,7 @@ installed by `modules/apps/rustdesk.nix`, because nixos-26.05 `rustdesk` is
 the old Sciter client. Pi (`pi-coding-agent` 1.4.0 from the unstable overlay)
 is installed by `modules/apps/pi.nix`. Its config is `pi/` in this repo, and
 the `pi` command points at that directory from any working directory. It
-talks to Nemotron on loopback and must not start its own llama.cpp. The `uinput` kernel module is loaded at boot so
+talks to Spark on loopback and must not start its own llama.cpp. The `uinput` kernel module is loaded at boot so
 OpenLogi's device node receives a seat ACL. The menu also has a Chrome app
 entry for Cleanuparr that opens `http://127.0.0.1:11011`.
 
@@ -178,7 +178,7 @@ The NixOS firewall stays enabled.
   `http://127.0.0.1:5678`. The editor base URL is that loopback address
   because Spotify OAuth allows plain HTTP only for `127.0.0.1` and rejects
   the tailnet host.
-- Nemotron accepts TCP port 8083 on `tailscale0` only. `llama-server`
+- Spark-X2.6-4B accepts TCP port 8083 on `tailscale0` only. `llama-server`
   listens on `127.0.0.1:8083`. Tailscale Serve presents HTTPS for
   `nixos.taile9f484.ts.net:8083`. The API key is the age secret
   `secrets/llama-api-key.age` (decrypted at `/run/agenix/llama-api-key`).
@@ -328,7 +328,7 @@ and leave open registration disabled.
 
 Machine learning for faces and search runs on CPU. The module default
 is one worker. The RTX 3050 is left to the desktop. The GTX 1660 SUPER
-runs Nemotron.
+runs Spark-X2.6-4B.
 
 On the phone:
 
@@ -363,21 +363,22 @@ Spotify OAuth must be started from a browser on this PC. The editor base
 URL stays on loopback HTTP because Spotify only allows that for
 `127.0.0.1`.
 
-## Nemotron
+## Spark (services/nemotron)
 
-Nemotron 3.5 Bolt E4B runs in `llama-server` from `packages/llama-cpp.nix`.
-The model alias is `nemotron-bolt`. On this computer the API is
+Spark-X2.6-4B Q4_K_M runs in `llama-server` from `packages/llama-cpp.nix`
+(the XHToken fork for DSpark speculative decoding). The target GGUF is
+`Spark-X2.6-4B-Q4_K_M.gguf`; the drafter is `Spark-X2.6-4B-DSpark.gguf`.
+The model alias is `spark`. On this computer the API is
 `http://127.0.0.1:8083`. On the tailnet it is
 `https://nixos.taile9f484.ts.net:8083`. Model files live under
 `/var/lib/llama-cpp/models`. Inference uses the GTX 1660 SUPER with context
-32768. The API key comes from `secrets/llama-api-key.age`.
-
-The persona text is in `nemotron-bolt-system-prompt.md`.
+32768. The API key comes from `secrets/llama-api-key.age`. The Nix module
+path is still `services/nemotron`.
 
 ## Pi
 
 Pi is the terminal coding agent (`pi` from `pi-coding-agent`). It uses
-`http://127.0.0.1:8083` with model `nemotron-bolt`. The agent directory is
+`http://127.0.0.1:8083` with model `spark`. The agent directory is
 `/etc/nixos/pi` (`PI_CODING_AGENT_DIR`), so the same `models.json`,
 `settings.json`, `APPEND_SYSTEM.md`, and skills apply in any working
 directory. That directory is this repo. Extensions go in `pi/extensions/`
@@ -390,7 +391,7 @@ with `/skill:nixos-managing`. Installed packages are
 `@juicesharp/rpiv-ask-user-question` (the model asks with fixed choices)
 and `pi-memory` (markdown notes in `~/.local/state/pi/memory`). Search
 across those notes needs `qmd`, which is not installed. Pi must not start its own llama.cpp server;
-Nemotron on the GTX 1660 SUPER is the only inference backend.
+Spark on the GTX 1660 SUPER is the only inference backend.
 
 ## RustDesk
 

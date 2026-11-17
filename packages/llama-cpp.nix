@@ -1,6 +1,5 @@
 { lib
 , fetchFromGitHub
-, fetchurl
 , cmake
 , ninja
 , pkg-config
@@ -15,28 +14,20 @@ let
   # https://github.com/NixOS/nixpkgs/blob/6713828a351efa628b025a1adf7f43cbf8597513/pkgs/by-name/ll/llama-cpp/package.nix
   effectiveStdenv = cudaPackages.backendStdenv;
   inherit (lib) cmakeBool cmakeFeature;
+  buildCommit = "22c0ae1871b60123c5afc008a78fe9c6fffa2858";
 in
 effectiveStdenv.mkDerivation (finalAttrs: {
   pname = "llama-cpp";
-  version = "0.8.0";
+  version = "0.7.0-dev";
 
-  # LFM3 (text, vision, audio, omni) landed in v0.8.0 / b11960. nixos-26.05
-  # still packages build 9190, which cannot load these GGUFs.
-  # https://github.com/ggml-org/llama.cpp/releases/tag/v0.8.0
+  # XHToken fork is required for `--spec-type draft-dspark`; upstream v0.8.0
+  # does not have it.
+  # https://github.com/XHToken/llama.cpp/commit/22c0ae1871b60123c5afc008a78fe9c6fffa2858
   src = fetchFromGitHub {
-    owner = "ggml-org";
+    owner = "XHToken";
     repo = "llama.cpp";
-    tag = "v${finalAttrs.version}";
-    hash = "sha256-WQAtD8Hos6fEtgPQId7nZiLGyP4asAMKJYEXZid1nqc=";
-  };
-
-  # v0.8.0 embeds the web UI from a release tarball. Building tools/ui here
-  # would compile Storybook, Playwright, and sharp for a UI the release
-  # already publishes.
-  # https://github.com/ggml-org/llama.cpp/blob/v0.8.0/scripts/ui-assets.cmake
-  uiDist = fetchurl {
-    url = "https://huggingface.co/buckets/ggml-org/llama-ui/resolve/b11960/dist.tar.gz";
-    hash = "sha256-7cawX/JiH18IzuTnnPi+sCgF8hiId2NU3R3c+fwmCeg=";
+    rev = buildCommit;
+    hash = "sha256-IAm6EG0X8NQP+FPBaAzjmbD2eVzvwjSAFmA1C4nnHRA=";
   };
 
   nativeBuildInputs = [
@@ -55,10 +46,11 @@ effectiveStdenv.mkDerivation (finalAttrs: {
     cudaPackages.libcublas
   ];
 
-  preConfigure = ''
-    mkdir -p tools/ui/dist
-    tar -xzf ${finalAttrs.uiDist} -C tools/ui/dist
-    test -f tools/ui/dist/index.html
+  # GCC 14 + Werror: decode() uses std::all_of without #include <algorithm>.
+  postPatch = ''
+        substituteInPlace src/llama-context.cpp \
+          --replace '#include <unordered_map>' '#include <algorithm>
+    #include <unordered_map>'
   '';
 
   cmakeFlags = [
@@ -85,15 +77,14 @@ effectiveStdenv.mkDerivation (finalAttrs: {
     (cmakeBool "LLAMA_BUILD_IS_DEV" false)
     (cmakeBool "LLAMA_OPENSSL" true)
     (cmakeBool "BUILD_SHARED_LIBS" true)
-    (cmakeFeature "LLAMA_BUILD_NUMBER" "11960")
-    (cmakeFeature "LLAMA_BUILD_COMMIT" "8642541")
+    (cmakeFeature "LLAMA_BUILD_COMMIT" buildCommit)
   ];
 
   doCheck = false;
 
   meta = {
     description = "Inference of Meta's LLaMA model (and others) in pure C/C++";
-    homepage = "https://github.com/ggml-org/llama.cpp";
+    homepage = "https://github.com/XHToken/llama.cpp";
     license = lib.licenses.mit;
     mainProgram = "llama-server";
     platforms = [ "x86_64-linux" ];

@@ -1,7 +1,7 @@
 {
   "lastChangelogVersion": "1.4.0",
-  "defaultProvider": "nemotron",
-  "defaultModel": "nemotron-bolt",
+  "defaultProvider": "spark",
+  "defaultModel": "spark",
   "extensions": [
     "-builtin:llama.cpp"
   ],
@@ -14,6 +14,6 @@
   },
   "tuiMode": "regular",
   "modelThinkingLevels": {
-    "nemotron/nemotron-bolt": "minimal"
+    "spark/spark": "minimal"
   }
 }

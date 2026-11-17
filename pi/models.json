@@ -1,16 +1,16 @@
 {
   "$schema": "https://pi.dev/schemas/models.schema.json",
   "providers": {
-    "nemotron": {
-      "name": "Nemotron",
+    "spark": {
+      "name": "Spark",
       "baseUrl": "http://127.0.0.1:8083/v1",
       "api": "openai-completions",
       "apiKey": "!/run/current-system/sw/bin/pi-nemotron-key",
       "authHeader": true,
       "models": [
         {
-          "id": "nemotron-bolt",
-          "name": "Nemotron 3.5 Bolt",
+          "id": "spark",
+          "name": "Spark-X2.6-4B",
           "reasoning": true,
           "input": ["text"],
           "contextWindow": 32768,

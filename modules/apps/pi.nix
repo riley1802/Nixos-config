@@ -1,4 +1,4 @@
-# Pi coding agent, using the Nemotron server on port 8083.
+# Pi coding agent, using the Spark server on port 8083.
 # Config is /etc/nixos/pi so it is in this repo. PI_CODING_AGENT_DIR makes
 # that the agent directory from any working directory.
 # https://pi.dev/docs/latest/configuration
@@ -28,7 +28,7 @@ let
   '';
 in
 {
-  options.my.apps.pi.enable = lib.mkEnableOption "Pi coding agent on Nemotron";
+  options.my.apps.pi.enable = lib.mkEnableOption "Pi coding agent on Spark (port 8083)";
 
   config = lib.mkIf cfg.enable {
     assertions = [
