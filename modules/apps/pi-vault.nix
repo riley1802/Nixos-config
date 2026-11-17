@@ -704,7 +704,7 @@ let
             my $r = $map{$u};
             my $uq = quotemeta($u);
             s~<$uq>~[$u]($r)~g;
-            s~\]\($uq(\s+"[^"]*")?\)~]($r$1)~g;
+            s~\]\($uq(?:\s+"[^"]*")?\)~]($r)~g;
           }
         ' "$canon"
       }
@@ -730,6 +730,7 @@ let
             my $t = $1;
             next if $t =~ m{^https?://};
             my $path = $t;
+            $path =~ s/\s+"[^"]*"\s*\z//;
             $path =~ s/^\s+|\s+$//g;
             next if $path eq "";
             my $abs;
