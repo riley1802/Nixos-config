@@ -752,10 +752,11 @@ let
               require File::Find;
               File::Find::find({
                 wanted => sub {
-                  return unless -f $_;
-                  return unless /\.md\z/;
-                  my $base = fileparse($_, qr/\.md/);
-                  push @hits, $File::Find::name if lc($base) eq $want;
+                  my $fn = $File::Find::name;
+                  return unless -f $fn;
+                  return unless $fn =~ /\.md\z/;
+                  my $base = fileparse($fn, qr/\.md/);
+                  push @hits, $fn if lc($base) eq $want;
                 },
                 no_chdir => 1,
               }, $vault);
