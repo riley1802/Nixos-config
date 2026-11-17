@@ -2,7 +2,7 @@
 { config, ... }:
 {
   home-manager.users.${config.my.user} =
-    { config, ... }:
+    { config, pkgs, ... }:
     {
       programs.home-manager.enable = true;
       # Set once. Do not bump it when Home Manager updates.
@@ -14,17 +14,31 @@
         enable = true;
         # git is already installed for the whole system.
         package = null;
-        settings.user = {
-          name = "riley thomason";
-          email = "thomasonriley0@gmail.com";
+        settings = {
+          user.name = "riley thomason";
+          user.email = "thomasonriley0@gmail.com";
+          credential = {
+            "https://github.com" = {
+              helper = [
+                ""
+                "${pkgs.gh}/bin/gh auth git-credential"
+              ];
+            };
+            "https://gist.github.com" = {
+              helper = [
+                ""
+                "${pkgs.gh}/bin/gh auth git-credential"
+              ];
+            };
+          };
         };
       };
 
       # Alias from ~/.config/gh/config.yml. hosts.yml is the login file
-      # and stays unmanaged. gitCredentialHelper defaults to on and writes
-      # the helper programs.git used to hardcode as a store path.
+      # and stays unmanaged. Credential helpers live on programs.git above.
       programs.gh = {
         enable = true;
+        gitCredentialHelper.enable = false;
         settings.aliases.co = "pr checkout";
       };
 
