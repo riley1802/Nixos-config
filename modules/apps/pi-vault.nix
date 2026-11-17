@@ -752,7 +752,7 @@ let
               require File::Find;
               File::Find::find({
                 wanted => sub {
-                  my $fn = $File::Find::name;
+                  my $fn = $_;
                   return unless -f $fn;
                   return unless $fn =~ /\.md\z/;
                   my $base = fileparse($fn, qr/\.md/);
