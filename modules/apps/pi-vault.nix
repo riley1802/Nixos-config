@@ -699,10 +699,12 @@ let
             next unless defined $np && -f $np;
             $map{$u} = rel($np);
           }
+          s~<\[([^\]]+)\]\(([^)]+)\)>~[$1]($2)~g;
           for my $u (sort { length($b) <=> length($a) } keys %map) {
             my $r = $map{$u};
-            s~\Q($u)\E~($r)~g;
-            s~(?<!\()\Q$u\E(?!\))~[$u]($r)~g;
+            my $uq = quotemeta($u);
+            s~<$uq>~[$u]($r)~g;
+            s~\]\($uq(\s+"[^"]*")?\)~]($r$1)~g;
           }
         ' "$canon"
       }
