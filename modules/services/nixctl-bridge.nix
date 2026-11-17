@@ -25,6 +25,8 @@ let
     MAX_ARGS = 12
     READ_TIMEOUT = 45
     SEARCH_TIMEOUT = 180
+    CRAWL_TIMEOUT = 180
+    CRAWL_WEBHOOK = "http://127.0.0.1:5678/webhook/crawl4ai-markdown"
     CHANGE_TIMEOUT = 20 * 60
 
     UNIT_RE = re.compile(
@@ -72,6 +74,7 @@ let
             '["nvidia-smi","-L"]\n'
             '["git","status"]\n'
             '["cat","/etc/nixos/hosts/nixos/default.nix"]\n'
+            '["curl","-fsS","--max-time","180","-H","Content-Type: application/json","-d","{\\"url\\":\\"https://example.com\\"}","http://127.0.0.1:5678/webhook/crawl4ai-markdown"]\n'
             "nixctl apply is not read-only. Do not use suggest for the examples above."
         ),
         "saved": (
@@ -121,7 +124,72 @@ let
     def reject(error="rejected"):
         return result(False, "", error, "rejected")
 
+    CRAWL_ARGC = 9
+    CRAWL_JSON_IDX = 7
+    CRAWL_BAD = frozenset("\n\r\x00|;<> `$")
+    CRAWL_BAD_OTHER = CRAWL_BAD | frozenset("&")
+
+    def crawl_json_ok(raw):
+        try:
+            data = json.loads(raw)
+        except json.JSONDecodeError:
+            return False
+        if not isinstance(data, dict):
+            return False
+        keys = set(data.keys())
+        if not keys or not keys <= {"url", "mode", "q"}:
+            return False
+        url = data.get("url")
+        if not isinstance(url, str):
+            return False
+        if not (url.startswith("http://") or url.startswith("https://")):
+            return False
+        if len(url) > 2000:
+            return False
+        if "mode" in data:
+            mode = data["mode"]
+            if not isinstance(mode, str) or mode not in ("raw", "fit", "bm25", "llm"):
+                return False
+        if "q" in data:
+            q = data["q"]
+            if not isinstance(q, str) or len(q) > 500:
+                return False
+        return True
+
+    def crawl_curl_valid(argv):
+        if not isinstance(argv, list) or len(argv) != CRAWL_ARGC:
+            return None
+        fixed = (
+            "curl",
+            "-fsS",
+            "--max-time",
+            "180",
+            "-H",
+            "Content-Type: application/json",
+            "-d",
+            None,
+            CRAWL_WEBHOOK,
+        )
+        for i, exp in enumerate(fixed):
+            if exp is not None and argv[i] != exp:
+                return None
+        for j, item in enumerate(argv):
+            if not isinstance(item, str) or not item:
+                return None
+            bad = CRAWL_BAD if j == CRAWL_JSON_IDX else CRAWL_BAD_OTHER
+            if any(ch in item for ch in bad):
+                return None
+            if j == CRAWL_JSON_IDX:
+                if len(item) > 2600 or not crawl_json_ok(item):
+                    return None
+            elif len(item) > 200:
+                return None
+        return list(argv)
+
     def valid_argv(argv):
+        special = crawl_curl_valid(argv)
+        if special is not None:
+            return special
         if not isinstance(argv, list) or not (1 <= len(argv) <= MAX_ARGS):
             return None
         clean = []
@@ -148,6 +216,8 @@ let
         return path
 
     def timeout_for(argv):
+        if crawl_curl_valid(argv) is not None:
+            return CRAWL_TIMEOUT
         if argv[0] == "nixctl" and len(argv) > 1:
             if argv[1] in ("apply", "rollback", "undo", "clean", "update"):
                 return CHANGE_TIMEOUT
@@ -430,6 +500,8 @@ let
 
     def readonly(argv):
         name = argv[0]
+        if name == "curl":
+            return crawl_curl_valid(argv)
         if name == "nixctl":
             return nixctl_read(argv)
         if name == "systemctl":
