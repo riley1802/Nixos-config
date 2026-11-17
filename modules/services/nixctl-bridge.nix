@@ -126,7 +126,7 @@ let
 
     CRAWL_ARGC = 9
     CRAWL_JSON_IDX = 7
-    CRAWL_BAD = frozenset("\n\r\x00|;<> `$")
+    CRAWL_BAD = frozenset("\n\r\x00|;<>$`")
     CRAWL_BAD_OTHER = CRAWL_BAD | frozenset("&")
 
     def crawl_json_ok(raw):
