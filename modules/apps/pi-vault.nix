@@ -624,7 +624,6 @@ let
           [[ -n "$raw" ]] || continue
           norm=$(trim_link "$raw")
           [[ "$norm" =~ ^https?:// ]] || continue
-          same_host "$norm" "$seed_host" || continue
           drop_obvious "$norm" && continue
           [[ -n "''${seen[$norm]+x}" ]] && continue
           seen["$norm"]=1
