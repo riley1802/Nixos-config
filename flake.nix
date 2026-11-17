@@ -9,6 +9,10 @@
       url = "github:ryantm/agenix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    home-manager = {
+      url = "github:nix-community/home-manager/release-26.05";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     # Local Logitech manager for the MX Master 4. The module installs the
     # package, udev rules, and the graphical-session agent. The packaging
     # flake is the real input; the repository root only aliases it.
@@ -22,6 +26,7 @@
   outputs =
     inputs@{ nixpkgs
     , agenix
+    , home-manager
     , openlogi
     , ...
     }:
@@ -38,6 +43,7 @@
             ./hosts/${name}
             ./modules
             agenix.nixosModules.default
+            home-manager.nixosModules.home-manager
             openlogi.nixosModules.default
           ];
         };
